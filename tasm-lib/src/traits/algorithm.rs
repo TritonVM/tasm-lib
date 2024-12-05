@@ -122,12 +122,7 @@ where
     }
 
     fn test(&self) {
-        for corner_case in self
-            .algorithm
-            .borrow()
-            .corner_case_initial_states()
-            .into_iter()
-        {
+        for corner_case in self.algorithm.borrow().corner_case_initial_states() {
             let stdin = vec![];
             test_rust_equivalence_given_complete_state(
                 self,

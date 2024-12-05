@@ -110,12 +110,7 @@ where
     }
 
     fn test(&self) {
-        for corner_case in self
-            .mem_preserver
-            .borrow()
-            .corner_case_initial_states()
-            .into_iter()
-        {
+        for corner_case in self.mem_preserver.borrow().corner_case_initial_states() {
             let stdin: Vec<_> = corner_case.public_input.into();
 
             test_rust_equivalence_given_complete_state(
@@ -129,10 +124,8 @@ where
         }
 
         let num_states = 10;
-        let seed: [u8; 32] = thread_rng().gen();
-        let mut rng = StdRng::from_seed(seed);
+        let mut rng = StdRng::from_seed(random());
         for _ in 0..num_states {
-            let seed: [u8; 32] = rng.gen();
             let MemPreserverInitialState {
                 stack,
                 public_input,
@@ -141,7 +134,7 @@ where
             } = self
                 .mem_preserver
                 .borrow()
-                .pseudorandom_initial_state(seed, None);
+                .pseudorandom_initial_state(rng.gen(), None);
 
             let stdin: Vec<_> = public_input.into();
             test_rust_equivalence_given_complete_state(

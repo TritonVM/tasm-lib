@@ -100,14 +100,14 @@ pub trait BasicSnippet {
         code
     }
 
-    /// Intial stack on program start, when the snippet runs in isolation.
+    /// Initial stack on program start, when the snippet runs in isolation.
     fn init_stack_for_isolated_run(&self) -> Vec<BFieldElement> {
         let code = self.link_for_isolated_run();
         let program = Program::new(&code);
         let program_digest = program.hash();
         [
             program_digest.reversed().values().to_vec(),
-            vec![BFieldElement::zero(); NUM_OP_STACK_REGISTERS - tip5::Digest::LEN],
+            vec![BFieldElement::zero(); NUM_OP_STACK_REGISTERS - Digest::LEN],
         ]
         .concat()
     }

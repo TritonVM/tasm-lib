@@ -109,7 +109,6 @@ where
             .read_only_algorithm
             .borrow()
             .corner_case_initial_states()
-            .into_iter()
         {
             let stdin = vec![];
             test_rust_equivalence_given_complete_state(
@@ -123,17 +122,15 @@ where
         }
 
         let num_states = 10;
-        let seed: [u8; 32] = thread_rng().gen();
-        let mut rng = StdRng::from_seed(seed);
+        let mut rng = StdRng::from_seed(random());
         for _ in 0..num_states {
-            let seed: [u8; 32] = rng.gen();
             let ReadOnlyAlgorithmInitialState {
                 stack,
                 nondeterminism,
             } = self
                 .read_only_algorithm
                 .borrow()
-                .pseudorandom_initial_state(seed, None);
+                .pseudorandom_initial_state(rng.gen(), None);
 
             let stdin = vec![];
             test_rust_equivalence_given_complete_state(
