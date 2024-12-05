@@ -142,8 +142,8 @@ fn generate_integral_size_indicators_code(parse_result: &ParseResult) -> TokenSt
                         crate::triton_vm::isa::instruction::TypeHint {
                             starting_index: 1,
                             length: 1,
-                            type_name: std::option::Option::<std::string::String>::None,
-                            variable_name: std::string::String::from("acc_size"),
+                            type_name: ::std::option::Option::<::std::string::String>::None,
+                            variable_name: ::std::string::String::from("acc_size"),
                         }
                     )
                 ].to_vec();
@@ -152,8 +152,8 @@ fn generate_integral_size_indicators_code(parse_result: &ParseResult) -> TokenSt
                 crate::triton_vm::isa::instruction::TypeHint {
                     starting_index: 0,
                     length: 1,
-                    type_name: std::option::Option::<std::string::String>::None,
-                    variable_name: std::string::String::from("field_ptr"),
+                    type_name: ::std::option::Option::<::std::string::String>::None,
+                    variable_name: ::std::string::String::from("field_ptr"),
                 }
             )
         ].to_vec();
@@ -315,7 +315,9 @@ fn impl_tasm_object_derive_macro(ast: DeriveInput) -> TokenStream {
                 #name_as_string.to_owned()
             }
 
-            fn get_field( field_name : &str ) -> Vec<crate::triton_vm::isa::instruction::LabelledInstruction> {
+            fn get_field(
+                field_name: &str
+            ) -> ::std::vec::Vec<crate::triton_vm::isa::instruction::LabelledInstruction> {
                 let field_getter = match field_name {
                     #( #just_field_clauses ,)*
                     unknown_field_name => panic!("Cannot match on field name `{unknown_field_name}`."),
@@ -325,8 +327,8 @@ fn impl_tasm_object_derive_macro(ast: DeriveInput) -> TokenStream {
                         crate::triton_vm::isa::instruction::TypeHint {
                             starting_index: 0,
                             length: 1,
-                            type_name: std::option::Option::<std::string::String>::None,
-                            variable_name: std::string::String::from(field_name),
+                            type_name: ::std::option::Option::<::std::string::String>::None,
+                            variable_name: ::std::string::String::from(field_name),
                         }
                     )
                 ].to_vec();
@@ -336,7 +338,9 @@ fn impl_tasm_object_derive_macro(ast: DeriveInput) -> TokenStream {
                 ].concat()
             }
 
-            fn get_field_with_size( field_name : &str ) -> Vec<crate::triton_vm::isa::instruction::LabelledInstruction> {
+            fn get_field_with_size(
+                field_name: &str
+            ) -> ::std::vec::Vec<crate::triton_vm::isa::instruction::LabelledInstruction> {
                 let field_getter = match field_name {
                     #( #field_with_size_clauses ,)*
                     unknown_field_name => panic!("Cannot match on field name `{unknown_field_name}`."),
@@ -346,16 +350,16 @@ fn impl_tasm_object_derive_macro(ast: DeriveInput) -> TokenStream {
                         crate::triton_vm::isa::instruction::TypeHint {
                             starting_index: 0,
                             length: 1,
-                            type_name: std::option::Option::<std::string::String>::Some(std::string::String::from("u32")),
-                            variable_name: std::string::String::from("size"),
+                            type_name: ::std::option::Option::Some(::std::string::String::from("u32")),
+                            variable_name: ::std::string::String::from("size"),
                         }
                     ),
                     crate::triton_vm::isa::instruction::LabelledInstruction::TypeHint(
                         crate::triton_vm::isa::instruction::TypeHint {
                             starting_index: 1,
                             length: 1,
-                            type_name: std::option::Option::<std::string::String>::None,
-                            variable_name: std::string::String::from(field_name),
+                            type_name: ::std::option::Option::<::std::string::String>::None,
+                            variable_name: ::std::string::String::from(field_name),
                         }
                     )
                 ].to_vec();
@@ -366,14 +370,18 @@ fn impl_tasm_object_derive_macro(ast: DeriveInput) -> TokenStream {
                 ].concat()
             }
 
-            fn get_field_start_with_jump_distance( field_name : &str ) -> Vec<crate::triton_vm::isa::instruction::LabelledInstruction> {
+            fn get_field_start_with_jump_distance(
+                field_name: &str
+            ) -> ::std::vec::Vec<crate::triton_vm::isa::instruction::LabelledInstruction> {
                 match field_name {
                     #( #field_starter_clauses ,)*
                     unknown_field_name => panic!("Cannot match on field name `{unknown_field_name}`."),
                 }
             }
 
-            fn compute_size_and_assert_valid_size_indicator(library: &mut crate::tasm_lib::library::Library) -> Vec<crate::triton_vm::isa::instruction::LabelledInstruction> {
+            fn compute_size_and_assert_valid_size_indicator(
+                library: &mut crate::tasm_lib::library::Library
+            ) -> ::std::vec::Vec<crate::triton_vm::isa::instruction::LabelledInstruction> {
                 #integral_size_indicators_code
             }
 
@@ -381,10 +389,13 @@ fn impl_tasm_object_derive_macro(ast: DeriveInput) -> TokenStream {
                 iterator: &mut Itr
             ) -> ::std::result::Result<
                     ::std::boxed::Box<Self>,
-                    ::std::boxed::Box<dyn ::std::error::Error
+                    ::std::boxed::Box<
+                        dyn ::std::error::Error
                         + ::core::marker::Send
-                        + ::core::marker::Sync>
-            > {
+                        + ::core::marker::Sync
+                    >
+                >
+            {
                 #( #field_decoders )*
                 ::std::result::Result::Ok(::std::boxed::Box::new(#self_builder))
             }
@@ -610,7 +621,7 @@ fn get_field_decoder(field_name: syn::Ident, field_type: syn::Type) -> TokenStre
         };
         let sequence = (0..length)
             .map(|_| iterator.next())
-            .collect::<core::option::Option<std::vec::Vec<_>>>()
+            .collect::<::std::option::Option<::std::vec::Vec<_>>>()
             .ok_or("iterator exhausted")?;
         let #field_name : #field_type = *crate::twenty_first::math::bfield_codec::BFieldCodec::decode(&sequence)?;
     }
