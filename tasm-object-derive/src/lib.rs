@@ -60,9 +60,9 @@ fn generate_integral_size_indicators_code(parse_result: &ParseResult) -> TokenSt
                 [
                     // _ accumulated_size *field
                     addi_len.clone(),
-                    swap1.clone(),
+                    pick1.clone(),
                     addi_len.clone(),
-                    swap1.clone(),
+                    place1.clone(),
                     // _ accumulated_size' *next_field
                 ].to_vec()
             } else {
@@ -102,15 +102,15 @@ fn generate_integral_size_indicators_code(parse_result: &ParseResult) -> TokenSt
                         add.clone(),
                         // _ accumulated_size indicated_field_size *next_field
 
-                        swap2.clone(),
-                        // _ *next_field indicated_field_size accumulated_size
+                        place2.clone(),
+                        // _  *next_field accumulated_size indicated_field_size
 
                         /* Add one for size-indicator on this struct */
                         add.clone(),
                         addi1.clone(),
                         // _ *next_field accumulated_size'
 
-                        swap1.clone(),
+                        pick1.clone(),
                         // _ accumulated_size' *next_field
                     ].to_vec(),
                 ].concat()
@@ -124,8 +124,9 @@ fn generate_integral_size_indicators_code(parse_result: &ParseResult) -> TokenSt
         let dup0 = crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::Dup(crate::triton_vm::isa::op_stack::OpStackElement::ST0));
         let dup1 = crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::Dup(crate::triton_vm::isa::op_stack::OpStackElement::ST1));
         let dup2 = crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::Dup(crate::triton_vm::isa::op_stack::OpStackElement::ST2));
-        let swap1 = crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::Swap(crate::triton_vm::isa::op_stack::OpStackElement::ST1));
-        let swap2 = crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::Swap(crate::triton_vm::isa::op_stack::OpStackElement::ST2));
+        let pick1 = crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::Pick(crate::triton_vm::isa::op_stack::OpStackElement::ST1));
+        let place1 = crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::Place(crate::triton_vm::isa::op_stack::OpStackElement::ST1));
+        let place2 = crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::Place(crate::triton_vm::isa::op_stack::OpStackElement::ST2));
         let lt = crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::Lt);
         let assert = crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::Assert);
         let assertion_context_field_size_too_big = crate::triton_vm::isa::instruction::LabelledInstruction::AssertionContext(crate::triton_vm::isa::instruction::AssertionContext::ID(180_i128));
@@ -159,7 +160,7 @@ fn generate_integral_size_indicators_code(parse_result: &ParseResult) -> TokenSt
         [
             [
                 push0.clone(),
-                swap1.clone(),
+                place1.clone(),
             ].to_vec(),
             hint_acc_size,
             hint_field_ptr,
@@ -489,8 +490,7 @@ fn generate_tasm_for_getter_postprocess(field_type: &syn::Type) -> TokenStream {
         } else {
             [
                 crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::Pop(crate::triton_vm::isa::op_stack::NumberOfWords::N1)),
-                crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::Push(crate::BFieldElement::new(1u64))),
-                crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::Add),
+                crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::AddI(crate::BFieldElement::new(1u64))),
             ].to_vec()
         }
     }
@@ -508,12 +508,10 @@ fn generate_tasm_for_sizer_postprocess(field_type: &syn::Type) -> TokenStream {
             ::std::vec::Vec::<crate::triton_vm::isa::instruction::LabelledInstruction>::new()
         } else {
             [
-                crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::Push(-crate::BFieldElement::new(1u64))),
-                crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::Add),
-                crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::Swap(crate::triton_vm::isa::op_stack::OpStackElement::ST1)),
-                crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::Push(crate::BFieldElement::new(1u64))),
-                crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::Add),
-                crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::Swap(crate::triton_vm::isa::op_stack::OpStackElement::ST1)),
+                crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::AddI(-crate::BFieldElement::new(1u64))),
+                crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::Pick(crate::triton_vm::isa::op_stack::OpStackElement::ST1)),
+                crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::AddI(crate::BFieldElement::new(1u64))),
+                crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::Place(crate::triton_vm::isa::op_stack::OpStackElement::ST1)),
             ].to_vec()
         }
     }
@@ -543,7 +541,7 @@ fn generate_tasm_for_extend_field_start_with_jump_amount(field_type: &syn::Type)
                 crate::triton_vm::isa::instruction::LabelledInstruction::AssertionContext(crate::triton_vm::isa::instruction::AssertionContext::ID(182_i128)),
                 // _ si (*object-1)
                 crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::AddI(crate::BFieldElement::new(1u64))),
-                crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::Swap(crate::triton_vm::isa::op_stack::OpStackElement::ST1)),
+                crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::Place(crate::triton_vm::isa::op_stack::OpStackElement::ST1)),
                 crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::AddI(crate::BFieldElement::new(1u64))),
                 // _ *object (si + 1)
                 // _ *object jummp_amount
