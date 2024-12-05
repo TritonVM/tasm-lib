@@ -17,26 +17,25 @@ repository.workspace = true
 readme.workspace = true
 
 [dev-dependencies]
-color-eyre = "0.6"
 proptest = "1.5"
 proptest-arbitrary-interop = "0.1"
-test-strategy = "0.4"
 rayon = "1"
+test-strategy = "0.4"
 
 [dependencies]
-const_format = "0.2"
-arbitrary = { version = "1", features = ["derive"] }
 anyhow = "1"
-tasm-object-derive.workspace = true
-ndarray = { version = "0.16" }
+arbitrary = { version = "1", features = ["derive"] }
+const_format = "0.2"
 hex = "^0.4.3"
 itertools = "0"
+ndarray = { version = "0.16" }
 num = "0"
 num-traits = "0"
 rand = "0.8.5"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 strum = { version = "0.26", features = ["derive"] }
+tasm-object-derive.workspace = true
 triton-vm = { version = "0.43.0", default-features = false }
 
 [dev-dependencies.cargo-husky]
