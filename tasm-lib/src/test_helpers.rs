@@ -454,7 +454,7 @@ pub fn link_and_run_tasm_for_test<T: RustShadow>(
     nondeterminism: NonDeterminism,
     maybe_sponge: Option<VmHasher>,
 ) -> VMState {
-    let code = link_for_isolated_run(snippet_struct);
+    let code = snippet_struct.inner().borrow().link_for_isolated_run();
 
     execute_test(
         &code,
@@ -464,25 +464,6 @@ pub fn link_and_run_tasm_for_test<T: RustShadow>(
         nondeterminism,
         maybe_sponge,
     )
-}
-
-fn link_for_isolated_run<T: RustShadow>(snippet_struct: &T) -> Vec<LabelledInstruction> {
-    let mut library = Library::new();
-    let entrypoint = snippet_struct.inner().borrow().entrypoint();
-    let function_body = snippet_struct.inner().borrow().annotated_code(&mut library);
-    let library_code = library.all_imports();
-
-    // The TASM code is always run through a function call, so the 1st instruction is a call to the
-    // function in question.
-    let code = triton_asm!(
-        call {entrypoint}
-        halt
-
-        {&function_body}
-        {&library_code}
-    );
-
-    code
 }
 
 pub fn test_rust_equivalence_given_execution_state<S: RustShadow>(
