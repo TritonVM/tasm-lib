@@ -1,4 +1,5 @@
 pub mod lt;
+pub mod overflowing_add;
 pub mod safe_add;
 pub mod safe_mul;
 pub mod shift_left;
