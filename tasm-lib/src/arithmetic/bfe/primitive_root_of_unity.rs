@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use num_traits::Zero;
 use rand::prelude::*;
 use triton_vm::prelude::*;
@@ -7,6 +9,8 @@ use crate::data_type::DataType;
 use crate::empty_stack;
 use crate::snippet_bencher::BenchmarkCase;
 use crate::traits::basic_snippet::BasicSnippet;
+use crate::traits::basic_snippet::Reviewer;
+use crate::traits::basic_snippet::SignOffFingerprint;
 use crate::traits::closure::Closure;
 
 /// Fetch the primitive root of unity of the given order.
@@ -176,6 +180,13 @@ impl BasicSnippet for PrimitiveRootOfUnity {
 
             return
         )
+    }
+
+    fn sign_offs(&self) -> HashMap<Reviewer, SignOffFingerprint> {
+        let mut sign_offs = HashMap::new();
+        sign_offs.insert(Reviewer("ferdinand"), 0xfcf839b15db0eef5.into());
+
+        sign_offs
     }
 }
 
