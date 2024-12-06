@@ -105,6 +105,20 @@ pub fn push_encodable<T: BFieldCodec>(stack: &mut Vec<BFieldElement>, value: &T)
     stack.extend(value.encode().into_iter().rev());
 }
 
+/// Pops an element of the specified, generic type from the stack.
+///
+/// ### Panics
+///
+/// Panics if
+/// - the generic type has [dynamic length](BFieldCodec::static_length)
+/// - the stack does not contain enough elements
+#[cfg(test)]
+pub(crate) fn pop_encodable<T: BFieldCodec>(stack: &mut Vec<BFieldElement>) -> T {
+    let len = T::static_length().unwrap();
+    let limbs = (0..len).map(|_| stack.pop().unwrap()).collect_vec();
+    *T::decode(&limbs).unwrap()
+}
+
 /// Execute a Triton-VM program and return its output and execution trace length
 pub fn execute_bench_deprecated(
     code: &[LabelledInstruction],
