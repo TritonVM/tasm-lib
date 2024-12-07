@@ -196,38 +196,17 @@ mod tests {
         }
 
         fn corner_case_initial_states(&self) -> Vec<Vec<BFieldElement>> {
-            let some_none_zero_value = (1u128 << 97) + (1u128 << 65) + u64::MAX as u128 - 456456;
-            let rhs_is_zero = self.setup_init_stack(some_none_zero_value, 0);
-            let lhs_is_zero = self.setup_init_stack(0, some_none_zero_value);
-            let rhs_is_zero_lhs_max = self.setup_init_stack(u128::MAX, 0);
-            let lhs_is_zero_rhs_max = self.setup_init_stack(0, u128::MAX);
-            let both_are_2_to_127 = self.setup_init_stack(1u128 << 127, 1u128 << 127);
-            let two_to_127_var0 = self.setup_init_stack((1u128 << 127) - 1, (1u128 << 127) - 1);
-            let two_to_127_var1 = self.setup_init_stack((1u128 << 127) - 1, 1u128 << 127);
-            let two_to_127_var2 = self.setup_init_stack((1u128 << 127) - 1, (1u128 << 127) + 1);
-            let two_to_127_var3 = self.setup_init_stack(1u128 << 127, (1u128 << 127) - 1);
-            let two_to_127_var4 = self.setup_init_stack(1u128 << 127, (1u128 << 127) + 1);
-            let two_to_127_var5 = self.setup_init_stack((1u128 << 127) + 1, (1u128 << 127) - 1);
-            let two_to_127_var6 = self.setup_init_stack((1u128 << 127) + 1, 1u128 << 127);
-            let two_to_127_var7 = self.setup_init_stack((1u128 << 127) + 1, (1u128 << 127) + 1);
-            let max_plus_max = self.setup_init_stack(u128::MAX, u128::MAX);
+            let points_with_plus_minus_one = [0, 0x200000002fffffffffff908f8, 1 << 127, u128::MAX]
+                .into_iter()
+                .flat_map(|p| [p.checked_sub(1), Some(p), p.checked_add(1)])
+                .flatten()
+                .collect_vec();
 
-            vec![
-                rhs_is_zero,
-                lhs_is_zero,
-                rhs_is_zero_lhs_max,
-                lhs_is_zero_rhs_max,
-                both_are_2_to_127,
-                two_to_127_var0,
-                two_to_127_var1,
-                two_to_127_var2,
-                two_to_127_var3,
-                two_to_127_var4,
-                two_to_127_var5,
-                two_to_127_var6,
-                two_to_127_var7,
-                max_plus_max,
-            ]
+            points_with_plus_minus_one
+                .iter()
+                .cartesian_product(&points_with_plus_minus_one)
+                .map(|(&l, &r)| self.setup_init_stack(l, r))
+                .collect()
         }
     }
 }
