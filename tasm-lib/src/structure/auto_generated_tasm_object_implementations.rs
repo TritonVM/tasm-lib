@@ -14,7 +14,7 @@ use crate::twenty_first::util_types::mmr::mmr_successor_proof::MmrSuccessorProof
 
 macro_rules! derive_tasm_object_for {
     ($actual:ident using $fake:ident {$($field:ident: $field_type:ty,)* $(,)?}) => {
-        #[derive(TasmObject)]
+        #[derive(BFieldCodec, TasmObject)]
         struct $fake { $($field: $field_type),* }
 
         impl TasmObject for $actual {
@@ -80,7 +80,7 @@ derive_tasm_object_for!(
 
 // can't use macro: MmrAccumulator has private fields and uses a dedicated
 // constructor
-#[derive(TasmObject)]
+#[derive(BFieldCodec, TasmObject)]
 struct FakeMmrAccumulator {
     leaf_count: u64,
     peaks: Vec<Digest>,

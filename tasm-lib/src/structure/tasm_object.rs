@@ -18,7 +18,7 @@ pub const DEFAULT_MAX_DYN_FIELD_SIZE: u32 = 1u32 << 28;
 ///
 /// The arguments referring to fields are strings. For structs with unnamed fields, the
 /// nth field name is implicitly `field_n`.
-pub trait TasmObject {
+pub trait TasmObject: BFieldCodec {
     /// Maximum jump distance for encoded size and length indicators.
     /// The field getters will compare any length or size indicator read
     /// from memory against this value and crash the VM if the indicator
