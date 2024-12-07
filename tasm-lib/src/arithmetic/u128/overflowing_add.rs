@@ -28,71 +28,50 @@ impl BasicSnippet for OverflowingAddU128 {
 
     /// Four top elements of stack are assumed to be valid u32s. So to have
     /// a value that's less than 2^32.
-    fn code(&self, _library: &mut Library) -> Vec<LabelledInstruction> {
-        let entrypoint = self.entrypoint();
-
+    fn code(&self, _: &mut Library) -> Vec<LabelledInstruction> {
         triton_asm!(
             // BEFORE: _ rhs_3 rhs_2 rhs_1 rhs_0 lhs_3 lhs_2 lhs_1 lhs_0
-            // AFTER:  _ sum_3 sum_2 sum_1 sum_0
-            {entrypoint}:
-                swap 1 swap 4
-                add
-                // _ rhs_3 rhs_2 rhs_1 lhs_1 lhs_3 lhs_2 (lhs_0 + rhs_0)
+            // AFTER:  _ sum_3 sum_2 sum_1 sum_0 is_overflow
+            //                                   ^^^^^^^^^^^
+            //             don't forget to adapt signature when copy-pasting
+            {self.entrypoint()}:
+                pick 4
+                // _ rhs_3 rhs_2 rhs_1 lhs_3 lhs_2 lhs_1 lhs_0 rhs_0
 
+                add
                 split
-                // _ rhs_3 rhs_2 rhs_1 lhs_1 lhs_3 lhs_2 (lhs_0 + rhs_0)_hi (lhs_0 + rhs_0)_lo
+                // _ rhs_3 rhs_2 rhs_1 lhs_3 lhs_2 lhs_1 (lhs_0 + rhs_0)_hi (lhs_0 + rhs_0)_lo
+                // _ rhs_3 rhs_2 rhs_1 lhs_3 lhs_2 lhs_1 carry_1            sum_0
 
-                // rename:
-                // _ rhs_3 rhs_2 rhs_1 lhs_1 lhs_3 lhs_2 carry_1 sum_0
-
-                swap 4
-                // _ rhs_3 rhs_2 rhs_1 sum_0 lhs_3 lhs_2 carry_1 lhs_1
-
-                add
-                // _ rhs_3 rhs_2 rhs_1 sum_0 lhs_3 lhs_2 lhs_1'
-
-                swap 1 swap 4
-                // _ rhs_3 rhs_2 lhs_2 sum_0 lhs_3 lhs_1' rhs_1
+                place 7
+                pick 4
+                // _ sum_0 rhs_3 rhs_2 lhs_3 lhs_2 lhs_1 carry_1 rhs_1
 
                 add
-                // _ rhs_3 rhs_2 lhs_2 sum_0 lhs_3 (lhs_1' + rhs_1)
-
+                add
                 split
-                // _ rhs_3 rhs_2 lhs_2 sum_0 lhs_3 carry_2 sum_1
+                // _ sum_0 rhs_3 rhs_2 lhs_3 lhs_2 carry_2 sum_1
 
-                swap 4
-                // _ rhs_3 rhs_2 sum_1 sum_0 lhs_3 carry_2 lhs_2
-
-                add
-                // _ rhs_3 rhs_2 sum_1 sum_0 lhs_3 lhs_2'
-
-                swap 1 swap 4
-                // _ rhs_3 lhs_3 sum_1 sum_0 lhs_2' rhs_2
+                place 6
+                pick 3
+                // _ sum_1 sum_0 rhs_3 lhs_3 lhs_2 carry_2 rhs_2
 
                 add
-                // _ rhs_3 lhs_3 sum_1 sum_0 (lhs_2' + rhs_2)
-
+                add
                 split
-                // _ rhs_3 lhs_3 sum_1 sum_0 carry_3 sum_2
+                // _ sum_1 sum_0 rhs_3 lhs_3 carry_3 sum_2
 
-                swap 4
-                // _ rhs_3 sum_2 sum_1 sum_0 carry_3 lhs_3
-
-                add
-                // _ rhs_3 sum_2 sum_1 sum_0 lhs_3'
-
-                dup 4
-                // _ rhs_3 sum_2 sum_1 sum_0 lhs_3' rhs_3
+                place 5
+                // _ sum_2 sum_1 sum_0 rhs_3 lhs_3 carry_3
 
                 add
-                // _ rhs_3 sum_2 sum_1 sum_0 (lhs_3' + rhs_3)
-
+                add
                 split
-                // _ rhs_3 sum_2 sum_1 sum_0 overflow sum_3
+                // _ sum_2 sum_1 sum_0 carry_4 sum_3
 
-                swap 5
-                pop 1
-                // _ sum_3 sum_2 sum_1 sum_0 overflow
+                place 4
+                // _ sum_3 sum_2 sum_1 sum_0 carry_4
+                // _ sum_3 sum_2 sum_1 sum_0 is_overflow
 
                 return
         )
@@ -108,6 +87,7 @@ mod tests {
     use rand::SeedableRng;
 
     use super::*;
+    use crate::pop_encodable;
     use crate::push_encodable;
     use crate::snippet_bencher::BenchmarkCase;
     use crate::test_helpers::test_rust_equivalence_given_complete_state;
@@ -196,35 +176,11 @@ mod tests {
 
     impl Closure for OverflowingAddU128 {
         fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
-            fn to_u128(a: u32, b: u32, c: u32, d: u32) -> u128 {
-                a as u128
-                    + b as u128 * (1u128 << 32)
-                    + c as u128 * (1u128 << 64)
-                    + d as u128 * (1u128 << 96)
-            }
-
-            // top element on stack
-            let a0: u32 = stack.pop().unwrap().try_into().unwrap();
-            let b0: u32 = stack.pop().unwrap().try_into().unwrap();
-            let c0: u32 = stack.pop().unwrap().try_into().unwrap();
-            let d0: u32 = stack.pop().unwrap().try_into().unwrap();
-            let ab0 = to_u128(a0, b0, c0, d0);
-
-            // second element on stack
-            let a1: u32 = stack.pop().unwrap().try_into().unwrap();
-            let b1: u32 = stack.pop().unwrap().try_into().unwrap();
-            let c1: u32 = stack.pop().unwrap().try_into().unwrap();
-            let d1: u32 = stack.pop().unwrap().try_into().unwrap();
-            let ab1 = to_u128(a1, b1, c1, d1);
-
-            let (sum, overflow) = ab0.overflowing_add(ab1);
-
-            let mut res = sum.encode();
-            for _ in 0..res.len() {
-                stack.push(res.pop().unwrap());
-            }
-
-            stack.push(bfe!(overflow as u64));
+            let left = pop_encodable::<u128>(stack);
+            let right = pop_encodable(stack);
+            let (sum, is_overflow) = left.overflowing_add(right);
+            push_encodable(stack, &sum);
+            push_encodable(stack, &is_overflow);
         }
 
         fn pseudorandom_initial_state(
@@ -240,38 +196,17 @@ mod tests {
         }
 
         fn corner_case_initial_states(&self) -> Vec<Vec<BFieldElement>> {
-            let some_none_zero_value = (1u128 << 97) + (1u128 << 65) + u64::MAX as u128 - 456456;
-            let rhs_is_zero = self.setup_init_stack(some_none_zero_value, 0);
-            let lhs_is_zero = self.setup_init_stack(0, some_none_zero_value);
-            let rhs_is_zero_lhs_max = self.setup_init_stack(u128::MAX, 0);
-            let lhs_is_zero_rhs_max = self.setup_init_stack(0, u128::MAX);
-            let both_are_2_to_127 = self.setup_init_stack(1u128 << 127, 1u128 << 127);
-            let two_to_127_var0 = self.setup_init_stack((1u128 << 127) - 1, (1u128 << 127) - 1);
-            let two_to_127_var1 = self.setup_init_stack((1u128 << 127) - 1, 1u128 << 127);
-            let two_to_127_var2 = self.setup_init_stack((1u128 << 127) - 1, (1u128 << 127) + 1);
-            let two_to_127_var3 = self.setup_init_stack(1u128 << 127, (1u128 << 127) - 1);
-            let two_to_127_var4 = self.setup_init_stack(1u128 << 127, (1u128 << 127) + 1);
-            let two_to_127_var5 = self.setup_init_stack((1u128 << 127) + 1, (1u128 << 127) - 1);
-            let two_to_127_var6 = self.setup_init_stack((1u128 << 127) + 1, 1u128 << 127);
-            let two_to_127_var7 = self.setup_init_stack((1u128 << 127) + 1, (1u128 << 127) + 1);
-            let max_plus_max = self.setup_init_stack(u128::MAX, u128::MAX);
+            let points_with_plus_minus_one = [0, 0x200000002fffffffffff908f8, 1 << 127, u128::MAX]
+                .into_iter()
+                .flat_map(|p| [p.checked_sub(1), Some(p), p.checked_add(1)])
+                .flatten()
+                .collect_vec();
 
-            vec![
-                rhs_is_zero,
-                lhs_is_zero,
-                rhs_is_zero_lhs_max,
-                lhs_is_zero_rhs_max,
-                both_are_2_to_127,
-                two_to_127_var0,
-                two_to_127_var1,
-                two_to_127_var2,
-                two_to_127_var3,
-                two_to_127_var4,
-                two_to_127_var5,
-                two_to_127_var6,
-                two_to_127_var7,
-                max_plus_max,
-            ]
+            points_with_plus_minus_one
+                .iter()
+                .cartesian_product(&points_with_plus_minus_one)
+                .map(|(&l, &r)| self.setup_init_stack(l, r))
+                .collect()
         }
     }
 }
