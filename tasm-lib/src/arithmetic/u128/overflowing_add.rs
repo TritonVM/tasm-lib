@@ -103,7 +103,7 @@ mod tests {
     #[test]
     fn overflowing_add_u128_unit_test() {
         let snippet = OverflowingAddU128;
-        snippet.prop_add(1u128 << 67, 1u128 << 67)
+        snippet.assert_expected_add_behavior(1u128 << 67, 1u128 << 67)
     }
 
     #[test]
@@ -125,8 +125,8 @@ mod tests {
             (u128::MAX, 1 << 97),
             (u128::MAX - 1, 2),
         ] {
-            snippet.prop_add(a, b);
-            snippet.prop_add(b, a);
+            snippet.assert_expected_add_behavior(a, b);
+            snippet.assert_expected_add_behavior(b, a);
         }
 
         for i in 0..128 {
@@ -138,12 +138,12 @@ mod tests {
             assert!(is_overflow, "i = {i}. a = {a}, b = {b}");
             assert!(wrapped_add.is_zero());
 
-            snippet.prop_add(b, a);
+            snippet.assert_expected_add_behavior(b, a);
         }
     }
 
     impl OverflowingAddU128 {
-        fn prop_add(&self, lhs: u128, rhs: u128) {
+        fn assert_expected_add_behavior(&self, lhs: u128, rhs: u128) {
             let init_stack = self.setup_init_stack(lhs, rhs);
 
             let expected = {
