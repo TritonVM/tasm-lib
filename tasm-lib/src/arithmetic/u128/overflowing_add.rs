@@ -28,75 +28,54 @@ impl BasicSnippet for OverflowingAddU128 {
 
     /// Four top elements of stack are assumed to be valid u32s. So to have
     /// a value that's less than 2^32.
-    fn code(&self, _library: &mut Library) -> Vec<LabelledInstruction> {
-        let entrypoint = self.entrypoint();
+fn code(&self, _: &mut Library) -> Vec<LabelledInstruction> {
+    triton_asm!(
+        // BEFORE: _ rhs_3 rhs_2 rhs_1 rhs_0 lhs_3 lhs_2 lhs_1 lhs_0
+        // AFTER:  _ sum_3 sum_2 sum_1 sum_0 is_overflow
+        //                                   ^^^^^^^^^^^
+        //             don't forget to adapt signature when copy-pasting
+        {self.entrypoint()}:
+            pick 4
+            // _ rhs_3 rhs_2 rhs_1 lhs_3 lhs_2 lhs_1 lhs_0 rhs_0
 
-        triton_asm!(
-            // BEFORE: _ rhs_3 rhs_2 rhs_1 rhs_0 lhs_3 lhs_2 lhs_1 lhs_0
-            // AFTER:  _ sum_3 sum_2 sum_1 sum_0
-            {entrypoint}:
-                swap 1 swap 4
-                add
-                // _ rhs_3 rhs_2 rhs_1 lhs_1 lhs_3 lhs_2 (lhs_0 + rhs_0)
+            add
+            split
+            // _ rhs_3 rhs_2 rhs_1 lhs_3 lhs_2 lhs_1 (lhs_0 + rhs_0)_hi (lhs_0 + rhs_0)_lo
+            // _ rhs_3 rhs_2 rhs_1 lhs_3 lhs_2 lhs_1 carry_1            sum_0
 
-                split
-                // _ rhs_3 rhs_2 rhs_1 lhs_1 lhs_3 lhs_2 (lhs_0 + rhs_0)_hi (lhs_0 + rhs_0)_lo
+            place 7
+            pick 4
+            // _ sum_0 rhs_3 rhs_2 lhs_3 lhs_2 lhs_1 carry_1 rhs_1
 
-                // rename:
-                // _ rhs_3 rhs_2 rhs_1 lhs_1 lhs_3 lhs_2 carry_1 sum_0
+            add
+            add
+            split
+            // _ sum_0 rhs_3 rhs_2 lhs_3 lhs_2 carry_2 sum_1
 
-                swap 4
-                // _ rhs_3 rhs_2 rhs_1 sum_0 lhs_3 lhs_2 carry_1 lhs_1
+            place 6
+            pick 3
+            // _ sum_1 sum_0 rhs_3 lhs_3 lhs_2 carry_2 rhs_2
 
-                add
-                // _ rhs_3 rhs_2 rhs_1 sum_0 lhs_3 lhs_2 lhs_1'
+            add
+            add
+            split
+            // _ sum_1 sum_0 rhs_3 lhs_3 carry_3 sum_2
 
-                swap 1 swap 4
-                // _ rhs_3 rhs_2 lhs_2 sum_0 lhs_3 lhs_1' rhs_1
+            place 5
+            // _ sum_2 sum_1 sum_0 rhs_3 lhs_3 carry_3
 
-                add
-                // _ rhs_3 rhs_2 lhs_2 sum_0 lhs_3 (lhs_1' + rhs_1)
+            add
+            add
+            split
+            // _ sum_2 sum_1 sum_0 carry_4 sum_3
 
-                split
-                // _ rhs_3 rhs_2 lhs_2 sum_0 lhs_3 carry_2 sum_1
+            place 4
+            // _ sum_3 sum_2 sum_1 sum_0 carry_4
+            // _ sum_3 sum_2 sum_1 sum_0 is_overflow
 
-                swap 4
-                // _ rhs_3 rhs_2 sum_1 sum_0 lhs_3 carry_2 lhs_2
-
-                add
-                // _ rhs_3 rhs_2 sum_1 sum_0 lhs_3 lhs_2'
-
-                swap 1 swap 4
-                // _ rhs_3 lhs_3 sum_1 sum_0 lhs_2' rhs_2
-
-                add
-                // _ rhs_3 lhs_3 sum_1 sum_0 (lhs_2' + rhs_2)
-
-                split
-                // _ rhs_3 lhs_3 sum_1 sum_0 carry_3 sum_2
-
-                swap 4
-                // _ rhs_3 sum_2 sum_1 sum_0 carry_3 lhs_3
-
-                add
-                // _ rhs_3 sum_2 sum_1 sum_0 lhs_3'
-
-                dup 4
-                // _ rhs_3 sum_2 sum_1 sum_0 lhs_3' rhs_3
-
-                add
-                // _ rhs_3 sum_2 sum_1 sum_0 (lhs_3' + rhs_3)
-
-                split
-                // _ rhs_3 sum_2 sum_1 sum_0 overflow sum_3
-
-                swap 5
-                pop 1
-                // _ sum_3 sum_2 sum_1 sum_0 overflow
-
-                return
-        )
-    }
+            return
+    )
+}
 }
 
 #[cfg(test)]
