@@ -1,13 +1,40 @@
+use std::collections::HashMap;
+
 use triton_vm::prelude::*;
 
 use crate::data_type::DataType;
 use crate::library::Library;
 use crate::traits::basic_snippet::BasicSnippet;
+use crate::traits::basic_snippet::Reviewer;
+use crate::traits::basic_snippet::SignOffFingerprint;
 
-/// Returns the smallest power of two greater than or equal to self.
-/// Behaves like the `rustc` method for all inputs of type `u32`.
+/// Returns the smallest power of two greater than or equal to argument `arg`.
+/// Behaves like the [`rustc` method in debug mode][rustc_pow] for all inputs
+/// of type `u32`.
+///
+/// ### Behavior
+///
+/// ```text
+/// BEFORE: _ arg
+/// AFTER:  _ u32::next_power_of_two(arg)
+/// ```
+///
+/// ### Pre-conditions
+///
+/// - `arg` is a valid u32
+/// - `arg` is smaller than or equal to 2^31
+///
+/// ### Post-conditions
+///
+/// - the output is the smallest power of two greater than or equal to `arg`
+///
+/// [rustc_pow]: u32::next_power_of_two
 #[derive(Debug, Clone, Copy)]
 pub struct NextPowerOfTwo;
+
+impl NextPowerOfTwo {
+    pub const INPUT_TOO_LARGE_ERROR_ID: i128 = 130;
+}
 
 impl BasicSnippet for NextPowerOfTwo {
     fn inputs(&self) -> Vec<(DataType, String)> {
@@ -22,76 +49,80 @@ impl BasicSnippet for NextPowerOfTwo {
         "tasmlib_arithmetic_u32_next_power_of_two".to_string()
     }
 
-    fn code(&self, _library: &mut Library) -> Vec<LabelledInstruction> {
+    fn code(&self, _: &mut Library) -> Vec<LabelledInstruction> {
         let entrypoint = self.entrypoint();
         let zero_or_one_label = format!("{entrypoint}_zero_or_one_label");
         let greater_than_one_label = format!("{entrypoint}_greater_than_one");
         triton_asm!(
             {entrypoint}:
-                // _ self_
+                // _ arg
 
                 push 1
                 push 2
                 dup 2
                 lt
+                // _ arg 1 (arg < 2)
+
                 skiz
                     call {zero_or_one_label}
+                // if arg < 2:  _ 1   0
+                // if arg >= 2: _ arg 1
+
                 skiz
                     call {greater_than_one_label}
+                // _
 
                 return
 
-                {zero_or_one_label}:
-                    // _ self_ 1
+            {zero_or_one_label}:
+                // _ arg 1
 
-                    pop 2
-                    // _
+                pop 2
+                push 1
+                push 0
+                // _ 1 0
 
-                    push 1
-                    // _ result
+                return
 
-                    push 0
-                    // _ result 0
+            {greater_than_one_label}:
+                // _ arg
 
-                    return
+                addi -1
+                log_2_floor
+                addi 1
+                // _ log₂(⌊value - 1⌋ + 1)
 
-                {greater_than_one_label}:
-                    // _ self_ 1
+                push 2
+                pow
+                // _ 2^log₂(⌊value - 1⌋ + 1)
 
-                    push -1
-                    add
-                    // _ (value - 1)
+                /* Assert result *not* 2^{32} */
+                dup 0
+                push {1u64 << 32}
+                eq
+                push 0
+                eq
+                assert error_id {Self::INPUT_TOO_LARGE_ERROR_ID}
 
-                    log_2_floor
-                    push 1
-                    add
-                    // _ (log_2_floor(value - 1) + 1)
-
-                    push 2
-                    // _ (log_2_floor(value - 1) + 1) 2
-
-                    pow
-                    // _ npo2(self_)
-
-                    // Assert result *not* 1^{32}
-                    dup 0
-                    push {1u64 << 32}
-                    eq
-                    push 0
-                    eq
-                    assert error_id 130
-
-                    return
+                return
         )
+    }
+
+    fn sign_offs(&self) -> HashMap<Reviewer, SignOffFingerprint> {
+        let mut sign_offs = HashMap::new();
+        sign_offs.insert(Reviewer("ferdinand"), 0x131c49afe5bf05af.into());
+        sign_offs
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use itertools::Itertools;
     use rand::prelude::*;
 
     use super::*;
+    use crate::pop_encodable;
+    use crate::push_encodable;
+    use crate::snippet_bencher::BenchmarkCase;
     use crate::test_helpers::test_assertion_failure;
     use crate::traits::closure::Closure;
     use crate::traits::closure::ShadowedClosure;
@@ -100,49 +131,38 @@ mod tests {
 
     impl Closure for NextPowerOfTwo {
         fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
-            let self_: u32 = stack.pop().unwrap().try_into().unwrap();
-            let npo2: u32 = self_.next_power_of_two();
-            stack.push(BFieldElement::new(npo2 as u64));
+            let arg = pop_encodable::<u32>(stack);
+            push_encodable(stack, &arg.next_power_of_two());
         }
 
         fn pseudorandom_initial_state(
             &self,
             seed: [u8; 32],
-            bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
+            bench_case: Option<BenchmarkCase>,
         ) -> Vec<BFieldElement> {
-            let self_: u32 = match bench_case {
-                Some(crate::snippet_bencher::BenchmarkCase::CommonCase) => (1 << 27) - 1,
-                Some(crate::snippet_bencher::BenchmarkCase::WorstCase) => (1 << 31) - 1,
-                None => {
-                    let mut rng = StdRng::from_seed(seed);
-                    rng.next_u32() / 2
-                }
+            let arg = match bench_case {
+                Some(BenchmarkCase::CommonCase) => (1 << 27) - 1,
+                Some(BenchmarkCase::WorstCase) => (1 << 31) - 1,
+                None => StdRng::from_seed(seed).next_u32() / 2,
             };
 
-            self.prepare_vm_stack(self_)
+            self.prepare_vm_stack(arg)
         }
 
         fn corner_case_initial_states(&self) -> Vec<Vec<BFieldElement>> {
-            let small_inputs = (0u32..=66).map(|i| self.prepare_vm_stack(i)).collect_vec();
-            let big_but_valid_inputs = [
-                1u32 << 31,
-                (1u32 << 31) - 1,
-                (1u32 << 31) - 2,
-                (1u32 << 31) - 3,
-                (1u32 << 31) - 4,
-                (1u32 << 31) - 5,
-            ]
-            .into_iter()
-            .map(|i| self.prepare_vm_stack(i))
-            .collect_vec();
+            let small_inputs = 0..=66;
+            let big_valid_inputs = (0..=5).map(|i| (1 << 31) - i);
 
-            [small_inputs, big_but_valid_inputs].concat()
+            small_inputs
+                .chain(big_valid_inputs)
+                .map(|i| self.prepare_vm_stack(i))
+                .collect()
         }
     }
 
     impl NextPowerOfTwo {
-        fn prepare_vm_stack(&self, self_: u32) -> Vec<BFieldElement> {
-            [self.init_stack_for_isolated_run(), bfe_vec![self_]].concat()
+        fn prepare_vm_stack(&self, arg: u32) -> Vec<BFieldElement> {
+            [self.init_stack_for_isolated_run(), bfe_vec![arg]].concat()
         }
     }
 
@@ -153,18 +173,15 @@ mod tests {
 
     #[test]
     fn npo2_overflow_negative_test() {
-        for self_ in [
-            (1u32 << 31) + 1,
-            (1u32 << 31) + 2,
-            (1u32 << 31) + 10,
-            u32::MAX - 2,
-            u32::MAX - 1,
-            u32::MAX,
-        ] {
-            let init_stack = NextPowerOfTwo.prepare_vm_stack(self_);
-            let init_state = InitVmState::with_stack(init_stack);
+        let greater_two_pow_31 = (1..=5).map(|i| (1 << 31) + i);
+        let smaller_equal_u32_max = (0..=2).map(|i| u32::MAX - i);
 
-            test_assertion_failure(&ShadowedClosure::new(NextPowerOfTwo), init_state, &[130]);
+        for arg in greater_two_pow_31.chain(smaller_equal_u32_max) {
+            test_assertion_failure(
+                &ShadowedClosure::new(NextPowerOfTwo),
+                InitVmState::with_stack(NextPowerOfTwo.prepare_vm_stack(arg)),
+                &[NextPowerOfTwo::INPUT_TOO_LARGE_ERROR_ID],
+            );
         }
     }
 }
