@@ -2,10 +2,10 @@
   {
     "name": "tasmlib_arithmetic_u128_safe_add",
     "benchmark_result": {
-      "clock_cycle_count": 29,
-      "hash_table_height": 30,
+      "clock_cycle_count": 26,
+      "hash_table_height": 24,
       "u32_table_height": 125,
-      "op_stack_table_height": 16,
+      "op_stack_table_height": 14,
       "ram_table_height": 0
     },
     "case": "CommonCase"
@@ -13,10 +13,10 @@
   {
     "name": "tasmlib_arithmetic_u128_safe_add",
     "benchmark_result": {
-      "clock_cycle_count": 29,
-      "hash_table_height": 30,
+      "clock_cycle_count": 26,
+      "hash_table_height": 24,
       "u32_table_height": 127,
-      "op_stack_table_height": 16,
+      "op_stack_table_height": 14,
       "ram_table_height": 0
     },
     "case": "WorstCase"
