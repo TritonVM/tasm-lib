@@ -56,6 +56,8 @@ impl BasicSnippet for ShiftRightI128 {
         library: &mut crate::prelude::Library,
     ) -> Vec<triton_vm::prelude::LabelledInstruction> {
         let shr_i128_by_32n = "tasmlib_arithmetic_u128_shift_right_i128_by_32n".to_string();
+        let clean_up_for_early_return =
+            "tasmlib_arithmetic_u128_shift_right_i128_early_return".to_string();
         let entrypoint = self.entrypoint();
 
         let is_u32 = library.import(Box::new(Isu32));
@@ -91,6 +93,7 @@ impl BasicSnippet for ShiftRightI128 {
                 /* extract top bit */
 
                 dup 4 push 31 call {shr_u32}
+                hint top = stack[0]
                 // _ arg3 arg2 arg1 arg0 shamt top
 
 
@@ -100,6 +103,14 @@ impl BasicSnippet for ShiftRightI128 {
                 // _ arg3' arg2' arg1' arg0' (shamt % 32) top
                 // _ arg3' arg2' arg1' arg0' shamt' top
 
+
+                /* early return if possible */
+                dup 1 push 0 eq dup 0
+                // _ arg3' arg2' arg1' arg0' shamt' top (shamt' == 0) (shamt' == 0)
+
+                skiz call {clean_up_for_early_return}
+                skiz return
+                // _ arg3' arg2' arg1' arg0' shamt' top
 
                 /* shift right by the remainder modulo 32 */
 
@@ -215,6 +226,14 @@ impl BasicSnippet for ShiftRightI128 {
                 // _ top_limb arg3 arg2 arg1 (shamt-32) top
 
                 recurse
+
+            // BEFORE _ arg3' arg2' arg1' arg0' shamt' top b
+            // AFTER _ arg3' arg2' arg1' arg0' b
+            {clean_up_for_early_return}:
+                place 2
+                pop 2
+                return
+
         }
     }
 }
@@ -224,13 +243,18 @@ mod test {
     use itertools::Itertools;
     use num::BigUint;
     use num::PrimInt;
+    use proptest_arbitrary_interop::arb;
     use rand::rngs::StdRng;
     use rand::Rng;
     use rand::SeedableRng;
+    use test_strategy::proptest;
     use triton_vm::prelude::bfe;
     use triton_vm::prelude::BFieldElement;
+    use triton_vm::vm::NonDeterminism;
 
     use crate::prelude::BasicSnippet;
+    use crate::push_encodable;
+    use crate::test_helpers::test_rust_equivalence_given_complete_state;
     use crate::traits::closure::Closure;
     use crate::traits::closure::ShadowedClosure;
     use crate::traits::rust_shadow::RustShadow;
@@ -238,7 +262,7 @@ mod test {
     use super::ShiftRightI128;
 
     impl ShiftRightI128 {
-        pub(crate) fn prepare_state(&self, arg: u128, shamt: u32) -> Vec<BFieldElement> {
+        pub(crate) fn prepare_stack(&self, arg: u128, shamt: u32) -> Vec<BFieldElement> {
             let mut stack = self.init_stack_for_isolated_run();
 
             let mut arg_limbs = BigUint::from(arg)
@@ -256,6 +280,26 @@ mod test {
             stack.push(bfe!(shamt));
 
             stack
+        }
+
+        fn assert_expected_shift_behavior(&self, arg: u128, shamt: u32) {
+            let init_stack = self.prepare_stack(arg, shamt);
+
+            let expected = {
+                let res = arg.signed_shr(shamt);
+                let mut stack = self.init_stack_for_isolated_run();
+                push_encodable(&mut stack, &res);
+                stack
+            };
+
+            test_rust_equivalence_given_complete_state(
+                &ShadowedClosure::new(Self),
+                &init_stack,
+                &[],
+                &NonDeterminism::default(),
+                &None,
+                Some(&expected),
+            );
         }
     }
 
@@ -289,12 +333,47 @@ mod test {
             let mut rng = StdRng::from_seed(seed);
             let arg: u128 = rng.gen();
             let shamt: u32 = rng.gen_range(0..128);
-            self.prepare_state(arg, shamt)
+            self.prepare_stack(arg, shamt)
         }
     }
 
     #[test]
-    fn test_shr_i128() {
+    fn standard_test() {
         ShadowedClosure::new(ShiftRightI128).test()
+    }
+
+    #[proptest]
+    fn proptest(#[strategy(arb())] arg: u128, #[strategy(0u32..128)] shamt: u32) {
+        ShiftRightI128.assert_expected_shift_behavior(arg, shamt);
+    }
+
+    #[test]
+    fn test_edge_cases() {
+        [0, 1, u32::MAX]
+            .into_iter()
+            .map(u128::from)
+            .tuple_combinations()
+            .map(|(l0, l1, l2, l3)| l0 + (l1 << 32) + (l2 << 64) + (l3 << 96))
+            .cartesian_product(
+                [0, 1, 16, 31]
+                    .into_iter()
+                    .cartesian_product(0..4)
+                    .map(|(l, r)| l + 32 * r),
+            )
+            .for_each(|(arg, shamt)| {
+                ShiftRightI128.assert_expected_shift_behavior(arg, shamt);
+            });
+    }
+}
+
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use crate::traits::closure::ShadowedClosure;
+    use crate::traits::rust_shadow::RustShadow;
+
+    #[test]
+    fn shift_right_i128_benchmark() {
+        ShadowedClosure::new(ShiftRightI128).bench()
     }
 }
