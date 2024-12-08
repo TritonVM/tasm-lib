@@ -1,5 +1,6 @@
 use triton_vm::prelude::*;
 
+use crate::arithmetic::u128::overflowing_add::OverflowingAddU128;
 use crate::data_type::DataType;
 use crate::library::Library;
 use crate::traits::basic_snippet::BasicSnippet;
@@ -25,70 +26,15 @@ impl BasicSnippet for SafeAdd {
 
     /// Four top elements of stack are assumed to be valid u32s. So to have
     /// a value that's less than 2^32.
-    fn code(&self, _library: &mut Library) -> Vec<LabelledInstruction> {
+    fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
+        let overflowing_add = library.import(Box::new(OverflowingAddU128));
         let entrypoint = self.entrypoint();
 
         triton_asm!(
             // BEFORE: _ rhs_3 rhs_2 rhs_1 rhs_0 lhs_3 lhs_2 lhs_1 lhs_0
             // AFTER:  _ sum_3 sum_2 sum_1 sum_0
             {entrypoint}:
-                swap 1 swap 4
-                add
-                // _ rhs_3 rhs_2 rhs_1 lhs_1 lhs_3 lhs_2 (lhs_0 + rhs_0)
-
-                split
-                // _ rhs_3 rhs_2 rhs_1 lhs_1 lhs_3 lhs_2 (lhs_0 + rhs_0)_hi (lhs_0 + rhs_0)_lo
-
-                // rename:
-                // _ rhs_3 rhs_2 rhs_1 lhs_1 lhs_3 lhs_2 carry_1 sum_0
-
-                swap 4
-                // _ rhs_3 rhs_2 rhs_1 sum_0 lhs_3 lhs_2 carry_1 lhs_1
-
-                add
-                // _ rhs_3 rhs_2 rhs_1 sum_0 lhs_3 lhs_2 lhs_1'
-
-                swap 1 swap 4
-                // _ rhs_3 rhs_2 lhs_2 sum_0 lhs_3 lhs_1' rhs_1
-
-                add
-                // _ rhs_3 rhs_2 lhs_2 sum_0 lhs_3 (lhs_1' + rhs_1)
-
-                split
-                // _ rhs_3 rhs_2 lhs_2 sum_0 lhs_3 carry_2 sum_1
-
-                swap 4
-                // _ rhs_3 rhs_2 sum_1 sum_0 lhs_3 carry_2 lhs_2
-
-                add
-                // _ rhs_3 rhs_2 sum_1 sum_0 lhs_3 lhs_2'
-
-                swap 1 swap 4
-                // _ rhs_3 lhs_3 sum_1 sum_0 lhs_2' rhs_2
-
-                add
-                // _ rhs_3 lhs_3 sum_1 sum_0 (lhs_2' + rhs_2)
-
-                split
-                // _ rhs_3 lhs_3 sum_1 sum_0 carry_3 sum_2
-
-                swap 4
-                // _ rhs_3 sum_2 sum_1 sum_0 carry_3 lhs_3
-
-                add
-                // _ rhs_3 sum_2 sum_1 sum_0 lhs_3'
-
-                dup 4
-                // _ rhs_3 sum_2 sum_1 sum_0 lhs_3' rhs_3
-
-                add
-                // _ rhs_3 sum_2 sum_1 sum_0 (lhs_3' + rhs_3)
-
-                split
-                // _ rhs_3 sum_2 sum_1 sum_0 overflow sum_3
-
-                swap 5
-                pop 1
+                call {overflowing_add}
                 // _ sum_3 sum_2 sum_1 sum_0 overflow
 
                 push 0
@@ -131,7 +77,7 @@ mod tests {
         expected.push(BFieldElement::new(1 << 4));
         expected.push(BFieldElement::new(0));
         expected.push(BFieldElement::new(0));
-        snippet.prop_add(1u128 << 67, 1u128 << 67, Some(&expected))
+        snippet.assert_expected_add_behavior(1u128 << 67, 1u128 << 67, Some(&expected))
     }
 
     #[test]
@@ -188,7 +134,12 @@ mod tests {
     }
 
     impl SafeAdd {
-        fn prop_add(&self, lhs: u128, rhs: u128, expected: Option<&[BFieldElement]>) {
+        fn assert_expected_add_behavior(
+            &self,
+            lhs: u128,
+            rhs: u128,
+            expected: Option<&[BFieldElement]>,
+        ) {
             let init_stack = self.setup_init_stack(lhs, rhs);
 
             test_rust_equivalence_given_complete_state(
@@ -257,18 +208,18 @@ mod tests {
         }
 
         fn corner_case_initial_states(&self) -> Vec<Vec<BFieldElement>> {
-            let some_none_zero_value = (1u128 << 97) + (1u128 << 65) + u64::MAX as u128 - 456456;
-            let rhs_is_zero = self.setup_init_stack(some_none_zero_value, 0);
-            let lhs_is_zero = self.setup_init_stack(0, some_none_zero_value);
-            let rhs_is_zero_lhs_max = self.setup_init_stack(u128::MAX, 0);
-            let lhs_is_zero_rhs_max = self.setup_init_stack(0, u128::MAX);
+            let points_with_plus_minus_one = [0, 0x200000002fffffffffff908f8, 1 << 127, u128::MAX]
+                .into_iter()
+                .flat_map(|p| [p.checked_sub(1), Some(p), p.checked_add(1)])
+                .flatten()
+                .collect_vec();
 
-            vec![
-                rhs_is_zero,
-                lhs_is_zero,
-                rhs_is_zero_lhs_max,
-                lhs_is_zero_rhs_max,
-            ]
+            points_with_plus_minus_one
+                .iter()
+                .cartesian_product(&points_with_plus_minus_one)
+                .filter(|(&l, &r)| l.checked_add(r).is_some())
+                .map(|(&l, &r)| self.setup_init_stack(l, r))
+                .collect()
         }
     }
 }
