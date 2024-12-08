@@ -59,6 +59,7 @@ commit_parsers = [
   { message = "^style",             group = "<!-- 90 --> 🎨 Styling" },
   { message = "^build",             group = "<!-- 95 --> 🛠 Build" },
   { message = "^bench",             group = "<!-- 98 --> ⏱ Bench" },
+  { message = "^signoff",           group = "<!--110 --> 🖋 Snippet Sign-Off" },
   { footer = "^changelog: ?ignore", skip = true },
 ]
 
