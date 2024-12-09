@@ -7,34 +7,17 @@ use crate::traits::basic_snippet::BasicSnippet;
 #[derive(Clone, Debug, Copy)]
 pub struct OverflowingAddU128;
 
-impl BasicSnippet for OverflowingAddU128 {
-    fn entrypoint(&self) -> String {
-        "tasmlib_arithmetic_u128_overflowing_add".to_string()
-    }
-
-    fn inputs(&self) -> Vec<(DataType, String)> {
-        vec![
-            (DataType::U128, "lhs".to_owned()),
-            (DataType::U128, "rhs".to_owned()),
-        ]
-    }
-
-    fn outputs(&self) -> Vec<(DataType, String)> {
-        vec![
-            (DataType::U128, "sum".to_owned()),
-            (DataType::Bool, "overflow".to_owned()),
-        ]
-    }
-
-    /// Four top elements of stack are assumed to be valid u32s. So to have
-    /// a value that's less than 2^32.
-    fn code(&self, _: &mut Library) -> Vec<LabelledInstruction> {
+impl OverflowingAddU128 {
+    /// Generate code to perform an addition on `u128`s.
+    ///
+    /// This function is called by both this snippet and [`SafeAdd`].
+    ///
+    /// BEFORE: _ rhs_3 rhs_2 rhs_1 rhs_0 lhs_3 lhs_2 lhs_1 lhs_0
+    /// AFTER:  _ sum_3 sum_2 sum_1 sum_0 is_overflow
+    ///                                   ^^^^^^^^^^^
+    /// Don't forget to adapt the signature when using this function elsewhere.
+    pub(crate) fn addition_code() -> Vec<LabelledInstruction> {
         triton_asm!(
-            // BEFORE: _ rhs_3 rhs_2 rhs_1 rhs_0 lhs_3 lhs_2 lhs_1 lhs_0
-            // AFTER:  _ sum_3 sum_2 sum_1 sum_0 is_overflow
-            //                                   ^^^^^^^^^^^
-            //             don't forget to adapt signature when copy-pasting
-            {self.entrypoint()}:
                 pick 4
                 // _ rhs_3 rhs_2 rhs_1 lhs_3 lhs_2 lhs_1 lhs_0 rhs_0
 
@@ -72,9 +55,39 @@ impl BasicSnippet for OverflowingAddU128 {
                 place 4
                 // _ sum_3 sum_2 sum_1 sum_0 carry_4
                 // _ sum_3 sum_2 sum_1 sum_0 is_overflow
-
-                return
         )
+    }
+}
+
+impl BasicSnippet for OverflowingAddU128 {
+    fn entrypoint(&self) -> String {
+        "tasmlib_arithmetic_u128_overflowing_add".to_string()
+    }
+
+    fn inputs(&self) -> Vec<(DataType, String)> {
+        vec![
+            (DataType::U128, "lhs".to_owned()),
+            (DataType::U128, "rhs".to_owned()),
+        ]
+    }
+
+    fn outputs(&self) -> Vec<(DataType, String)> {
+        vec![
+            (DataType::U128, "sum".to_owned()),
+            (DataType::Bool, "overflow".to_owned()),
+        ]
+    }
+
+    /// Four top elements of stack are assumed to be valid u32s. So to have
+    /// a value that's less than 2^32.
+    fn code(&self, _: &mut Library) -> Vec<LabelledInstruction> {
+        let add_code = Self::addition_code();
+
+        triton_asm! {
+            {self.entrypoint()}:
+                {&add_code}
+                return
+        }
     }
 }
 
