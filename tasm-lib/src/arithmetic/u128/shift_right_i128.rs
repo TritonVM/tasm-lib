@@ -8,7 +8,11 @@ use crate::data_type::DataType;
 use crate::library::Library;
 use crate::prelude::BasicSnippet;
 
-/// Sign-preserving right-shift for `u128`s.
+/// Sign-preserving right-shift for 128-bit integers.
+///
+/// If the the 128-bit integer is signed (`i128`), this corresponds to regular
+/// right-shift (`>>`). If it is unsigned (`u128`) then this operation
+/// corresponds to `signed_shr`. Either way, the top bit is repeated.
 ///
 /// # Behavior
 ///
@@ -16,12 +20,12 @@ use crate::prelude::BasicSnippet;
 ///
 /// AFTER: `_ res3 res2 res1 res0`
 ///
-/// where `res == arg >> shamt` as `u128`s.
+/// where `res == arg >> shamt` as `i128`s.
 ///
 /// # Preconditions
 ///
 ///  - `arg` consists of 4 `u32`s
-///  - `shamt` is in `[0:128]`
+///  - `shamt` is in `[0:128)`
 ///
 /// # Postconditions
 ///
