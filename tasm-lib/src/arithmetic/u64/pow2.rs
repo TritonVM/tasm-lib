@@ -14,9 +14,9 @@ use crate::InitVmState;
 /// Consumes top element which is interpreted as exponent. Pushes a
 /// U32<2> to the top of the stack. So grows the stack by 1.
 #[derive(Clone, Debug)]
-pub struct Pow2U64;
+pub struct Pow2;
 
-impl DeprecatedSnippet for Pow2U64 {
+impl DeprecatedSnippet for Pow2 {
     fn entrypoint_name(&self) -> String {
         "tasmlib_arithmetic_u64_pow2".to_string()
     }
@@ -108,7 +108,7 @@ mod tests {
 
     #[test]
     fn pow2_static_test() {
-        test_rust_equivalence_multiple_deprecated(&Pow2U64, true);
+        test_rust_equivalence_multiple_deprecated(&Pow2, true);
     }
 
     fn prop_exp_static(exponent: u8) {
@@ -121,7 +121,7 @@ mod tests {
         expected.push(BFieldElement::new(res >> 32));
         expected.push(BFieldElement::new(res & u32::MAX as u64));
         test_rust_equivalence_given_input_values_deprecated(
-            &Pow2U64,
+            &Pow2,
             &init_stack,
             &[],
             HashMap::default(),
@@ -144,6 +144,6 @@ mod benches {
 
     #[test]
     fn pow2_static_benchmark() {
-        bench_and_write(Pow2U64);
+        bench_and_write(Pow2);
     }
 }

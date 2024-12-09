@@ -8,9 +8,9 @@ use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::InitVmState;
 
 #[derive(Clone, Debug)]
-pub struct LeadingZerosU64;
+pub struct LeadingZeros;
 
-impl DeprecatedSnippet for LeadingZerosU64 {
+impl DeprecatedSnippet for LeadingZeros {
     fn entrypoint_name(&self) -> String {
         "tasmlib_arithmetic_u64_leading_zeros".to_string()
     }
@@ -131,7 +131,7 @@ mod tests {
 
     #[test]
     fn snippet_test() {
-        test_rust_equivalence_multiple_deprecated(&LeadingZerosU64, true);
+        test_rust_equivalence_multiple_deprecated(&LeadingZeros, true);
     }
 
     #[test]
@@ -170,7 +170,7 @@ mod tests {
         expected_stack.push(BFieldElement::new(leading_zeros as u64));
 
         test_rust_equivalence_given_input_values_deprecated(
-            &LeadingZerosU64,
+            &LeadingZeros,
             &init_stack,
             &[],
             HashMap::default(),
@@ -186,6 +186,6 @@ mod benches {
 
     #[test]
     fn u32_leading_zeros_benchmark() {
-        bench_and_write(LeadingZerosU64);
+        bench_and_write(LeadingZeros);
     }
 }

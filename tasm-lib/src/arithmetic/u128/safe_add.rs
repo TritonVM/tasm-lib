@@ -5,9 +5,9 @@ use crate::library::Library;
 use crate::traits::basic_snippet::BasicSnippet;
 
 #[derive(Clone, Debug, Copy)]
-pub struct SafeAddU128;
+pub struct SafeAdd;
 
-impl BasicSnippet for SafeAddU128 {
+impl BasicSnippet for SafeAdd {
     fn entrypoint(&self) -> String {
         "tasmlib_arithmetic_u128_safe_add".to_string()
     }
@@ -120,12 +120,12 @@ mod tests {
 
     #[test]
     fn add_u128_test() {
-        ShadowedClosure::new(SafeAddU128).test()
+        ShadowedClosure::new(SafeAdd).test()
     }
 
     #[test]
     fn add_u128_unit_test() {
-        let snippet = SafeAddU128;
+        let snippet = SafeAdd;
         let mut expected = snippet.init_stack_for_isolated_run();
         expected.push(BFieldElement::new(0));
         expected.push(BFieldElement::new(1 << 4));
@@ -136,7 +136,7 @@ mod tests {
 
     #[test]
     fn add_u128_overflow_test() {
-        let snippet = SafeAddU128;
+        let snippet = SafeAdd;
 
         for (a, b) in [
             (1u128 << 127, 1u128 << 127),
@@ -187,12 +187,12 @@ mod tests {
         }
     }
 
-    impl SafeAddU128 {
+    impl SafeAdd {
         fn prop_add(&self, lhs: u128, rhs: u128, expected: Option<&[BFieldElement]>) {
             let init_stack = self.setup_init_stack(lhs, rhs);
 
             test_rust_equivalence_given_complete_state(
-                &ShadowedClosure::new(SafeAddU128),
+                &ShadowedClosure::new(SafeAdd),
                 &init_stack,
                 &[],
                 &NonDeterminism::default(),
@@ -211,7 +211,7 @@ mod tests {
         }
     }
 
-    impl Closure for SafeAddU128 {
+    impl Closure for SafeAdd {
         fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
             fn to_u128(a: u32, b: u32, c: u32, d: u32) -> u128 {
                 a as u128
@@ -281,6 +281,6 @@ mod benches {
 
     #[test]
     fn add_u128_benchmark() {
-        ShadowedClosure::new(SafeAddU128).bench()
+        ShadowedClosure::new(SafeAdd).bench()
     }
 }

@@ -1,19 +1,19 @@
 use rand::prelude::*;
 use triton_vm::prelude::*;
 
-use super::decr_u64::DecrU64;
-use super::xor_u64::XorU64;
-use crate::arithmetic::u64::and_u64::AndU64;
-use crate::arithmetic::u64::log_2_floor_u64::Log2FloorU64;
+use super::decr::Decr;
+use super::xor::Xor;
+use crate::arithmetic::u64::and::And;
+use crate::arithmetic::u64::log_2_floor::Log2Floor;
 use crate::data_type::DataType;
 use crate::empty_stack;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::InitVmState;
 
 #[derive(Clone, Debug)]
-pub struct IndexOfLastNonZeroBitU64;
+pub struct IndexOfLastNonZeroBit;
 
-impl DeprecatedSnippet for IndexOfLastNonZeroBitU64 {
+impl DeprecatedSnippet for IndexOfLastNonZeroBit {
     fn entrypoint_name(&self) -> String {
         "tasmlib_arithmetic_u64_index_of_last_nonzero_bit".to_string()
     }
@@ -40,10 +40,10 @@ impl DeprecatedSnippet for IndexOfLastNonZeroBitU64 {
 
     fn function_code(&self, library: &mut crate::library::Library) -> String {
         let entrypoint = self.entrypoint_name();
-        let decr = library.import(Box::new(DecrU64));
-        let xor = library.import(Box::new(XorU64));
-        let and = library.import(Box::new(AndU64));
-        let log_2_floor_u64 = library.import(Box::new(Log2FloorU64));
+        let decr = library.import(Box::new(Decr));
+        let xor = library.import(Box::new(Xor));
+        let and = library.import(Box::new(And));
+        let log_2_floor_u64 = library.import(Box::new(Log2Floor));
 
         const U32MAX: u32 = u32::MAX;
         // Finds the least significant set bit using `x & ~(x - 1)` where
@@ -149,7 +149,7 @@ mod tests {
 
     #[test]
     fn index_of_last_nonzero_bit_test() {
-        test_rust_equivalence_multiple_deprecated(&IndexOfLastNonZeroBitU64, true);
+        test_rust_equivalence_multiple_deprecated(&IndexOfLastNonZeroBit, true);
     }
 
     fn index_of_last_nonzero_bit_prop(value: u64, expected: u32) {
@@ -162,7 +162,7 @@ mod tests {
         expected_output.push(BFieldElement::new(expected as u64));
 
         test_rust_equivalence_given_input_values_deprecated(
-            &IndexOfLastNonZeroBitU64,
+            &IndexOfLastNonZeroBit,
             &init_stack,
             &[],
             HashMap::default(),
@@ -178,7 +178,7 @@ mod tests {
         init_stack.push(BFieldElement::zero());
 
         test_rust_equivalence_given_input_values_deprecated(
-            &IndexOfLastNonZeroBitU64,
+            &IndexOfLastNonZeroBit,
             &init_stack,
             &[],
             HashMap::default(),
@@ -194,7 +194,7 @@ mod tests {
         init_stack.push(BFieldElement::new(1 << 32));
 
         test_rust_equivalence_given_input_values_deprecated(
-            &IndexOfLastNonZeroBitU64,
+            &IndexOfLastNonZeroBit,
             &init_stack,
             &[],
             HashMap::default(),
@@ -210,7 +210,7 @@ mod tests {
         init_stack.push(BFieldElement::zero());
 
         test_rust_equivalence_given_input_values_deprecated(
-            &IndexOfLastNonZeroBitU64,
+            &IndexOfLastNonZeroBit,
             &init_stack,
             &[],
             HashMap::default(),
@@ -249,6 +249,6 @@ mod benches {
 
     #[test]
     fn index_of_last_nonzero_bit_benchmark() {
-        bench_and_write(IndexOfLastNonZeroBitU64);
+        bench_and_write(IndexOfLastNonZeroBit);
     }
 }

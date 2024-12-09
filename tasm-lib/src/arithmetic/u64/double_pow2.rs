@@ -9,9 +9,9 @@ use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::InitVmState;
 
 #[derive(Clone, Debug)]
-pub struct DoublePow2U64;
+pub struct DoublePow2;
 
-impl DeprecatedSnippet for DoublePow2U64 {
+impl DeprecatedSnippet for DoublePow2 {
     fn entrypoint_name(&self) -> String {
         "tasmlib_arithmetic_u64_pow2_double".to_string()
     }
@@ -142,7 +142,7 @@ mod tests {
 
     #[test]
     fn double_pow2_u64_test() {
-        test_rust_equivalence_multiple_deprecated(&DoublePow2U64, true);
+        test_rust_equivalence_multiple_deprecated(&DoublePow2, true);
     }
 }
 
@@ -153,6 +153,6 @@ mod benches {
 
     #[test]
     fn double_pow2_u64_benchmark() {
-        bench_and_write(DoublePow2U64);
+        bench_and_write(DoublePow2);
     }
 }

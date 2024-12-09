@@ -8,13 +8,13 @@ use triton_vm::twenty_first::prelude::U32s;
 
 use crate::arithmetic::u32::safeadd::Safeadd;
 use crate::arithmetic::u32::safesub::Safesub;
-use crate::arithmetic::u64::and_u64::AndU64;
-use crate::arithmetic::u64::leading_zeros_u64::LeadingZerosU64;
-use crate::arithmetic::u64::lt_u64::LtU64ConsumeArgs;
-use crate::arithmetic::u64::or_u64::OrU64;
-use crate::arithmetic::u64::shift_left_u64::ShiftLeftU64;
-use crate::arithmetic::u64::shift_right_u64::ShiftRightU64;
-use crate::arithmetic::u64::sub_u64::SubU64;
+use crate::arithmetic::u64::and::And;
+use crate::arithmetic::u64::leading_zeros::LeadingZeros;
+use crate::arithmetic::u64::lt::Lt;
+use crate::arithmetic::u64::or::Or;
+use crate::arithmetic::u64::shift_left::ShiftLeft;
+use crate::arithmetic::u64::shift_right::ShiftRight;
+use crate::arithmetic::u64::sub::Sub;
 use crate::data_type::DataType;
 use crate::empty_stack;
 use crate::library::Library;
@@ -23,9 +23,9 @@ use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::InitVmState;
 
 #[derive(Clone, Debug)]
-pub struct DivModU64;
+pub struct DivMod;
 
-impl DeprecatedSnippet for DivModU64 {
+impl DeprecatedSnippet for DivMod {
     fn entrypoint_name(&self) -> String {
         "tasmlib_arithmetic_u64_div_mod".to_string()
     }
@@ -62,14 +62,14 @@ impl DeprecatedSnippet for DivModU64 {
 
     fn function_code(&self, library: &mut Library) -> String {
         let entrypoint = self.entrypoint_name();
-        let shift_right_u64 = library.import(Box::new(ShiftRightU64));
-        let shift_left_u64 = library.import(Box::new(ShiftLeftU64));
-        let and_u64 = library.import(Box::new(AndU64));
-        let lt_u64 = library.import(Box::new(LtU64ConsumeArgs));
-        let or_u64 = library.import(Box::new(OrU64));
-        let sub_u64 = library.import(Box::new(SubU64));
+        let shift_right_u64 = library.import(Box::new(ShiftRight));
+        let shift_left_u64 = library.import(Box::new(ShiftLeft));
+        let and_u64 = library.import(Box::new(And));
+        let lt_u64 = library.import(Box::new(Lt));
+        let or_u64 = library.import(Box::new(Or));
+        let sub_u64 = library.import(Box::new(Sub));
         let sub_u32 = library.import(Box::new(Safesub));
-        let leading_zeros_u64 = library.import(Box::new(LeadingZerosU64));
+        let leading_zeros_u64 = library.import(Box::new(LeadingZeros));
         let add_u32 = library.import(Box::new(Safeadd));
         let spilled_divisor_alloc = library.kmalloc(2);
 
@@ -528,7 +528,7 @@ mod tests {
 
     #[test]
     fn div_mod_u64_test() {
-        test_rust_equivalence_multiple_deprecated(&DivModU64, true);
+        test_rust_equivalence_multiple_deprecated(&DivMod, true);
     }
 
     #[test]
@@ -539,7 +539,7 @@ mod tests {
         // TODO: `run_tasm` ought to return an error on failure instead of
         // crashing!
         let mut init_state = prepare_state(100, 0);
-        DivModU64.link_and_run_tasm_from_state_for_test(&mut init_state);
+        DivMod.link_and_run_tasm_from_state_for_test(&mut init_state);
     }
 
     #[test]
@@ -550,7 +550,7 @@ mod tests {
         // TODO: `run_tasm` ought to return an error on failure instead of
         // crashing!
         let mut init_state = prepare_state(1u64 << 33, 0);
-        DivModU64.link_and_run_tasm_from_state_for_test(&mut init_state);
+        DivMod.link_and_run_tasm_from_state_for_test(&mut init_state);
     }
 
     #[test]
@@ -637,7 +637,7 @@ mod tests {
         }
 
         test_rust_equivalence_given_input_values_deprecated(
-            &DivModU64,
+            &DivMod,
             &init_stack,
             &[],
             HashMap::default(),
@@ -653,6 +653,6 @@ mod benches {
 
     #[test]
     fn div_mod_u64_benchmark() {
-        bench_and_write(DivModU64);
+        bench_and_write(DivMod);
     }
 }

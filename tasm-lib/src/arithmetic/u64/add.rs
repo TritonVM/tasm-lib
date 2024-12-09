@@ -5,13 +5,13 @@ use crate::data_type::DataType;
 use crate::library::Library;
 
 #[derive(Clone, Debug)]
-pub struct AddU64;
+pub struct Add;
 
-impl AddU64 {
+impl Add {
     pub const OVERFLOW_ERROR_ID: i128 = 310;
 }
 
-impl BasicSnippet for AddU64 {
+impl BasicSnippet for Add {
     fn inputs(&self) -> Vec<(DataType, String)> {
         ["rhs", "lhs"]
             .map(|side| (DataType::U64, side.to_string()))
@@ -76,7 +76,7 @@ mod tests {
     use crate::traits::rust_shadow::RustShadow;
     use crate::InitVmState;
 
-    impl AddU64 {
+    impl Add {
         fn prepare_stack(&self, left: u64, right: u64) -> Vec<BFieldElement> {
             let mut stack = self.init_stack_for_isolated_run();
             push_encodable(&mut stack, &right);
@@ -86,7 +86,7 @@ mod tests {
         }
     }
 
-    impl Closure for AddU64 {
+    impl Closure for Add {
         fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
             let sum = pop_encodable::<u64>(stack) + pop_encodable::<u64>(stack);
             push_encodable(stack, &sum);
@@ -122,13 +122,13 @@ mod tests {
 
     #[test]
     fn unit_test() {
-        ShadowedClosure::new(AddU64).test();
+        ShadowedClosure::new(Add).test();
     }
 
     #[proptest]
     fn proptest(left: u64, #[strategy(0..u64::MAX - #left)] right: u64) {
-        let initial_state = InitVmState::with_stack(AddU64.prepare_stack(left, right));
-        test_rust_equivalence_given_execution_state(&ShadowedClosure::new(AddU64), initial_state);
+        let initial_state = InitVmState::with_stack(Add.prepare_stack(left, right));
+        test_rust_equivalence_given_execution_state(&ShadowedClosure::new(Add), initial_state);
     }
 
     #[proptest]
@@ -136,9 +136,9 @@ mod tests {
         prop_assume!(left.checked_add(right).is_none());
 
         test_assertion_failure(
-            &ShadowedClosure::new(AddU64),
-            InitVmState::with_stack(AddU64.prepare_stack(left, right)),
-            &[AddU64::OVERFLOW_ERROR_ID],
+            &ShadowedClosure::new(Add),
+            InitVmState::with_stack(Add.prepare_stack(left, right)),
+            &[Add::OVERFLOW_ERROR_ID],
         );
     }
 }
@@ -151,6 +151,6 @@ mod benches {
 
     #[test]
     fn bench() {
-        ShadowedClosure::new(AddU64).bench()
+        ShadowedClosure::new(Add).bench()
     }
 }

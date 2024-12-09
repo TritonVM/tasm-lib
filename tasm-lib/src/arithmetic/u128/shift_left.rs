@@ -9,15 +9,11 @@ use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::InitVmState;
 
 #[derive(Clone, Debug)]
-pub struct ShiftLeftStaticU128<const N: u8>;
+pub struct ShiftLeft;
 
-impl<const N: u8> DeprecatedSnippet for ShiftLeftStaticU128<N> {
+impl DeprecatedSnippet for ShiftLeft {
     fn entrypoint_name(&self) -> String {
-        assert!(
-            N <= 32,
-            "Static left-shift snippet cannot shift by more than 32 bits"
-        );
-        format!("tasmlib_arithmetic_u128_shift_left_static_{N}")
+        "tasmlib_arithmetic_u128_shift_left".to_string()
     }
 
     fn input_field_names(&self) -> Vec<String>
@@ -29,11 +25,12 @@ impl<const N: u8> DeprecatedSnippet for ShiftLeftStaticU128<N> {
             "value_limb2".to_string(),
             "value_limb1".to_string(),
             "value_limb0".to_string(),
+            "shift_amount".to_string(),
         ]
     }
 
     fn input_types(&self) -> Vec<DataType> {
-        vec![DataType::U128]
+        vec![DataType::U128, DataType::U32]
     }
 
     fn output_field_names(&self) -> Vec<String>
@@ -56,29 +53,43 @@ impl<const N: u8> DeprecatedSnippet for ShiftLeftStaticU128<N> {
     where
         Self: Sized,
     {
-        0
+        -1
     }
 
     fn function_code(&self, _library: &mut Library) -> String {
-        assert!(
-            N <= 32,
-            "Static shift-snippet cannot left-shift by more than 32 bits"
-        );
         let entrypoint = self.entrypoint_name();
-        let pow_2_n = 2u64.pow(N as u32);
         format!(
             "
-            // BEFORE: _ limb3 limb2 limb1 limb0
+            // BEFORE: _ limb3 limb2 limb1 limb0 shamt
             // AFTER:  _ (value << shift)_3 (value << shift)_2 (value << shift)_1 (value << shift)_0
             {entrypoint}:
-                push {pow_2_n}
+                // Bounds check: Verify that shift amount is less than 128.
+                push 128
+                dup 1
+                lt
+                assert
+                // _ limb3 limb2 limb1 limb0 shamt
+
+                // If shift amount is greater than 32, we need to special-case!
+                dup 0
+                push 32
+                lt
+                // _ v3 v2 v1 v0 shift (shift > 32)
+
+                skiz
+                    call {entrypoint}_handle_hi_shift
+                // _ v3 v2 v1 v0 shift
+
+                push 2
+                pow
                 // _ v3 v2 v1 v0 (2 ^ shift)
 
-                mul             // _ v3 v2 v1 v0<<shift
-                swap 3          // _ v0<<shift v2 v1 v3
-                push {pow_2_n}
-                xb_mul           // _ v0<<shift v2<<shift v1<<shift v3<<shift
-                swap 3          // _ v3<<shift v2<<shift v1<<shift v0<<shift
+                dup 0  // _ v3 v2 v1 v0 (2 ^ shift) (2 ^ shift)
+                swap 5 // _ (2 ^ shift) v2 v1 v0 (2 ^ shift) v3
+
+                mul    // _ (2 ^ shift) v2 v1 v0 v3<<shift
+                swap 4 // _ v3<<shift v2 v1 v0 (2^shift)
+                xb_mul  // _ v3<<shift v2<<shift v1<<shift v0<<shift
 
                 split  // _ v3s v2s v1s v0s_hi v0s_lo
                 swap 2 // _ v3s v2s v0s_lo v0s_hi v1s
@@ -87,6 +98,7 @@ impl<const N: u8> DeprecatedSnippet for ShiftLeftStaticU128<N> {
                 split  // _ v3s v1s_lo v0s_lo v0s_hi v1s_hi v2s_hi v2s_lo
                 swap 6 // _ v2s_lo v1s_lo v0s_lo v0s_hi v1s_hi v2s_hi v3s
                 split  // _ v2s_lo v1s_lo v0s_lo v0s_hi v1s_hi v2s_hi v3s_hi v3s_lo
+
 
                 swap 1 // _ v2s_lo v1s_lo v0s_lo v0s_hi v1s_hi v2s_hi v3s_lo v3s_hi
                 pop 1  // _ v2s_lo v1s_lo v0s_lo v0s_hi v1s_hi v2s_hi v3s_lo
@@ -98,6 +110,37 @@ impl<const N: u8> DeprecatedSnippet for ShiftLeftStaticU128<N> {
                 swap 1 // _ w3 w2 w1 w0
 
                 return
+
+            // start: _ v3 v2 v1 v0 shift
+            // end: _ (value << 32)_3 (value << 32)_2 (value << 32)_1 (value << 32)_0 (shift - 32)
+            {entrypoint}_handle_hi_shift:
+                push -32
+                add
+                // _ v3 v2 v1 v0 (shift - 32)
+
+                swap 4 // _ (shift-32) v2 v1 v0 v3
+                swap 3
+                swap 2
+                swap 1 // _ (shift-32) v3 v2 v1 v0
+                push 32
+                // _ (shift - 32) v3 v2 v1 v0 32
+
+                call {entrypoint}
+                // _ (shift - 32) (value << 32)_3 (value << 32)_2 (value << 32)_1 (value << 32)_0
+
+                swap 1 // _ (shift - 32) (value << 32)_3 (value << 32)_2 (value << 32)_0 (value << 32)_1
+                swap 2 // _ (shift - 32) (value << 32)_3 (value << 32)_1 (value << 32)_0 (value << 32)_2
+                swap 3 // _ (shift - 32) (value << 32)_2 (value << 32)_1 (value << 32)_0 (value << 32)_3
+                swap 4 // _ (value << 32)_3 (value << 32)_2 (value << 32)_1 (value << 32)_0 (shift - 32)
+
+                // if (shift - 32) > 32, we need to special-case again
+                dup 0
+                push 32
+                lt
+                skiz
+                    recurse
+
+                return
             "
         )
     }
@@ -106,7 +149,10 @@ impl<const N: u8> DeprecatedSnippet for ShiftLeftStaticU128<N> {
     where
         Self: Sized,
     {
-        vec![]
+        vec![
+            "Shift amount is 128 or greater".to_string(),
+            "inputs are not valid u32s".to_string(),
+        ]
     }
 
     fn gen_input_states(&self) -> Vec<InitVmState>
@@ -114,8 +160,10 @@ impl<const N: u8> DeprecatedSnippet for ShiftLeftStaticU128<N> {
         Self: Sized,
     {
         let mut ret = vec![];
-        for _ in 0..5 {
-            ret.push(prepare_state(random::<u128>()));
+        for _ in 0..3 {
+            for i in 0..128 {
+                ret.push(prepare_state(random::<u128>(), i));
+            }
         }
         ret
     }
@@ -124,14 +172,14 @@ impl<const N: u8> DeprecatedSnippet for ShiftLeftStaticU128<N> {
     where
         Self: Sized,
     {
-        prepare_state(0x1282)
+        prepare_state(0x1282, 15)
     }
 
     fn worst_case_input_state(&self) -> InitVmState
     where
         Self: Sized,
     {
-        prepare_state(0x123456789abcdef)
+        prepare_state(0x123456789abcdef, 125)
     }
 
     fn rust_shadowing(
@@ -143,13 +191,16 @@ impl<const N: u8> DeprecatedSnippet for ShiftLeftStaticU128<N> {
     ) where
         Self: Sized,
     {
+        // Find shift amount
+        let shift_amount: u32 = stack.pop().unwrap().try_into().unwrap();
+
         // Original value
         let mut value = 0u128;
         for i in 0..4 {
             value |= (stack.pop().unwrap().value() as u128) << (i * 32);
         }
 
-        value <<= N;
+        value <<= shift_amount;
 
         for i in 0..4 {
             let limb = ((value >> ((3 - i) * 32)) & u32::MAX as u128) as u32;
@@ -158,9 +209,10 @@ impl<const N: u8> DeprecatedSnippet for ShiftLeftStaticU128<N> {
     }
 }
 
-fn prepare_state(value: u128) -> InitVmState {
+fn prepare_state(value: u128, shift_amount: u32) -> InitVmState {
     let mut init_stack = empty_stack();
     push_encodable(&mut init_stack, &value.encode());
+    init_stack.push(BFieldElement::new(shift_amount as u64));
     InitVmState::with_stack(init_stack)
 }
 
@@ -174,65 +226,21 @@ mod tests {
 
     #[test]
     fn shift_left_u128_test() {
-        test_rust_equivalence_multiple_deprecated(&ShiftLeftStaticU128::<0>, false);
-        test_rust_equivalence_multiple_deprecated(&ShiftLeftStaticU128::<1>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftLeftStaticU128::<2>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftLeftStaticU128::<3>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftLeftStaticU128::<4>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftLeftStaticU128::<5>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftLeftStaticU128::<6>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftLeftStaticU128::<7>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftLeftStaticU128::<8>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftLeftStaticU128::<9>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftLeftStaticU128::<10>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftLeftStaticU128::<11>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftLeftStaticU128::<12>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftLeftStaticU128::<13>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftLeftStaticU128::<14>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftLeftStaticU128::<15>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftLeftStaticU128::<16>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftLeftStaticU128::<17>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftLeftStaticU128::<18>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftLeftStaticU128::<19>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftLeftStaticU128::<20>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftLeftStaticU128::<21>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftLeftStaticU128::<22>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftLeftStaticU128::<23>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftLeftStaticU128::<24>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftLeftStaticU128::<25>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftLeftStaticU128::<26>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftLeftStaticU128::<27>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftLeftStaticU128::<28>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftLeftStaticU128::<29>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftLeftStaticU128::<30>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftLeftStaticU128::<31>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftLeftStaticU128::<32>, true);
+        test_rust_equivalence_multiple_deprecated(&ShiftLeft, true);
     }
 
     #[test]
     fn shift_left_simple_test() {
-        prop_left_left::<1>(1);
-        prop_left_left::<2>(8);
+        prop_left_left(1, 1);
+        prop_left_left(8, 2);
     }
 
     #[test]
-    fn shift_left_max_values_test() {
-        prop_left_left::<0>(u128::MAX);
-        prop_left_left::<1>(u128::MAX);
-        prop_left_left::<12>(u128::MAX);
-        prop_left_left::<24>(u128::MAX);
-        prop_left_left::<31>(u128::MAX);
-        prop_left_left::<32>(u128::MAX);
-    }
-
-    #[test]
-    fn shift_left_zero_test() {
-        prop_left_left::<0>(0);
-        prop_left_left::<1>(0);
-        prop_left_left::<12>(0);
-        prop_left_left::<24>(0);
-        prop_left_left::<31>(0);
-        prop_left_left::<32>(0);
+    fn shift_left_max_values_and_zeros_test() {
+        for i in 0..128 {
+            prop_left_left(u128::MAX, i);
+            prop_left_left(0, i);
+        }
     }
 
     #[test]
@@ -243,20 +251,21 @@ mod tests {
         init_stack.push(BFieldElement::new(u32::MAX as u64));
         init_stack.push(BFieldElement::new(u32::MAX as u64));
         init_stack.push(BFieldElement::new(u32::MAX as u64));
-        ShiftLeftStaticU128::<33>
-            .link_and_run_tasm_from_state_for_test(&mut InitVmState::with_stack(init_stack));
+        init_stack.push(128u64.into());
+        ShiftLeft.link_and_run_tasm_from_state_for_test(&mut InitVmState::with_stack(init_stack));
     }
 
-    fn prop_left_left<const N: u8>(value: u128) {
+    fn prop_left_left(value: u128, shift_amount: u32) {
         let mut init_stack = empty_stack();
         for i in 0..4 {
             init_stack.push(BFieldElement::new(
                 ((value >> (32 * (3 - i))) as u32) as u64,
             ));
         }
+        init_stack.push(BFieldElement::new(shift_amount as u64));
 
-        let expected_u128 = value << N;
-        println!("{value} << {N} = {expected_u128}");
+        let expected_u128 = value << shift_amount;
+        println!("{value} << {shift_amount} = {expected_u128}");
 
         let mut expected_stack = empty_stack();
         for i in 0..4 {
@@ -266,7 +275,7 @@ mod tests {
         }
 
         test_rust_equivalence_given_input_values_deprecated(
-            &ShiftLeftStaticU128::<N>,
+            &ShiftLeft,
             &init_stack,
             &[],
             HashMap::default(),
@@ -282,6 +291,6 @@ mod benches {
 
     #[test]
     fn shift_left_u128_benchmark() {
-        bench_and_write(ShiftLeftStaticU128::<5>);
+        bench_and_write(ShiftLeft);
     }
 }

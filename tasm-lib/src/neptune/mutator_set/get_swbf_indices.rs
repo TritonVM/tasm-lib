@@ -5,8 +5,8 @@ use rand::prelude::*;
 use triton_vm::prelude::*;
 use triton_vm::twenty_first::prelude::Sponge;
 
-use crate::arithmetic::u128::shift_left_static_u128;
-use crate::arithmetic::u128::shift_right_static_u128;
+use crate::arithmetic::u128::shift_left_static;
+use crate::arithmetic::u128::shift_right_static;
 use crate::data_type::DataType;
 use crate::empty_stack;
 use crate::hashing::algebraic_hasher::sample_indices::SampleIndices;
@@ -62,10 +62,10 @@ impl BasicSnippet for GetSwbfIndices {
 
         // TODO: This can be replaced by a bit-mask to save some clock cycles
         let divide_by_batch_size = library.import(Box::new(
-            shift_right_static_u128::ShiftRightStaticU128::<LOG2_BATCH_SIZE>,
+            shift_right_static::ShiftRightStatic::<LOG2_BATCH_SIZE>,
         ));
         let mul_by_chunk_size = library.import(Box::new(
-            shift_left_static_u128::ShiftLeftStaticU128::<LOG2_CHUNK_SIZE>,
+            shift_left_static::ShiftLeftStatic::<LOG2_CHUNK_SIZE>,
         ));
 
         triton_asm!(

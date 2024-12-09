@@ -7,13 +7,13 @@ use triton_vm::prelude::*;
 use triton_vm::twenty_first::prelude::U32s;
 use twenty_first::util_types::mmr;
 
-use crate::arithmetic::u64::add_u64::AddU64;
-use crate::arithmetic::u64::and_u64::AndU64;
-use crate::arithmetic::u64::decr_u64::DecrU64;
-use crate::arithmetic::u64::log_2_floor_u64::Log2FloorU64;
-use crate::arithmetic::u64::lt_u64::LtU64PreserveArgs;
-use crate::arithmetic::u64::popcount_u64::PopCountU64;
-use crate::arithmetic::u64::pow2_u64::Pow2U64;
+use crate::arithmetic::u64::add::Add;
+use crate::arithmetic::u64::and::And;
+use crate::arithmetic::u64::decr::Decr;
+use crate::arithmetic::u64::log_2_floor::Log2Floor;
+use crate::arithmetic::u64::lt::LtU64PreserveArgs;
+use crate::arithmetic::u64::popcount::PopCount;
+use crate::arithmetic::u64::pow2::Pow2;
 use crate::data_type::DataType;
 use crate::empty_stack;
 use crate::library::Library;
@@ -60,13 +60,13 @@ impl DeprecatedSnippet for MmrLeafIndexToMtIndexAndPeakIndex {
 
     fn function_code(&self, library: &mut Library) -> String {
         let entrypoint = self.entrypoint_name();
-        let log_2_floor_u64 = library.import(Box::new(Log2FloorU64));
+        let log_2_floor_u64 = library.import(Box::new(Log2Floor));
         let lt_u64 = library.import(Box::new(LtU64PreserveArgs));
-        let add_u64 = library.import(Box::new(AddU64));
-        let and_u64 = library.import(Box::new(AndU64));
-        let pow2_u64 = library.import(Box::new(Pow2U64));
-        let decr_u64 = library.import(Box::new(DecrU64));
-        let popcount_u64 = library.import(Box::new(PopCountU64));
+        let add_u64 = library.import(Box::new(Add));
+        let and_u64 = library.import(Box::new(And));
+        let pow2_u64 = library.import(Box::new(Pow2));
+        let decr_u64 = library.import(Box::new(Decr));
+        let popcount_u64 = library.import(Box::new(PopCount));
 
         triton_asm!(
         // BEFORE: _ leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo

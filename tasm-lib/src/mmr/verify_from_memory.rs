@@ -12,7 +12,7 @@ use twenty_first::util_types::mmr::mmr_trait::Mmr;
 
 use super::leaf_index_to_mt_index_and_peak_index::MmrLeafIndexToMtIndexAndPeakIndex;
 use super::MAX_MMR_HEIGHT;
-use crate::arithmetic::u64::div2_u64::Div2U64;
+use crate::arithmetic::u64::div2::Div2;
 use crate::data_type::DataType;
 use crate::empty_stack;
 use crate::hashing::eq_digest::EqDigest;
@@ -135,7 +135,7 @@ impl DeprecatedSnippet for MmrVerifyFromMemory {
 
         let leaf_index_to_mt_index = library.import(Box::new(MmrLeafIndexToMtIndexAndPeakIndex));
         let get_list_element = library.import(Box::new(Get::new(DataType::Digest)));
-        let div_2 = library.import(Box::new(Div2U64));
+        let div_2 = library.import(Box::new(Div2));
         let swap_digests = library.import(Box::new(SwapDigest));
         let eq_digest = library.import(Box::new(EqDigest));
         let loop_label = format!("{entrypoint}_loop");

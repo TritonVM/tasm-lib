@@ -16,9 +16,9 @@ use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::InitVmState;
 
 #[derive(Clone, Debug)]
-pub struct LtU64ConsumeArgs;
+pub struct Lt;
 
-impl BasicSnippet for LtU64ConsumeArgs {
+impl BasicSnippet for Lt {
     fn inputs(&self) -> Vec<(DataType, String)> {
         vec![
             (DataType::U64, "rhs".to_owned()),
@@ -371,7 +371,7 @@ mod tests {
         let stdin = &[];
         let expected = None;
         test_rust_equivalence_given_complete_state(
-            &ShadowedClosure::new(LtU64ConsumeArgs),
+            &ShadowedClosure::new(Lt),
             &init_stack,
             stdin,
             &NonDeterminism::default(),
@@ -382,10 +382,10 @@ mod tests {
 
     #[test]
     fn lt_u64_pbt() {
-        ShadowedClosure::new(LtU64ConsumeArgs).test()
+        ShadowedClosure::new(Lt).test()
     }
 
-    impl LtU64ConsumeArgs {
+    impl Lt {
         fn init_state(&self, rhs: u64, lhs: u64) -> Vec<BFieldElement> {
             [
                 self.init_stack_for_isolated_run(),
@@ -396,7 +396,7 @@ mod tests {
         }
     }
 
-    impl Closure for LtU64ConsumeArgs {
+    impl Closure for Lt {
         fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
             let lhs = U32s::new([
                 stack.pop().unwrap().try_into().unwrap(),
@@ -466,6 +466,6 @@ mod benches {
 
     #[test]
     fn lt_u64_benchmark() {
-        ShadowedClosure::new(LtU64ConsumeArgs).bench();
+        ShadowedClosure::new(Lt).bench();
     }
 }

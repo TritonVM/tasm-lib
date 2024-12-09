@@ -13,9 +13,9 @@ use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::InitVmState;
 
 #[derive(Clone, Debug)]
-pub struct XorU64;
+pub struct Xor;
 
-impl DeprecatedSnippet for XorU64 {
+impl DeprecatedSnippet for Xor {
     fn entrypoint_name(&self) -> String {
         "tasmlib_arithmetic_u64_xor".to_string()
     }
@@ -140,7 +140,7 @@ mod tests {
 
     #[test]
     fn xor_u64_test() {
-        test_rust_equivalence_multiple_deprecated(&XorU64, true);
+        test_rust_equivalence_multiple_deprecated(&Xor, true);
     }
 
     #[test]
@@ -183,7 +183,7 @@ mod tests {
         }
 
         test_rust_equivalence_given_input_values_deprecated(
-            &XorU64,
+            &Xor,
             &init_stack,
             &[],
             HashMap::default(),
@@ -199,6 +199,6 @@ mod benches {
 
     #[test]
     fn xor_u64_benchmark() {
-        bench_and_write(XorU64);
+        bench_and_write(Xor);
     }
 }

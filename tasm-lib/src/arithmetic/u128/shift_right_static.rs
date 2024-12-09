@@ -9,9 +9,9 @@ use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::InitVmState;
 
 #[derive(Clone, Debug)]
-pub struct ShiftRightStaticU128<const N: u8>;
+pub struct ShiftRightStatic<const N: u8>;
 
-impl<const N: u8> DeprecatedSnippet for ShiftRightStaticU128<N> {
+impl<const N: u8> DeprecatedSnippet for ShiftRightStatic<N> {
     fn entrypoint_name(&self) -> String {
         assert!(
             N <= 32,
@@ -183,39 +183,39 @@ mod tests {
 
     #[test]
     fn shift_right_u128_test() {
-        test_rust_equivalence_multiple_deprecated(&ShiftRightStaticU128::<0>, false);
-        test_rust_equivalence_multiple_deprecated(&ShiftRightStaticU128::<1>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftRightStaticU128::<2>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftRightStaticU128::<3>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftRightStaticU128::<4>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftRightStaticU128::<5>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftRightStaticU128::<6>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftRightStaticU128::<7>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftRightStaticU128::<8>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftRightStaticU128::<9>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftRightStaticU128::<10>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftRightStaticU128::<11>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftRightStaticU128::<12>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftRightStaticU128::<13>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftRightStaticU128::<14>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftRightStaticU128::<15>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftRightStaticU128::<16>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftRightStaticU128::<17>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftRightStaticU128::<18>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftRightStaticU128::<19>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftRightStaticU128::<20>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftRightStaticU128::<21>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftRightStaticU128::<22>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftRightStaticU128::<23>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftRightStaticU128::<24>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftRightStaticU128::<25>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftRightStaticU128::<26>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftRightStaticU128::<27>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftRightStaticU128::<28>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftRightStaticU128::<29>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftRightStaticU128::<30>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftRightStaticU128::<31>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftRightStaticU128::<32>, true);
+        test_rust_equivalence_multiple_deprecated(&ShiftRightStatic::<0>, false);
+        test_rust_equivalence_multiple_deprecated(&ShiftRightStatic::<1>, true);
+        test_rust_equivalence_multiple_deprecated(&ShiftRightStatic::<2>, true);
+        test_rust_equivalence_multiple_deprecated(&ShiftRightStatic::<3>, true);
+        test_rust_equivalence_multiple_deprecated(&ShiftRightStatic::<4>, true);
+        test_rust_equivalence_multiple_deprecated(&ShiftRightStatic::<5>, true);
+        test_rust_equivalence_multiple_deprecated(&ShiftRightStatic::<6>, true);
+        test_rust_equivalence_multiple_deprecated(&ShiftRightStatic::<7>, true);
+        test_rust_equivalence_multiple_deprecated(&ShiftRightStatic::<8>, true);
+        test_rust_equivalence_multiple_deprecated(&ShiftRightStatic::<9>, true);
+        test_rust_equivalence_multiple_deprecated(&ShiftRightStatic::<10>, true);
+        test_rust_equivalence_multiple_deprecated(&ShiftRightStatic::<11>, true);
+        test_rust_equivalence_multiple_deprecated(&ShiftRightStatic::<12>, true);
+        test_rust_equivalence_multiple_deprecated(&ShiftRightStatic::<13>, true);
+        test_rust_equivalence_multiple_deprecated(&ShiftRightStatic::<14>, true);
+        test_rust_equivalence_multiple_deprecated(&ShiftRightStatic::<15>, true);
+        test_rust_equivalence_multiple_deprecated(&ShiftRightStatic::<16>, true);
+        test_rust_equivalence_multiple_deprecated(&ShiftRightStatic::<17>, true);
+        test_rust_equivalence_multiple_deprecated(&ShiftRightStatic::<18>, true);
+        test_rust_equivalence_multiple_deprecated(&ShiftRightStatic::<19>, true);
+        test_rust_equivalence_multiple_deprecated(&ShiftRightStatic::<20>, true);
+        test_rust_equivalence_multiple_deprecated(&ShiftRightStatic::<21>, true);
+        test_rust_equivalence_multiple_deprecated(&ShiftRightStatic::<22>, true);
+        test_rust_equivalence_multiple_deprecated(&ShiftRightStatic::<23>, true);
+        test_rust_equivalence_multiple_deprecated(&ShiftRightStatic::<24>, true);
+        test_rust_equivalence_multiple_deprecated(&ShiftRightStatic::<25>, true);
+        test_rust_equivalence_multiple_deprecated(&ShiftRightStatic::<26>, true);
+        test_rust_equivalence_multiple_deprecated(&ShiftRightStatic::<27>, true);
+        test_rust_equivalence_multiple_deprecated(&ShiftRightStatic::<28>, true);
+        test_rust_equivalence_multiple_deprecated(&ShiftRightStatic::<29>, true);
+        test_rust_equivalence_multiple_deprecated(&ShiftRightStatic::<30>, true);
+        test_rust_equivalence_multiple_deprecated(&ShiftRightStatic::<31>, true);
+        test_rust_equivalence_multiple_deprecated(&ShiftRightStatic::<32>, true);
     }
 
     #[test]
@@ -258,7 +258,7 @@ mod tests {
         init_stack.push(BFieldElement::new(u32::MAX as u64));
         init_stack.push(BFieldElement::new(u32::MAX as u64));
         init_stack.push(BFieldElement::new(u32::MAX as u64));
-        ShiftRightStaticU128::<33>
+        ShiftRightStatic::<33>
             .link_and_run_tasm_from_state_for_test(&mut InitVmState::with_stack(init_stack));
     }
 
@@ -281,7 +281,7 @@ mod tests {
         }
 
         test_rust_equivalence_given_input_values_deprecated(
-            &ShiftRightStaticU128::<N>,
+            &ShiftRightStatic::<N>,
             &init_stack,
             &[],
             HashMap::default(),
@@ -297,6 +297,6 @@ mod benches {
 
     #[test]
     fn shift_right_u128_benchmark() {
-        bench_and_write(ShiftRightStaticU128::<5>);
+        bench_and_write(ShiftRightStatic::<5>);
     }
 }

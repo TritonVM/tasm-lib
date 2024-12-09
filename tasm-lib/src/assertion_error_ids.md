@@ -27,8 +27,8 @@ often.
 |    70..80 | [`DynMalloc`](memory/dyn_malloc.rs)                                                         |
 |    80..90 | [`SplitOff`](list/split_off.rs)                                                             |
 |   90..100 | [`MerkleRootFromXfesGeneric`](hashing/merkle_root_from_xfes_generic.rs)                     |
-|  100..110 | [`SafeMulU64`](arithmetic/u64/safe_mul_u64.rs)                                              |
-|  110..120 | [`DecrU64`](arithmetic/u64/decr_u64.rs)                                                     |
+|  100..110 | [`SafeMulU64`](arithmetic/u64/safe_mul.rs)                                                  |
+|  110..120 | [`DecrU64`](arithmetic/u64/decr.rs)                                                         |
 |  120..130 | [`Safepow`](arithmetic/u32/safepow.rs)                                                      |
 |  130..140 | [`NextPowerOfTwo`](arithmetic/u32/next_power_of_two.rs)                                     |
 |  140..150 | [`PrimitiveRootOfUnity`](arithmetic/bfe/primitive_root_of_unity.rs)                         |
@@ -40,4 +40,4 @@ often.
 |  220..230 | [`TasmObject` for `(T, S)`](structure/manual_tasm_object_implementations.rs)                |
 |  230..300 | [`StarkVerify`](verifier/stark_verify.rs)                                                   |
 |  300..310 | [`vm_proof_iter::New`](verifier/vm_proof_iter/new.rs)                                       |
-|  310..320 | [`AddU64`](arithmetic/u64/add_u64.rs)                                                       |
+|  310..320 | [`AddU64`](arithmetic/u64/add.rs)                                                           |

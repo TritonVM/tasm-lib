@@ -2,12 +2,12 @@ use triton_vm::prelude::*;
 use triton_vm::twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
 use triton_vm::twenty_first::util_types::mmr::mmr_successor_proof::MmrSuccessorProof;
 
-use crate::arithmetic::u64::add_u64::AddU64;
-use crate::arithmetic::u64::log_2_floor_u64::Log2FloorU64;
-use crate::arithmetic::u64::lt_u64::LtU64ConsumeArgs;
-use crate::arithmetic::u64::popcount_u64::PopCountU64;
-use crate::arithmetic::u64::shift_right_u64::ShiftRightU64;
-use crate::arithmetic::u64::sub_u64::SubU64;
+use crate::arithmetic::u64::add::Add;
+use crate::arithmetic::u64::log_2_floor::Log2Floor;
+use crate::arithmetic::u64::lt::Lt;
+use crate::arithmetic::u64::popcount::PopCount;
+use crate::arithmetic::u64::shift_right::ShiftRight;
+use crate::arithmetic::u64::sub::Sub;
 use crate::data_type::DataType;
 use crate::field;
 use crate::hashing::merkle_step_u64_index::MerkleStepU64Index;
@@ -65,14 +65,14 @@ impl BasicSnippet for VerifyMmrSuccessor {
             // _ [num_leafs] (*leaf_count-1)
             pop 1
         );
-        let ltu64 = library.import(Box::new(LtU64ConsumeArgs));
-        let popcount_u64 = library.import(Box::new(PopCountU64));
-        let add_u64 = library.import(Box::new(AddU64));
+        let ltu64 = library.import(Box::new(Lt));
+        let popcount_u64 = library.import(Box::new(PopCount));
+        let add_u64 = library.import(Box::new(Add));
         let leaf_index_to_mti_and_pki = library.import(Box::new(MmrLeafIndexToMtIndexAndPeakIndex));
         let merkle_step_u64 = library.import(Box::new(MerkleStepU64Index));
-        let ilog2_u64 = library.import(Box::new(Log2FloorU64));
-        let sub_u64 = library.import(Box::new(SubU64));
-        let shr_u64 = library.import(Box::new(ShiftRightU64));
+        let ilog2_u64 = library.import(Box::new(Log2Floor));
+        let sub_u64 = library.import(Box::new(Sub));
+        let shr_u64 = library.import(Box::new(ShiftRight));
         let compare_digests = DataType::Digest.compare();
         let compare_u64 = DataType::U64.compare();
         let bag_peaks = library.import(Box::new(BagPeaks));

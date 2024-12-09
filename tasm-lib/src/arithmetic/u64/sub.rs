@@ -14,9 +14,9 @@ use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::InitVmState;
 
 #[derive(Clone, Debug)]
-pub struct SubU64;
+pub struct Sub;
 
-impl DeprecatedSnippet for SubU64 {
+impl DeprecatedSnippet for Sub {
     fn entrypoint_name(&self) -> String {
         "tasmlib_arithmetic_u64_sub".to_string()
     }
@@ -223,7 +223,7 @@ mod tests {
 
     #[test]
     fn sub_u64_test() {
-        test_rust_equivalence_multiple_deprecated(&SubU64, true);
+        test_rust_equivalence_multiple_deprecated(&Sub, true);
     }
 
     #[test]
@@ -319,7 +319,7 @@ mod tests {
             init_stack.push(elem);
         }
 
-        SubU64.link_and_run_tasm_from_state_for_test(&mut InitVmState::with_stack(init_stack));
+        Sub.link_and_run_tasm_from_state_for_test(&mut InitVmState::with_stack(init_stack));
     }
 
     fn prop_sub(lhs: U32s<2>, rhs: U32s<2>, expected: Option<&[BFieldElement]>) {
@@ -332,7 +332,7 @@ mod tests {
         }
 
         test_rust_equivalence_given_input_values_deprecated(
-            &SubU64,
+            &Sub,
             &init_stack,
             &[],
             HashMap::default(),
@@ -348,6 +348,6 @@ mod benches {
 
     #[test]
     fn sub_u64_benchmark() {
-        bench_and_write(SubU64);
+        bench_and_write(Sub);
     }
 }

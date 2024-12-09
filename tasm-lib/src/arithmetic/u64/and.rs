@@ -13,9 +13,9 @@ use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::InitVmState;
 
 #[derive(Clone, Debug)]
-pub struct AndU64;
+pub struct And;
 
-impl DeprecatedSnippet for AndU64 {
+impl DeprecatedSnippet for And {
     fn entrypoint_name(&self) -> String {
         "tasmlib_arithmetic_u64_and".to_string()
     }
@@ -140,7 +140,7 @@ mod tests {
 
     #[test]
     fn and_u64_test() {
-        test_rust_equivalence_multiple_deprecated(&AndU64, true);
+        test_rust_equivalence_multiple_deprecated(&And, true);
     }
 
     #[test]
@@ -185,7 +185,7 @@ mod tests {
         }
 
         test_rust_equivalence_given_input_values_deprecated(
-            &AndU64,
+            &And,
             &init_stack,
             &[],
             HashMap::default(),
@@ -201,6 +201,6 @@ mod benches {
 
     #[test]
     fn and_u64_benchmark() {
-        bench_and_write(AndU64);
+        bench_and_write(And);
     }
 }

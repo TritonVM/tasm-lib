@@ -10,9 +10,9 @@ use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::InitVmState;
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
-pub struct ShiftRightU128;
+pub struct ShiftRight;
 
-impl DeprecatedSnippet for ShiftRightU128 {
+impl DeprecatedSnippet for ShiftRight {
     fn entrypoint_name(&self) -> String {
         "tasmlib_arithmetic_u128_shift_right".to_string()
     }
@@ -223,7 +223,7 @@ mod tests {
 
     #[test]
     fn shift_right_u128_test() {
-        test_rust_equivalence_multiple_deprecated(&ShiftRightU128, true);
+        test_rust_equivalence_multiple_deprecated(&ShiftRight, true);
     }
 
     #[test]
@@ -274,7 +274,7 @@ mod tests {
         }
 
         test_rust_equivalence_given_input_values_deprecated(
-            &ShiftRightU128,
+            &ShiftRight,
             &init_stack,
             &[],
             HashMap::default(),
@@ -290,6 +290,6 @@ mod benches {
 
     #[test]
     fn benchmark() {
-        bench_and_write(ShiftRightU128);
+        bench_and_write(ShiftRight);
     }
 }

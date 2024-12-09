@@ -1,6 +1,5 @@
 use triton_vm::isa::triton_asm;
 
-use crate::arithmetic::u64::lt_u64::LtU64ConsumeArgs;
 use crate::data_type::DataType;
 use crate::prelude::BasicSnippet;
 
@@ -9,11 +8,13 @@ use crate::prelude::BasicSnippet;
 /// Consumes arguments from stack and leaves a boolean behind. When the
 /// arguments are not 8 u32s, the behavior is undefined.
 ///
+/// ```text
 /// BEFORE: _ [rhs; 4] [lhs; 4]
-/// AFTER: _ (lhs < rhs)
-pub struct LtU128;
+/// AFTER:  _ (lhs < rhs)
+/// ```
+pub struct Lt;
 
-impl BasicSnippet for LtU128 {
+impl BasicSnippet for Lt {
     fn inputs(&self) -> Vec<(DataType, String)> {
         ["rhs", "lhs"]
             .map(|s| (DataType::U128, s.to_string()))
@@ -35,7 +36,7 @@ impl BasicSnippet for LtU128 {
         let entrypoint = self.entrypoint();
 
         let compare_u64 = DataType::U64.compare();
-        let lt_u64 = library.import(Box::new(LtU64ConsumeArgs));
+        let lt_u64 = library.import(Box::new(crate::arithmetic::u64::lt::Lt));
 
         triton_asm! {
             // BEFORE: _ r3 r2 r1 r0 l3 l2 l1 l0
@@ -91,7 +92,7 @@ mod test {
 
     use super::*;
 
-    impl LtU128 {
+    impl Lt {
         fn prepare_stack(&self, left: u128, right: u128) -> Vec<BFieldElement> {
             let u128_for_stack = |v: u128| v.encode().into_iter().rev();
 
@@ -103,7 +104,7 @@ mod test {
         }
     }
 
-    impl Closure for LtU128 {
+    impl Closure for Lt {
         fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
             fn pop_u128(stack: &mut Vec<BFieldElement>) -> u128 {
                 let num_limbs = u128::static_length().unwrap();
@@ -128,12 +129,12 @@ mod test {
 
     #[test]
     fn lt_u128_standard_test() {
-        ShadowedClosure::new(LtU128).test()
+        ShadowedClosure::new(Lt).test()
     }
 
     fn test_rust_tasm_equivalence(left: u128, right: u128) {
-        let initial_state = InitVmState::with_stack(LtU128.prepare_stack(left, right));
-        test_rust_equivalence_given_execution_state(&ShadowedClosure::new(LtU128), initial_state);
+        let initial_state = InitVmState::with_stack(Lt.prepare_stack(left, right));
+        test_rust_equivalence_given_execution_state(&ShadowedClosure::new(Lt), initial_state);
     }
 
     #[test]
@@ -197,6 +198,6 @@ mod benches {
 
     #[test]
     fn lt_u128_benchmark() {
-        ShadowedClosure::new(LtU128).bench()
+        ShadowedClosure::new(Lt).bench()
     }
 }

@@ -9,9 +9,9 @@ use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::InitVmState;
 
 #[derive(Clone, Debug)]
-pub struct OrU64;
+pub struct Or;
 
-impl DeprecatedSnippet for OrU64 {
+impl DeprecatedSnippet for Or {
     fn entrypoint_name(&self) -> String {
         "tasmlib_arithmetic_u64_or_u64".to_string()
     }
@@ -145,7 +145,7 @@ mod tests {
 
     #[test]
     fn snippet_test() {
-        test_rust_equivalence_multiple_deprecated(&OrU64, true);
+        test_rust_equivalence_multiple_deprecated(&Or, true);
     }
 
     #[test]
@@ -183,7 +183,7 @@ mod tests {
         expected.push(BFieldElement::new(res & u32::MAX as u64));
 
         test_rust_equivalence_given_input_values_deprecated(
-            &OrU64,
+            &Or,
             &init_stack,
             &[],
             HashMap::default(),
@@ -199,6 +199,6 @@ mod benches {
 
     #[test]
     fn u64_or_benchmark() {
-        bench_and_write(OrU64);
+        bench_and_write(Or);
     }
 }

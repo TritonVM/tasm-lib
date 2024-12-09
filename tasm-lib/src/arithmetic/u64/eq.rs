@@ -14,9 +14,9 @@ use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::InitVmState;
 
 #[derive(Clone, Debug)]
-pub struct EqU64;
+pub struct Eq;
 
-impl DeprecatedSnippet for EqU64 {
+impl DeprecatedSnippet for Eq {
     fn entrypoint_name(&self) -> String {
         "tasmlib_arithmetic_u64_eq".to_string()
     }
@@ -145,7 +145,7 @@ mod tests {
 
     #[test]
     fn eq_u64_test() {
-        test_rust_equivalence_multiple_deprecated(&EqU64, true);
+        test_rust_equivalence_multiple_deprecated(&Eq, true);
     }
 
     #[test]
@@ -271,7 +271,7 @@ mod tests {
         }
 
         test_rust_equivalence_given_input_values_deprecated(
-            &EqU64,
+            &Eq,
             &init_stack,
             &[],
             HashMap::default(),
@@ -287,6 +287,6 @@ mod benches {
 
     #[test]
     fn eq_u64_benchmark() {
-        bench_and_write(EqU64);
+        bench_and_write(Eq);
     }
 }

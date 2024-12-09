@@ -13,9 +13,9 @@ use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::InitVmState;
 
 #[derive(Clone, Debug)]
-pub struct Div2U64;
+pub struct Div2;
 
-impl DeprecatedSnippet for Div2U64 {
+impl DeprecatedSnippet for Div2 {
     fn entrypoint_name(&self) -> String {
         "tasmlib_arithmetic_u64_div2".to_string()
     }
@@ -145,7 +145,7 @@ mod tests {
 
     #[test]
     fn div2_u64_test() {
-        test_rust_equivalence_multiple_deprecated(&Div2U64, true);
+        test_rust_equivalence_multiple_deprecated(&Div2, true);
     }
 
     #[should_panic]
@@ -155,8 +155,8 @@ mod tests {
         init_stack.push(BFieldElement::new(16));
         init_stack.push(BFieldElement::new(u32::MAX as u64 + 1));
 
-        test_rust_equivalence_given_input_values_deprecated::<Div2U64>(
-            &Div2U64,
+        test_rust_equivalence_given_input_values_deprecated::<Div2>(
+            &Div2,
             &init_stack,
             &[],
             HashMap::default(),
@@ -171,8 +171,8 @@ mod tests {
         init_stack.push(BFieldElement::new(u32::MAX as u64 + 1));
         init_stack.push(BFieldElement::new(16));
 
-        test_rust_equivalence_given_input_values_deprecated::<Div2U64>(
-            &Div2U64,
+        test_rust_equivalence_given_input_values_deprecated::<Div2>(
+            &Div2,
             &init_stack,
             &[],
             HashMap::default(),
@@ -217,8 +217,8 @@ mod tests {
         expected_stack.push(BFieldElement::new(res >> 32));
         expected_stack.push(BFieldElement::new(res & u32::MAX as u64));
 
-        test_rust_equivalence_given_input_values_deprecated::<Div2U64>(
-            &Div2U64,
+        test_rust_equivalence_given_input_values_deprecated::<Div2>(
+            &Div2,
             &init_stack,
             &[],
             HashMap::default(),
@@ -234,6 +234,6 @@ mod benches {
 
     #[test]
     fn div2_u64_benchmark() {
-        bench_and_write(Div2U64);
+        bench_and_write(Div2);
     }
 }

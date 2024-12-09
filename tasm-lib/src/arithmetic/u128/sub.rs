@@ -11,9 +11,9 @@ use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::InitVmState;
 
 #[derive(Clone, Debug)]
-pub struct SubU128;
+pub struct Sub;
 
-impl DeprecatedSnippet for SubU128 {
+impl DeprecatedSnippet for Sub {
     fn entrypoint_name(&self) -> String {
         "tasmlib_arithmetic_u128_sub".to_string()
     }
@@ -257,7 +257,7 @@ mod tests {
 
     #[test]
     fn sub_u128_test() {
-        test_rust_equivalence_multiple_deprecated(&SubU128, true);
+        test_rust_equivalence_multiple_deprecated(&Sub, true);
     }
 
     #[test]
@@ -365,7 +365,7 @@ mod tests {
         }
 
         test_rust_equivalence_given_input_values_deprecated(
-            &SubU128,
+            &Sub,
             &init_stack,
             &[],
             HashMap::default(),
@@ -381,6 +381,6 @@ mod benches {
 
     #[test]
     fn sub_u128_benchmark() {
-        bench_and_write(SubU128);
+        bench_and_write(Sub);
     }
 }

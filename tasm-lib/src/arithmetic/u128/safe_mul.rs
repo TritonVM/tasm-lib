@@ -10,9 +10,9 @@ use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::InitVmState;
 
 #[derive(Clone, Debug)]
-pub struct SafeMulU128;
+pub struct SafeMul;
 
-impl DeprecatedSnippet for SafeMulU128 {
+impl DeprecatedSnippet for SafeMul {
     fn entrypoint_name(&self) -> String {
         "tasmlib_arithmetic_u128_safe_mul".to_string()
     }
@@ -461,7 +461,7 @@ mod tests {
 
     #[test]
     fn safe_mul_u128_test() {
-        test_rust_equivalence_multiple_deprecated(&SafeMulU128, true);
+        test_rust_equivalence_multiple_deprecated(&SafeMul, true);
     }
 
     #[test]
@@ -477,7 +477,7 @@ mod tests {
                 init_stack.push(elem);
             }
 
-            match SafeMulU128.link_and_run_tasm_for_test(
+            match SafeMul.link_and_run_tasm_for_test(
                 &mut init_stack,
                 vec![],
                 NonDeterminism::default(),
@@ -509,7 +509,7 @@ mod tests {
                 init_stack.push(elem);
             }
 
-            match SafeMulU128.link_and_run_tasm_for_test(
+            match SafeMul.link_and_run_tasm_for_test(
                 &mut init_stack,
                 vec![],
                 NonDeterminism::default(),
@@ -546,7 +546,7 @@ mod tests {
                 }
 
                 // Verify that quotient * divisor does not overflow
-                match SafeMulU128.link_and_run_tasm_for_test(
+                match SafeMul.link_and_run_tasm_for_test(
                     &mut init_stack_no_overflow,
                     vec![],
                     NonDeterminism::default(),
@@ -595,7 +595,7 @@ mod tests {
                         init_stack.push(elem);
                     }
 
-                    match SafeMulU128.link_and_run_tasm_for_test(
+                    match SafeMul.link_and_run_tasm_for_test(
                         &mut init_stack,
                         vec![],
                         NonDeterminism::default(),
@@ -615,7 +615,7 @@ mod tests {
                         init_stack_mirrored.push(elem);
                     }
 
-                    match SafeMulU128.link_and_run_tasm_for_test(
+                    match SafeMul.link_and_run_tasm_for_test(
                         &mut init_stack_mirrored,
                         vec![],
                         NonDeterminism::default(),
@@ -666,7 +666,7 @@ mod tests {
                 init_stack.push(elem);
             }
 
-            match SafeMulU128.link_and_run_tasm_for_test(
+            match SafeMul.link_and_run_tasm_for_test(
                 &mut init_stack,
                 vec![],
                 NonDeterminism::default(),
@@ -685,6 +685,6 @@ mod benches {
 
     #[test]
     fn safe_u128_benchmark() {
-        bench_and_write(SafeMulU128);
+        bench_and_write(SafeMul);
     }
 }

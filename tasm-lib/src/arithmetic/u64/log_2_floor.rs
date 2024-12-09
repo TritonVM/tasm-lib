@@ -5,9 +5,9 @@ use crate::library::Library;
 use crate::traits::basic_snippet::BasicSnippet;
 
 #[derive(Clone, Debug, Copy)]
-pub struct Log2FloorU64;
+pub struct Log2Floor;
 
-impl BasicSnippet for Log2FloorU64 {
+impl BasicSnippet for Log2Floor {
     fn inputs(&self) -> Vec<(DataType, String)> {
         vec![(DataType::U64, "x".to_owned())]
     }
@@ -87,7 +87,7 @@ mod tests {
     use crate::traits::rust_shadow::RustShadow;
     use crate::InitVmState;
 
-    impl Log2FloorU64 {
+    impl Log2Floor {
         fn init_state(&self, x: u64) -> Vec<BFieldElement> {
             [
                 self.init_stack_for_isolated_run(),
@@ -97,7 +97,7 @@ mod tests {
         }
     }
 
-    impl Closure for Log2FloorU64 {
+    impl Closure for Log2Floor {
         fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
             // Get input value as a u64
             let lo: u32 = stack.pop().unwrap().try_into().unwrap();
@@ -135,13 +135,13 @@ mod tests {
 
     #[test]
     fn log_2_floor_u64_test() {
-        ShadowedClosure::new(Log2FloorU64).test();
+        ShadowedClosure::new(Log2Floor).test();
     }
 
     #[test]
     fn lo_is_not_u32_hi_is_zero() {
         let not_u32 = bfe!(u64::from(u32::MAX) + 1);
-        let mut init_stack = Log2FloorU64.init_stack_for_isolated_run();
+        let mut init_stack = Log2Floor.init_stack_for_isolated_run();
         init_stack.push(bfe!(0));
         init_stack.push(not_u32);
 
@@ -149,7 +149,7 @@ mod tests {
         let expected_err =
             InstructionError::OpStackError(OpStackError::FailedU32Conversion(not_u32));
         negative_test(
-            &ShadowedClosure::new(Log2FloorU64),
+            &ShadowedClosure::new(Log2Floor),
             init_state,
             &[expected_err],
         );
@@ -158,7 +158,7 @@ mod tests {
     #[test]
     fn hi_is_not_u32() {
         let not_u32 = bfe!(u64::from(u32::MAX) + 1);
-        let mut init_stack = Log2FloorU64.init_stack_for_isolated_run();
+        let mut init_stack = Log2Floor.init_stack_for_isolated_run();
         init_stack.push(not_u32);
         init_stack.push(bfe!(16));
 
@@ -166,7 +166,7 @@ mod tests {
         let expected_err =
             InstructionError::OpStackError(OpStackError::FailedU32Conversion(not_u32));
         negative_test(
-            &ShadowedClosure::new(Log2FloorU64),
+            &ShadowedClosure::new(Log2Floor),
             init_state,
             &[expected_err],
         );
@@ -176,7 +176,7 @@ mod tests {
     fn hi_is_not_u32_alt() {
         let n = u64::from(rand::thread_rng().next_u32());
         let not_u32 = bfe!(u64::from(u32::MAX) + 1 + n);
-        let mut init_stack = Log2FloorU64.init_stack_for_isolated_run();
+        let mut init_stack = Log2Floor.init_stack_for_isolated_run();
         init_stack.push(not_u32);
         init_stack.push(bfe!(16));
 
@@ -184,7 +184,7 @@ mod tests {
         let expected_err =
             InstructionError::OpStackError(OpStackError::FailedU32Conversion(not_u32));
         negative_test(
-            &ShadowedClosure::new(Log2FloorU64),
+            &ShadowedClosure::new(Log2Floor),
             init_state,
             &[expected_err],
         );
@@ -193,13 +193,13 @@ mod tests {
     #[test]
     fn crash_on_zero() {
         let init_stack = [
-            Log2FloorU64.init_stack_for_isolated_run(),
+            Log2Floor.init_stack_for_isolated_run(),
             vec![BFieldElement::zero(), BFieldElement::zero()],
         ]
         .concat();
         let init_state = InitVmState::with_stack(init_stack);
         negative_test(
-            &ShadowedClosure::new(Log2FloorU64),
+            &ShadowedClosure::new(Log2Floor),
             init_state,
             &[InstructionError::LogarithmOfZero],
         );
@@ -207,29 +207,29 @@ mod tests {
 
     #[test]
     fn u32s_2_log2_floor() {
-        let mut expected = Log2FloorU64.init_stack_for_isolated_run();
+        let mut expected = Log2Floor.init_stack_for_isolated_run();
         expected.push(BFieldElement::new(0));
         prop_log2_floor_u32s_2(1, &expected);
 
-        expected = Log2FloorU64.init_stack_for_isolated_run();
+        expected = Log2Floor.init_stack_for_isolated_run();
         expected.push(BFieldElement::new(1));
         prop_log2_floor_u32s_2(2, &expected);
         prop_log2_floor_u32s_2(3, &expected);
 
-        expected = Log2FloorU64.init_stack_for_isolated_run();
+        expected = Log2Floor.init_stack_for_isolated_run();
         expected.push(BFieldElement::new(2));
         prop_log2_floor_u32s_2(4, &expected);
         prop_log2_floor_u32s_2(5, &expected);
         prop_log2_floor_u32s_2(6, &expected);
         prop_log2_floor_u32s_2(7, &expected);
 
-        expected = Log2FloorU64.init_stack_for_isolated_run();
+        expected = Log2Floor.init_stack_for_isolated_run();
         expected.push(BFieldElement::new(31));
         prop_log2_floor_u32s_2(u32::MAX as u64 - 20000, &expected);
         prop_log2_floor_u32s_2(u32::MAX as u64 - 1, &expected);
         prop_log2_floor_u32s_2(u32::MAX as u64, &expected);
 
-        expected = Log2FloorU64.init_stack_for_isolated_run();
+        expected = Log2Floor.init_stack_for_isolated_run();
         expected.push(BFieldElement::new(32));
         prop_log2_floor_u32s_2(u32::MAX as u64 + 1, &expected);
         prop_log2_floor_u32s_2(u32::MAX as u64 + 2, &expected);
@@ -238,7 +238,7 @@ mod tests {
         prop_log2_floor_u32s_2(u32::MAX as u64 + u32::MAX as u64 + 1, &expected);
 
         for i in 0..64 {
-            expected = Log2FloorU64.init_stack_for_isolated_run();
+            expected = Log2Floor.init_stack_for_isolated_run();
             expected.push(BFieldElement::new(i));
             prop_log2_floor_u32s_2(1 << i, &expected);
             if i > 0 {
@@ -262,7 +262,7 @@ mod tests {
         }
 
         test_rust_equivalence_given_complete_state(
-            &ShadowedClosure::new(Log2FloorU64),
+            &ShadowedClosure::new(Log2Floor),
             &init_stack,
             &[],
             &NonDeterminism::default(),
@@ -280,6 +280,6 @@ mod benches {
 
     #[test]
     fn log_2_floor_u64_benchmark() {
-        ShadowedClosure::new(Log2FloorU64).bench();
+        ShadowedClosure::new(Log2Floor).bench();
     }
 }

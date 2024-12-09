@@ -9,8 +9,8 @@ use twenty_first::math::other::random_elements;
 use twenty_first::util_types::mmr;
 use twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
 
-use crate::arithmetic::u64::incr_u64::IncrU64;
-use crate::arithmetic::u64::index_of_last_nonzero_bit::IndexOfLastNonZeroBitU64;
+use crate::arithmetic::u64::incr::Incr;
+use crate::arithmetic::u64::index_of_last_nonzero_bit::IndexOfLastNonZeroBit;
 use crate::data_type::DataType;
 use crate::empty_stack;
 use crate::library::Library;
@@ -110,8 +110,8 @@ impl DeprecatedSnippet for CalculateNewPeaksFromAppend {
         let push = library.import(Box::new(Push::new(DataType::Digest)));
         let pop = library.import(Box::new(Pop::new(DataType::Digest)));
         let set_length = library.import(Box::new(SetLength::new(DataType::Digest)));
-        let u64incr = library.import(Box::new(IncrU64));
-        let right_lineage_count = library.import(Box::new(IndexOfLastNonZeroBitU64));
+        let u64incr = library.import(Box::new(Incr));
+        let right_lineage_count = library.import(Box::new(IndexOfLastNonZeroBit));
 
         triton_asm!(
                 // BEFORE: _ old_leaf_count_hi old_leaf_count_lo *peaks [digests (new_leaf)]

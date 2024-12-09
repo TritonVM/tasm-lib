@@ -11,9 +11,9 @@ use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::InitVmState;
 
 #[derive(Clone, Debug)]
-pub struct PopCountU64;
+pub struct PopCount;
 
-impl DeprecatedSnippet for PopCountU64 {
+impl DeprecatedSnippet for PopCount {
     fn entrypoint_name(&self) -> String {
         "tasmlib_arithmetic_u64_popcount".to_string()
     }
@@ -132,7 +132,7 @@ mod tests {
 
     #[test]
     fn popcount_u64_test() {
-        test_rust_equivalence_multiple_deprecated(&PopCountU64, true);
+        test_rust_equivalence_multiple_deprecated(&PopCount, true);
     }
 }
 
@@ -143,6 +143,6 @@ mod benches {
 
     #[test]
     fn popcount_u64_benchmark() {
-        bench_and_write(PopCountU64);
+        bench_and_write(PopCount);
     }
 }

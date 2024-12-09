@@ -1,8 +1,8 @@
-pub mod lt_u128;
+pub mod lt;
 pub mod safe_add;
-pub mod safe_mul_u128;
-pub mod shift_left_static_u128;
-pub mod shift_left_u128;
-pub mod shift_right_static_u128;
-pub mod shift_right_u128;
-pub mod sub_u128;
+pub mod safe_mul;
+pub mod shift_left;
+pub mod shift_left_static;
+pub mod shift_right;
+pub mod shift_right_static;
+pub mod sub;

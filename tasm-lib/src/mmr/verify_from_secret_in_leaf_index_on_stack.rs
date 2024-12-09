@@ -1,7 +1,7 @@
 use triton_vm::prelude::*;
 
 use super::leaf_index_to_mt_index_and_peak_index::MmrLeafIndexToMtIndexAndPeakIndex;
-use crate::arithmetic::u64::eq_u64::EqU64;
+use crate::arithmetic::u64::eq::Eq;
 use crate::data_type::DataType;
 use crate::hashing::merkle_step_u64_index::MerkleStepU64Index;
 use crate::library::Library;
@@ -39,7 +39,7 @@ impl BasicSnippet for MmrVerifyFromSecretInLeafIndexOnStack {
         let auth_path_loop_label = format!("{entrypoint}_auth_path_loop");
 
         let leaf_index_to_mt_index = library.import(Box::new(MmrLeafIndexToMtIndexAndPeakIndex));
-        let eq_u64 = library.import(Box::new(EqU64));
+        let eq_u64 = library.import(Box::new(Eq));
         let merkle_step_u64_index = library.import(Box::new(MerkleStepU64Index));
         let list_get = library.import(Box::new(Get::new(DataType::Digest)));
 

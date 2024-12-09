@@ -1,4 +1,3 @@
-use itertools::Itertools;
 use rand::prelude::*;
 use triton_vm::prelude::*;
 use triton_vm::twenty_first::prelude::U32s;
@@ -11,11 +10,11 @@ use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::InitVmState;
 
 #[derive(Clone, Debug)]
-pub struct SafeMulU64;
+pub struct WrappingMul;
 
-impl DeprecatedSnippet for SafeMulU64 {
+impl DeprecatedSnippet for WrappingMul {
     fn entrypoint_name(&self) -> String {
-        "tasmlib_arithmetic_u64_safe_mul".to_string()
+        "tasmlib_arithmetic_u64_wrapping_mul".to_string()
     }
 
     fn input_field_names(&self) -> Vec<String> {
@@ -46,7 +45,8 @@ impl DeprecatedSnippet for SafeMulU64 {
     fn function_code(&self, _library: &mut Library) -> String {
         let entrypoint = self.entrypoint_name();
 
-        triton_asm!(
+        format!(
+            "
                 // BEFORE: _ rhs_hi rhs_lo lhs_hi lhs_lo
                 // AFTER:  _ prod_hi prod_lo
                 {entrypoint}:
@@ -54,29 +54,15 @@ impl DeprecatedSnippet for SafeMulU64 {
                     dup 0 dup 3 mul
                     // _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs_lo * rhs_lo)
 
-                    // `rhs_hi * lhs_lo` (consume and `lhs_lo`):
+                    // `rhs_hi * lhs_lo` (consume `rhs_hi` and `lhs_lo`):
                     swap 4
-                    swap 1
-                    dup 1
                     mul
-                    // _ (lhs_lo * rhs_lo) rhs_lo lhs_hi rhs_hi (lhs_lo * rhs_hi)
+                    // _ (lhs_lo * rhs_lo) rhs_lo lhs_hi (lhs_lo * rhs_hi)
 
-                    // `rhs_lo * lhs_hi` (consume `rhs_lo`):
-                    swap 3
-                    dup 2
-                    mul
-                    // _ (lhs_lo * rhs_lo) (lhs_lo * rhs_hi) lhs_hi rhs_hi (rhs_lo * lhs_hi)
-
-                    // `lhs_hi * rhs_hi` (consume `lhs_hi` and `rhs_hi`):
+                    // `rhs_lo * lhs_hi` (consume `rhs_lo` and `lhs_hi`):
                     swap 2
                     mul
-                    // _ (lhs_lo * rhs_lo) (lhs_lo * rhs_hi) (rhs_lo * lhs_hi) (lhs_hi * rhs_hi)
-
-                    // crash if `lhs_hi * rhs_hi != 0`
-                    push 0
-                    eq
-                    assert error_id 100
-                    // _ (lhs_lo * rhs_lo) (lhs_lo * rhs_hi) (rhs_lo * lhs_hi)
+                    // _ (lhs_lo * rhs_lo) (lhs_lo * rhs_hi) (lhs_hi * rhs_lo)
 
                     // rename to: a, b, c:
                     // _ a b c
@@ -84,17 +70,13 @@ impl DeprecatedSnippet for SafeMulU64 {
                     // Calculate `prod_hi = a_hi + b_lo + c_lo`:
                     split
                     swap 1
-                    push 0
-                    eq
-                    assert error_id 101
+                    pop 1
                     // _ a b c_lo
 
                     swap 1
                     split
                     swap 1
-                    push 0
-                    eq
-                    assert error_id 102
+                    pop 1
                     // _ a c_lo b_lo
 
                     swap 2
@@ -110,9 +92,7 @@ impl DeprecatedSnippet for SafeMulU64 {
 
                     split
                     swap 1
-                    push 0
-                    eq
-                    assert error_id 103
+                    pop 1
                     // _ a_lo (c_lo + a_hi + b_lo)_lo
 
                     swap 1
@@ -121,13 +101,12 @@ impl DeprecatedSnippet for SafeMulU64 {
                     // _ prod_hi prod_lo
 
                     return
+                    "
         )
-        .iter()
-        .join("\n")
     }
 
     fn crash_conditions(&self) -> Vec<String> {
-        vec!["Product is greater than u64::MAX".to_string()]
+        todo!()
     }
 
     fn gen_input_states(&self) -> Vec<InitVmState> {
@@ -135,25 +114,18 @@ impl DeprecatedSnippet for SafeMulU64 {
 
         let mut ret = vec![];
         for _ in 0..10 {
-            ret.push(prepare_state(rng.next_u32() as u64, rng.next_u32() as u64));
+            ret.push(prepare_state(rng.next_u64(), rng.next_u64()));
         }
-
-        ret.push(prepare_state(u32::MAX as u64, u32::MAX as u64));
-        ret.push(prepare_state(u32::MAX as u64 - 1, u32::MAX as u64));
-        ret.push(prepare_state(u32::MAX as u64, u32::MAX as u64 - 1));
-        ret.push(prepare_state(u32::MAX as u64 - 1, u32::MAX as u64 - 1));
-        ret.push(prepare_state(u32::MAX as u64 - 2, u32::MAX as u64));
-        ret.push(prepare_state(u32::MAX as u64, u32::MAX as u64 - 2));
 
         ret
     }
 
     fn common_case_input_state(&self) -> InitVmState {
-        prepare_state(1 << 31, (1 << 25) - 1)
+        prepare_state(1 << 60, (1 << 42) - 1)
     }
 
     fn worst_case_input_state(&self) -> InitVmState {
-        prepare_state(1 << 31, (1 << 31) - 1)
+        prepare_state(1 << 60, (1 << 42) - 1)
     }
 
     fn rust_shadowing(
@@ -172,12 +144,10 @@ impl DeprecatedSnippet for SafeMulU64 {
         let b_hi: u32 = stack.pop().unwrap().try_into().unwrap();
         let b = ((b_hi as u64) << 32) + b_lo as u64;
 
-        // let prod = a.wrapping_mul(b);
-        let (safe_mul_prod, overflow) = a.overflowing_mul(b);
-        assert!(!overflow, "u64 mul result overflowed");
+        let prod = a.wrapping_mul(b);
 
-        stack.push(BFieldElement::new(safe_mul_prod >> 32));
-        stack.push(BFieldElement::new(safe_mul_prod & u32::MAX as u64));
+        stack.push(BFieldElement::new(prod >> 32));
+        stack.push(BFieldElement::new(prod & u32::MAX as u64));
     }
 }
 
@@ -197,70 +167,16 @@ mod tests {
     use num::Zero;
 
     use super::*;
-    use crate::test_helpers::test_assertion_failure;
     use crate::test_helpers::test_rust_equivalence_given_input_values_deprecated;
     use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
-    use crate::traits::basic_snippet::BasicSnippet;
-    use crate::traits::deprecated_snippet::tests::DeprecatedSnippetWrapper;
 
-    impl SafeMulU64 {
-        fn initial_test_state(lhs: u64, rhs: u64) -> InitVmState {
-            let mut stack = Self.init_stack_for_isolated_run();
-            push_encodable(&mut stack, &U32s::<2>::try_from(rhs).unwrap());
-            push_encodable(&mut stack, &U32s::<2>::try_from(lhs).unwrap());
-
-            InitVmState::with_stack(stack)
-        }
+    #[test]
+    fn wrapping_mul_u64_test() {
+        test_rust_equivalence_multiple_deprecated(&WrappingMul, true);
     }
 
     #[test]
-    fn safe_mul_u64_test() {
-        test_rust_equivalence_multiple_deprecated(&SafeMulU64, true);
-    }
-
-    #[test]
-    fn overflow_test_1() {
-        // Crash because (rhs_hi * lhs_hi) != 0
-
-        test_assertion_failure(
-            &DeprecatedSnippetWrapper::new(SafeMulU64),
-            SafeMulU64::initial_test_state(1 << 32, 1 << 32),
-            &[100],
-        );
-    }
-
-    #[test]
-    fn overflow_test_2() {
-        // Crash because (rhs_lo * lhs_hi)_hi != 0
-        test_assertion_failure(
-            &DeprecatedSnippetWrapper::new(SafeMulU64),
-            SafeMulU64::initial_test_state(1 << 31, 1 << 33),
-            &[102],
-        );
-    }
-
-    #[test]
-    fn overflow_test_3() {
-        // Crash because (lhs_lo * rhs_hi)_hi != 0
-        test_assertion_failure(
-            &DeprecatedSnippetWrapper::new(SafeMulU64),
-            SafeMulU64::initial_test_state(1 << 33, 1 << 31),
-            &[101],
-        );
-    }
-
-    #[test]
-    fn overflow_test_4() {
-        // Crash because (c_lo + a_hi + b_lo)_hi != 0
-        test_assertion_failure(
-            &DeprecatedSnippetWrapper::new(SafeMulU64),
-            SafeMulU64::initial_test_state((1 << 33) + 5, (1 << 31) - 1),
-            &[103],
-        );
-    }
-
-    #[test]
-    fn safe_mul_u64_simple() {
+    fn wrapping_mul_u64_simple() {
         let mut init_stack = empty_stack();
         init_stack.push(BFieldElement::zero());
         init_stack.push(BFieldElement::new(100));
@@ -271,7 +187,7 @@ mod tests {
         expected.push(BFieldElement::zero());
         expected.push(BFieldElement::new(20_000));
         test_rust_equivalence_given_input_values_deprecated(
-            &SafeMulU64,
+            &WrappingMul,
             &init_stack,
             &[],
             HashMap::default(),
@@ -286,7 +202,7 @@ mod benches {
     use crate::snippet_bencher::bench_and_write;
 
     #[test]
-    fn safe_u64_benchmark() {
-        bench_and_write(SafeMulU64);
+    fn wrappingmul_u64_benchmark() {
+        bench_and_write(WrappingMul);
     }
 }

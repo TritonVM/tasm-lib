@@ -45,7 +45,7 @@ impl BasicSnippet for Lt {
 
     fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
         let entrypoint = self.entrypoint();
-        let u128_lt = library.import(Box::new(arithmetic::u128::lt_u128::LtU128));
+        let u128_lt = library.import(Box::new(arithmetic::u128::lt::Lt));
 
         const TWO_POW_31: u32 = 1 << 31;
         let flip_msbs = triton_asm!(
