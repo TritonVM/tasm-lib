@@ -212,11 +212,10 @@ mod tests {
     use rand::prelude::*;
     use triton_vm::twenty_first::math::other::random_elements;
     use triton_vm::twenty_first::math::tip5::RATE;
-    use triton_vm::twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
-    use triton_vm::twenty_first::util_types::algebraic_hasher::Sponge;
     use triton_vm::twenty_first::util_types::merkle_tree::CpuParallel;
     use triton_vm::twenty_first::util_types::merkle_tree::MerkleTree;
     use triton_vm::twenty_first::util_types::merkle_tree::MerkleTreeInclusionProof;
+    use triton_vm::twenty_first::util_types::sponge::Sponge;
     use twenty_first::prelude::MerkleTreeMaker;
 
     use super::*;

@@ -3,7 +3,6 @@ use std::collections::HashMap;
 use itertools::Itertools;
 use rand::prelude::*;
 use triton_vm::prelude::*;
-use triton_vm::twenty_first::prelude::AlgebraicHasher;
 
 use crate::data_type::DataType;
 use crate::empty_stack;

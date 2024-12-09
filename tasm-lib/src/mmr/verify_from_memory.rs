@@ -368,7 +368,6 @@ impl DeprecatedSnippet for MmrVerifyFromMemory {
 #[cfg(test)]
 mod tests {
     use itertools::Itertools;
-    use twenty_first::prelude::AlgebraicHasher;
 
     use super::*;
     use crate::empty_stack;

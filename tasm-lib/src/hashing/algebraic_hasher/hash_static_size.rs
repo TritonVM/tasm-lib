@@ -60,7 +60,7 @@ mod tests {
     use rand::prelude::*;
     use test_strategy::proptest;
     use triton_vm::twenty_first::math::tip5::Digest;
-    use triton_vm::twenty_first::util_types::algebraic_hasher::Sponge;
+    use triton_vm::twenty_first::util_types::sponge::Sponge;
 
     use super::*;
     use crate::snippet_bencher::BenchmarkCase;

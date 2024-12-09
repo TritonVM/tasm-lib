@@ -8,7 +8,6 @@ use triton_vm::table::master_table::MasterMainTable;
 use triton_vm::table::master_table::MasterTable;
 use triton_vm::table::NUM_QUOTIENT_SEGMENTS;
 use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
-use triton_vm::twenty_first::prelude::AlgebraicHasher;
 use twenty_first::prelude::MerkleTreeInclusionProof;
 
 use super::master_table::air_constraint_evaluation::AirConstraintEvaluation;

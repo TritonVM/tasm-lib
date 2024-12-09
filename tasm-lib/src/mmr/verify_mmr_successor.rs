@@ -387,7 +387,6 @@ mod test {
     use crate::test_helpers::negative_test;
     use crate::traits::mem_preserver::MemPreserver;
     use crate::traits::mem_preserver::MemPreserverInitialState;
-    use crate::twenty_first::prelude::AlgebraicHasher;
     use crate::twenty_first::prelude::Mmr;
 
     fn num_digests_to_read(old_mmr: &MmrAccumulator, new_mmr: &MmrAccumulator) -> usize {

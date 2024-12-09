@@ -3,7 +3,6 @@ use std::collections::HashMap;
 use itertools::Itertools;
 use rand::prelude::*;
 use triton_vm::prelude::*;
-use triton_vm::twenty_first::prelude::AlgebraicHasher;
 use triton_vm::twenty_first::prelude::Sponge;
 
 use crate::arithmetic::u128::shift_left_static_u128;
@@ -19,7 +18,6 @@ use crate::traits::basic_snippet::BasicSnippet;
 use crate::traits::function::Function;
 use crate::traits::function::FunctionInitialState;
 use crate::Digest;
-use crate::VmHasher;
 
 /// Derives the indices that make up the removal record from the item
 /// (a digest), the sender randomness (also a digest), receiver
@@ -203,7 +201,8 @@ impl Function for GetSwbfIndices {
 
         // Compare derived indices to actual implementation (copy-pasted from
         // mutator set implementaion.
-        let indices_from_mutator_set = get_swbf_indices::<VmHasher>(
+        // Why would you ever want to copy-paste code like this? 😫
+        let indices_from_mutator_set = get_swbf_indices(
             &item,
             &sender_randomness,
             &receiver_preimage,
@@ -312,7 +311,7 @@ const NUM_TRIALS: usize = 45;
 const LOG2_BATCH_SIZE: u8 = 3;
 const LOG2_CHUNK_SIZE: u8 = 12;
 const LOG2_WINDOW_SIZE: u32 = 20;
-fn get_swbf_indices<H: AlgebraicHasher>(
+fn get_swbf_indices(
     item: &Digest,
     sender_randomness: &Digest,
     receiver_preimage: &Digest,
@@ -328,7 +327,7 @@ fn get_swbf_indices<H: AlgebraicHasher>(
         leaf_index_bfes,
     ]
     .concat();
-    let mut sponge = H::init();
+    let mut sponge = Tip5::init();
     sponge.pad_and_absorb_all(&input);
     sponge
         .sample_indices(1 << LOG2_WINDOW_SIZE, NUM_TRIALS)

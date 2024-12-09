@@ -366,7 +366,6 @@ impl DeprecatedSnippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
 mod tests {
     use itertools::Itertools;
     use mmr::mmr_trait::LeafMutation;
-    use twenty_first::prelude::AlgebraicHasher;
 
     use super::*;
     use crate::test_helpers::test_rust_equivalence_given_input_values_deprecated;

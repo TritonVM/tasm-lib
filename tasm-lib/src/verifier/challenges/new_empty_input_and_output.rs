@@ -159,7 +159,6 @@ mod tests {
     use itertools::Itertools;
     use rand::prelude::*;
     use triton_vm::challenges::Challenges;
-    use triton_vm::twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 
     use super::*;
     use crate::rust_shadowing_helper_functions::array::insert_as_array;

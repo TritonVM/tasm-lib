@@ -280,7 +280,6 @@ impl Function for Filter {
 
 #[cfg(test)]
 mod tests {
-    use triton_vm::twenty_first::prelude::AlgebraicHasher;
     use twenty_first::math::other::random_elements;
 
     use super::*;

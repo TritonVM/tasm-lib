@@ -222,7 +222,6 @@ mod tests {
     use rand::prelude::*;
     use triton_vm::challenges::Challenges;
     use triton_vm::twenty_first::math::other::random_elements;
-    use triton_vm::twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 
     use super::*;
     use crate::memory::encode_to_memory;

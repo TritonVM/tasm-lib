@@ -1,6 +1,5 @@
 use itertools::Itertools;
 use triton_vm::prelude::*;
-use triton_vm::twenty_first::prelude::AlgebraicHasher;
 
 use crate::data_type::DataType;
 use crate::data_type::Literal;

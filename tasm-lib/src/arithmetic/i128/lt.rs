@@ -10,9 +10,10 @@ use crate::prelude::BasicSnippet;
 ///
 /// # Behavior
 ///
-/// BEFORE: `_ [rhs: i128] [lhs: i128]`
-///
-/// AFTER: `_ (lhs < rhs)`
+/// ```text
+/// BEFORE: _ [rhs: i128] [lhs: i128]
+/// AFTER:  _ (lhs < rhs)
+/// ```
 ///
 /// # Preconditions
 ///
@@ -89,11 +90,11 @@ mod tests {
     use test_strategy::proptest;
     use triton_vm::error::InstructionError;
     use triton_vm::error::OpStackError;
-    use triton_vm::prelude::bfe;
     use triton_vm::prelude::BFieldElement;
     use triton_vm::vm::NonDeterminism;
 
     use super::*;
+    use crate::pop_encodable;
     use crate::push_encodable;
     use crate::snippet_bencher::BenchmarkCase;
     use crate::test_helpers::negative_test;
@@ -139,7 +140,7 @@ mod tests {
     fn i128_lt_unit_test_min_max() {
         let init_stack = Lt.init_state(i128::MIN, i128::MAX);
         let mut expected_end_stack = Lt.init_stack_for_isolated_run();
-        expected_end_stack.push(bfe!(true as u64));
+        push_encodable(&mut expected_end_stack, &true);
 
         let stdin = &[];
         test_rust_equivalence_given_complete_state(
@@ -156,7 +157,7 @@ mod tests {
     fn i128_lt_unit_test_zero_zero() {
         let init_stack = Lt.init_state(0, 0);
         let mut expected_end_stack = Lt.init_stack_for_isolated_run();
-        expected_end_stack.push(bfe!(false as u64));
+        push_encodable(&mut expected_end_stack, &false);
 
         let stdin = &[];
         test_rust_equivalence_given_complete_state(
@@ -172,8 +173,8 @@ mod tests {
     impl Lt {
         fn init_state(&self, lhs: i128, rhs: i128) -> Vec<BFieldElement> {
             let mut stack = self.init_stack_for_isolated_run();
-            push_encodable(&mut stack, &(rhs as u128));
-            push_encodable(&mut stack, &(lhs as u128));
+            push_encodable(&mut stack, &rhs);
+            push_encodable(&mut stack, &lhs);
 
             stack
         }
@@ -181,23 +182,9 @@ mod tests {
 
     impl Closure for Lt {
         fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
-            fn pop_i128(stack: &mut Vec<BFieldElement>) -> i128 {
-                let num_limbs = 4;
-                let limbs: Vec<u32> = (0..num_limbs)
-                    .map(|_| stack.pop().unwrap().try_into().unwrap())
-                    .collect_vec();
-
-                let mut acc = ((limbs[3] as i32) as i128) << 96;
-                for (i, limb) in limbs[0..3].iter().enumerate() {
-                    acc += (*limb as i128) << (i * 32);
-                }
-
-                acc
-            }
-            let lhs = pop_i128(stack);
-            let rhs = pop_i128(stack);
-
-            stack.push(bfe!((lhs < rhs) as u64));
+            let lhs = pop_encodable::<i128>(stack);
+            let rhs = pop_encodable::<i128>(stack);
+            push_encodable(stack, &(lhs < rhs));
         }
 
         fn pseudorandom_initial_state(

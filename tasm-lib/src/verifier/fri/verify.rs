@@ -1177,7 +1177,7 @@ mod test {
     use triton_vm::proof_item::ProofItem;
     use triton_vm::proof_stream::ProofStream;
     use triton_vm::twenty_first::math::ntt::ntt;
-    use triton_vm::twenty_first::util_types::algebraic_hasher::Sponge;
+    use triton_vm::twenty_first::util_types::sponge::Sponge;
 
     use super::*;
     use crate::empty_stack;

@@ -241,7 +241,6 @@ impl Function for All {
 #[cfg(test)]
 mod tests {
     use num::One;
-    use triton_vm::twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 
     use super::*;
     use crate::arithmetic;

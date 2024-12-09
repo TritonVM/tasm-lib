@@ -4,7 +4,6 @@ use itertools::Itertools;
 use num::One;
 use rand::prelude::*;
 use triton_vm::prelude::*;
-use triton_vm::twenty_first::prelude::AlgebraicHasher;
 use triton_vm::twenty_first::prelude::Mmr;
 use twenty_first::math::other::random_elements;
 use twenty_first::util_types::mmr;

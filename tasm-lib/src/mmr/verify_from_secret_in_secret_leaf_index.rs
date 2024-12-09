@@ -125,7 +125,6 @@ mod tests {
     use rand::prelude::*;
     use tasm_lib::test_helpers::test_assertion_failure;
     use twenty_first::math::other::random_elements;
-    use twenty_first::prelude::AlgebraicHasher;
     use twenty_first::util_types::mmr::mmr_accumulator::util::mmra_with_mps;
     use twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
     use twenty_first::util_types::mmr::mmr_membership_proof::MmrMembershipProof;

@@ -123,7 +123,6 @@ mod tests {
     use proptest_arbitrary_interop::arb;
     use rand::prelude::*;
     use test_strategy::proptest;
-    use triton_vm::twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 
     use super::*;
     use crate::snippet_bencher::BenchmarkCase;

@@ -79,8 +79,7 @@ pub(crate) mod tests {
     use rand::prelude::*;
     use test_strategy::proptest;
     use triton_vm::prelude::*;
-    use triton_vm::twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
-    use triton_vm::twenty_first::util_types::algebraic_hasher::Sponge;
+    use triton_vm::twenty_first::util_types::sponge::Sponge;
 
     use super::*;
     use crate::rust_shadowing_helper_functions::array::array_get;

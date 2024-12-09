@@ -262,7 +262,6 @@ mod tests {
     use rand::RngCore;
     use rand::SeedableRng;
     use tip5::Digest;
-    use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 
     use super::*;
     use crate::library::STATIC_MEMORY_FIRST_ADDRESS;

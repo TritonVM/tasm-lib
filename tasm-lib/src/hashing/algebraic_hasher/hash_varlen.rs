@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use rand::prelude::*;
 use triton_vm::prelude::*;
 use triton_vm::twenty_first::math::tip5::Digest;
-use triton_vm::twenty_first::util_types::algebraic_hasher::Sponge;
+use triton_vm::twenty_first::util_types::sponge::Sponge;
 
 use crate::data_type::DataType;
 use crate::hashing::absorb_multiple::AbsorbMultiple;
