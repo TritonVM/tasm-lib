@@ -40,4 +40,5 @@ often.
 |  220..230 | [`TasmObject` for `(T, S)`](structure/manual_tasm_object_implementations.rs)                |
 |  230..300 | [`StarkVerify`](verifier/stark_verify.rs)                                                   |
 |  300..310 | [`vm_proof_iter::New`](verifier/vm_proof_iter/new.rs)                                       |
-|  310..320 | [`AddU64`](arithmetic/u64/add.rs)                                                           |
+|  310..320 | [`u64::Add`](arithmetic/u64/add.rs)                                                         |
+|  320..330 | [`i128::ShiftRight`](arithmetic/i128/shift_right.rs)                                        |

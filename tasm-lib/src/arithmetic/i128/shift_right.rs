@@ -1,11 +1,14 @@
 use triton_vm::isa::triton_asm;
+use triton_vm::prelude::LabelledInstruction;
 
 use crate::arithmetic::u32::isu32::Isu32;
 use crate::arithmetic::u32::shiftleft::Shiftleft;
 use crate::arithmetic::u32::shiftright::Shiftright;
+use crate::data_type::DataType;
+use crate::library::Library;
 use crate::prelude::BasicSnippet;
 
-/// Sign-preserving right-shift for `u128`s.
+/// Sign-preserving right-shift for 128-bit integers AKA right-shift for `i128`.
 ///
 /// # Behavior
 ///
@@ -13,12 +16,12 @@ use crate::prelude::BasicSnippet;
 ///
 /// AFTER: `_ res3 res2 res1 res0`
 ///
-/// where `res == arg >> shamt` as `u128`s.
+/// where `res == arg >> shamt` as `i128`s.
 ///
 /// # Preconditions
 ///
 ///  - `arg` consists of 4 `u32`s
-///  - `shamt` is in `[0:128]`
+///  - `shamt` is in `[0:128)`
 ///
 /// # Postconditions
 ///
@@ -27,37 +30,36 @@ use crate::prelude::BasicSnippet;
 /// # Panics
 ///
 ///  - If preconditions are not met.
-pub struct ShiftRightI128;
+pub struct ShiftRight;
 
-pub const ARGUMENT_LIMB_3_NOT_U32_ERROR: i128 = 13;
-pub const ARGUMENT_LIMB_2_NOT_U32_ERROR: i128 = 12;
-pub const ARGUMENT_LIMB_1_NOT_U32_ERROR: i128 = 11;
-pub const ARGUMENT_LIMB_0_NOT_U32_ERROR: i128 = 10;
-pub const SHAMT_NOT_U32_ERROR: i128 = 14;
+impl ShiftRight {
+    pub const ARGUMENT_LIMB_3_NOT_U32_ERROR_ID: i128 = 323;
+    pub const ARGUMENT_LIMB_2_NOT_U32_ERROR_ID: i128 = 322;
+    pub const ARGUMENT_LIMB_1_NOT_U32_ERROR_ID: i128 = 321;
+    pub const ARGUMENT_LIMB_0_NOT_U32_ERROR_ID: i128 = 320;
+    pub const SHAMT_NOT_U32_ERROR_ID: i128 = 324;
+}
 
-impl BasicSnippet for ShiftRightI128 {
-    fn inputs(&self) -> Vec<(crate::data_type::DataType, String)> {
+impl BasicSnippet for ShiftRight {
+    fn inputs(&self) -> Vec<(DataType, String)> {
         vec![
-            (crate::data_type::DataType::U128, "arg".to_string()),
-            (crate::data_type::DataType::U32, "shamt".to_string()),
+            (DataType::U128, "arg".to_string()),
+            (DataType::U32, "shamt".to_string()),
         ]
     }
 
-    fn outputs(&self) -> Vec<(crate::data_type::DataType, String)> {
-        vec![(crate::data_type::DataType::U128, "res".to_string())]
+    fn outputs(&self) -> Vec<(DataType, String)> {
+        vec![(DataType::U128, "res".to_string())]
     }
 
     fn entrypoint(&self) -> String {
         "tasmlib_arithmetic_u128_shift_right_i128".to_string()
     }
 
-    fn code(
-        &self,
-        library: &mut crate::prelude::Library,
-    ) -> Vec<triton_vm::prelude::LabelledInstruction> {
-        let shr_i128_by_32n = "tasmlib_arithmetic_u128_shift_right_i128_by_32n".to_string();
-        let clean_up_for_early_return =
-            "tasmlib_arithmetic_u128_shift_right_i128_early_return".to_string();
+    fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
+        let entrypoint = self.entrypoint();
+        let shr_i128_by_32n = format!("{entrypoint}_by_32n");
+        let clean_up_for_early_return = format!("{entrypoint}_early_return");
         let entrypoint = self.entrypoint();
 
         let is_u32 = library.import(Box::new(Isu32));
@@ -80,13 +82,13 @@ impl BasicSnippet for ShiftRightI128 {
                 lt
                 // _ arg3 arg2 arg1 arg0 shamt arg3 arg2 arg1 arg0 (shamt < 128)
 
-                assert error_id {SHAMT_NOT_U32_ERROR}
+                assert error_id {Self::SHAMT_NOT_U32_ERROR_ID}
                 // _ arg3 arg2 arg1 arg0 shamt arg3 arg2 arg1 arg0
 
-                call {is_u32} assert error_id {ARGUMENT_LIMB_0_NOT_U32_ERROR}
-                call {is_u32} assert error_id {ARGUMENT_LIMB_1_NOT_U32_ERROR}
-                call {is_u32} assert error_id {ARGUMENT_LIMB_2_NOT_U32_ERROR}
-                call {is_u32} assert error_id {ARGUMENT_LIMB_3_NOT_U32_ERROR}
+                call {is_u32} assert error_id {Self::ARGUMENT_LIMB_0_NOT_U32_ERROR_ID}
+                call {is_u32} assert error_id {Self::ARGUMENT_LIMB_1_NOT_U32_ERROR_ID}
+                call {is_u32} assert error_id {Self::ARGUMENT_LIMB_2_NOT_U32_ERROR_ID}
+                call {is_u32} assert error_id {Self::ARGUMENT_LIMB_3_NOT_U32_ERROR_ID}
                 // _ arg3 arg2 arg1 arg0 shamt
 
 
@@ -197,8 +199,8 @@ impl BasicSnippet for ShiftRightI128 {
 
                 return
 
-            // BEFORE: _ arg3 arg2 arg1 arg0 shamt top
-            // AFTER: _ arg3' arg2' arg1' arg0' shamt' top
+            // BEFORE: _ arg3  arg2  arg1  arg0  shamt  top
+            // AFTER:  _ arg3' arg2' arg1' arg0' shamt' top
             // where `arg >> shamt == arg' >> shamt'` and `shamt' < 32`
             {shr_i128_by_32n}:
 
@@ -222,13 +224,13 @@ impl BasicSnippet for ShiftRightI128 {
                 pick 2 pop 1
                 // _ top_limb arg3 arg2 arg1 shamt top
 
-                pick 1 push {-32} add place 1
+                pick 1 addi -32 place 1
                 // _ top_limb arg3 arg2 arg1 (shamt-32) top
 
                 recurse
 
-            // BEFORE _ arg3' arg2' arg1' arg0' shamt' top b
-            // AFTER _ arg3' arg2' arg1' arg0' b
+            // BEFORE: _ arg3' arg2' arg1' arg0' shamt' top b
+            // AFTER:  _ arg3' arg2' arg1' arg0' b
             {clean_up_for_early_return}:
                 place 2
                 pop 2
@@ -259,9 +261,9 @@ mod test {
     use crate::traits::closure::ShadowedClosure;
     use crate::traits::rust_shadow::RustShadow;
 
-    use super::ShiftRightI128;
+    use super::ShiftRight;
 
-    impl ShiftRightI128 {
+    impl ShiftRight {
         pub(crate) fn prepare_stack(&self, arg: u128, shamt: u32) -> Vec<BFieldElement> {
             let mut stack = self.init_stack_for_isolated_run();
 
@@ -303,7 +305,7 @@ mod test {
         }
     }
 
-    impl Closure for ShiftRightI128 {
+    impl Closure for ShiftRight {
         fn rust_shadow(&self, stack: &mut Vec<triton_vm::prelude::BFieldElement>) {
             let shamt: u32 = stack.pop().unwrap().value().try_into().unwrap();
             let arg_limbs = (0..4)
@@ -339,12 +341,12 @@ mod test {
 
     #[test]
     fn standard_test() {
-        ShadowedClosure::new(ShiftRightI128).test()
+        ShadowedClosure::new(ShiftRight).test()
     }
 
     #[proptest]
     fn proptest(#[strategy(arb())] arg: u128, #[strategy(0u32..128)] shamt: u32) {
-        ShiftRightI128.assert_expected_shift_behavior(arg, shamt);
+        ShiftRight.assert_expected_shift_behavior(arg, shamt);
     }
 
     #[test]
@@ -361,7 +363,7 @@ mod test {
                     .map(|(l, r)| l + 32 * r),
             )
             .for_each(|(arg, shamt)| {
-                ShiftRightI128.assert_expected_shift_behavior(arg, shamt);
+                ShiftRight.assert_expected_shift_behavior(arg, shamt);
             });
     }
 }
@@ -374,6 +376,6 @@ mod benches {
 
     #[test]
     fn shift_right_i128_benchmark() {
-        ShadowedClosure::new(ShiftRightI128).bench()
+        ShadowedClosure::new(ShiftRight).bench()
     }
 }
