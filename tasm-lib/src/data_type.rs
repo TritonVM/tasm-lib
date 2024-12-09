@@ -21,6 +21,7 @@ pub enum DataType {
     U32,
     U64,
     U128,
+    I128,
     Bfe,
     Xfe,
     Digest,
@@ -57,6 +58,7 @@ impl DataType {
             DataType::U32 => u32::static_length(),
             DataType::U64 => u64::static_length(),
             DataType::U128 => u128::static_length(),
+            DataType::I128 => Some(4),
             DataType::Bfe => BFieldElement::static_length(),
             DataType::Xfe => XFieldElement::static_length(),
             DataType::Digest => Digest::static_length(),
@@ -86,6 +88,7 @@ impl DataType {
             DataType::U32 => "u32".to_string(),
             DataType::U64 => "u64".to_string(),
             DataType::U128 => "u128".to_string(),
+            DataType::I128 => "i128".to_string(),
             DataType::Bfe => "bfe".to_string(),
             DataType::Xfe => "xfe".to_string(),
             DataType::Digest => "digest".to_string(),
@@ -105,6 +108,7 @@ impl DataType {
             DataType::U32 => 1,
             DataType::U64 => 2,
             DataType::U128 => 4,
+            DataType::I128 => 4,
             DataType::Bfe => 1,
             DataType::Xfe => 3,
             DataType::Digest => Digest::LEN,
@@ -222,6 +226,7 @@ impl DataType {
             DataType::U32 => "DataType::U32".to_owned(),
             DataType::U64 => "DataType::U64".to_owned(),
             DataType::U128 => "DataType::U128".to_owned(),
+            DataType::I128 => "DataType::I128".to_owned(),
             DataType::Bfe => "DataType::BFE".to_owned(),
             DataType::Xfe => "DataType::XFE".to_owned(),
             DataType::Digest => "DataType::Digest".to_owned(),
@@ -298,6 +303,7 @@ impl DataType {
             DataType::U32 => rng.gen::<u32>().encode(),
             DataType::U64 => rng.gen::<u64>().encode(),
             DataType::U128 => rng.gen::<u128>().encode(),
+            DataType::I128 => rng.gen::<[u32; 4]>().encode(),
             DataType::Bfe => rng.gen::<BFieldElement>().encode(),
             DataType::Xfe => rng.gen::<XFieldElement>().encode(),
             DataType::Digest => rng.gen::<Digest>().encode(),
@@ -365,6 +371,7 @@ impl FromStr for DataType {
                 "u32" => Self::U32,
                 "u64" => Self::U64,
                 "u128" => Self::U128,
+                "i128" => Self::I128,
                 "bfe" => Self::Bfe,
                 "xfe" => Self::Xfe,
                 "digest" => Self::Digest,
@@ -382,6 +389,7 @@ pub enum Literal {
     U32(u32),
     U64(u64),
     U128(u128),
+    I128(i128),
     Bfe(BFieldElement),
     Xfe(XFieldElement),
     Digest(Digest),
@@ -394,6 +402,7 @@ impl Literal {
             Literal::U32(_) => DataType::U32,
             Literal::U64(_) => DataType::U64,
             Literal::U128(_) => DataType::U128,
+            Literal::I128(_) => DataType::I128,
             Literal::Bfe(_) => DataType::Bfe,
             Literal::Xfe(_) => DataType::Xfe,
             Literal::Digest(_) => DataType::Digest,
@@ -422,6 +431,14 @@ impl Literal {
                     push {(*val >> 64) & u32::MAX as u128}
                     push {(*val >> 32) & u32::MAX as u128}
                     push {(*val) & u32::MAX as u128}
+                )
+            }
+            Literal::I128(val) => {
+                triton_asm!(
+                    push {(*val >> 96) & 0xFFFF_FFFF}
+                    push {(*val >> 64) & 0xFFFF_FFFF}
+                    push {(*val >> 32) & 0xFFFF_FFFF}
+                    push {(*val) & 0xFFFF_FFFF}
                 )
             }
             Literal::Bfe(bfe) => triton_asm!(push { bfe }),
@@ -482,6 +499,15 @@ impl Literal {
                         + ((words[3].value() as u128) << 96),
                 )
             }
+            DataType::I128 => {
+                assert!(is_u32_based(&words));
+                Literal::I128(
+                    words[0].value() as i128
+                        + ((words[1].value() as i128) << 32)
+                        + ((words[2].value() as i128) << 64)
+                        + ((words[3].value() as i128) << 96),
+                )
+            }
             DataType::Bfe => Literal::Bfe(words[0]),
             DataType::Xfe => Literal::Xfe(XFieldElement::new([words[0], words[1], words[2]])),
             DataType::Digest => Literal::Digest(Digest::new([
@@ -503,6 +529,16 @@ mod tests {
     use test_strategy::proptest;
 
     use super::*;
+
+    impl Literal {
+        fn as_128(&self) -> i128 {
+            let Literal::I128(val) = self else {
+                panic!("Expected i128, got: {self:?}");
+            };
+
+            *val
+        }
+    }
 
     #[proptest]
     fn push_to_stack_leaves_value_on_top_of_stack(#[strategy(arb())] literal: Literal) {
@@ -622,6 +658,40 @@ mod tests {
         let mut rng = StdRng::seed_from_u64(5950175350772851878);
         let element_type = DataType::List(Box::new(DataType::Digest));
         let _list = element_type.random_list(&mut rng, 10);
+    }
+
+    #[test]
+    fn i128_sizes() {
+        assert_eq!(4, DataType::I128.stack_size());
+        assert_eq!(Some(4), DataType::I128.static_length());
+    }
+
+    #[proptest]
+    fn non_negative_i128s_encode_like_u128s_prop(
+        #[strategy(arb())]
+        #[filter(#as_i128 >= 0i128)]
+        as_i128: i128,
+    ) {
+        let as_u128: u128 = as_i128.try_into().unwrap();
+        assert_eq!(
+            Literal::U128(as_u128).push_to_stack_code(),
+            Literal::I128(as_i128).push_to_stack_code()
+        );
+    }
+
+    #[proptest]
+    fn i128_literals_prop(val: i128) {
+        let program = Literal::I128(val).push_to_stack_code();
+        let program = triton_program!(
+            {&program}
+            halt
+        );
+
+        let mut vm_state = VMState::new(program, [].into(), [].into());
+        vm_state.run().unwrap();
+        let mut final_stack = vm_state.op_stack.stack;
+        let popped = Literal::pop_from_stack(DataType::I128, &mut final_stack).as_128();
+        assert_eq!(val, popped);
     }
 
     #[proptest]
