@@ -1,20 +1,67 @@
 use triton_vm::prelude::*;
 
-use crate::arithmetic::u128::overflowing_add::OverflowingAddU128;
 use crate::data_type::DataType;
 use crate::library::Library;
 use crate::traits::basic_snippet::BasicSnippet;
 
 #[derive(Clone, Debug, Copy)]
-pub struct SafeAddU128;
+pub struct OverflowingAddU128;
 
-impl SafeAddU128 {
-    pub(crate) const OVERFLOW_ERROR_ID: i128 = 170;
+impl OverflowingAddU128 {
+    /// Generate code to perform an addition on `u128`s.
+    ///
+    /// This function is called by both this snippet and [`SafeAdd`].
+    ///
+    /// BEFORE: _ rhs_3 rhs_2 rhs_1 rhs_0 lhs_3 lhs_2 lhs_1 lhs_0
+    /// AFTER:  _ sum_3 sum_2 sum_1 sum_0 is_overflow
+    ///                                   ^^^^^^^^^^^
+    /// Don't forget to adapt the signature when using this function elsewhere.
+    pub(crate) fn addition_code() -> Vec<LabelledInstruction> {
+        triton_asm!(
+                pick 4
+                // _ rhs_3 rhs_2 rhs_1 lhs_3 lhs_2 lhs_1 lhs_0 rhs_0
+
+                add
+                split
+                // _ rhs_3 rhs_2 rhs_1 lhs_3 lhs_2 lhs_1 (lhs_0 + rhs_0)_hi (lhs_0 + rhs_0)_lo
+                // _ rhs_3 rhs_2 rhs_1 lhs_3 lhs_2 lhs_1 carry_1            sum_0
+
+                place 7
+                pick 4
+                // _ sum_0 rhs_3 rhs_2 lhs_3 lhs_2 lhs_1 carry_1 rhs_1
+
+                add
+                add
+                split
+                // _ sum_0 rhs_3 rhs_2 lhs_3 lhs_2 carry_2 sum_1
+
+                place 6
+                pick 3
+                // _ sum_1 sum_0 rhs_3 lhs_3 lhs_2 carry_2 rhs_2
+
+                add
+                add
+                split
+                // _ sum_1 sum_0 rhs_3 lhs_3 carry_3 sum_2
+
+                place 5
+                // _ sum_2 sum_1 sum_0 rhs_3 lhs_3 carry_3
+
+                add
+                add
+                split
+                // _ sum_2 sum_1 sum_0 carry_4 sum_3
+
+                place 4
+                // _ sum_3 sum_2 sum_1 sum_0 carry_4
+                // _ sum_3 sum_2 sum_1 sum_0 is_overflow
+        )
+    }
 }
 
-impl BasicSnippet for SafeAddU128 {
+impl BasicSnippet for OverflowingAddU128 {
     fn entrypoint(&self) -> String {
-        "tasmlib_arithmetic_u128_safe_add".to_string()
+        "tasmlib_arithmetic_u128_overflowing_add".to_string()
     }
 
     fn inputs(&self) -> Vec<(DataType, String)> {
@@ -25,24 +72,20 @@ impl BasicSnippet for SafeAddU128 {
     }
 
     fn outputs(&self) -> Vec<(DataType, String)> {
-        vec![(DataType::U128, "sum".to_owned())]
+        vec![
+            (DataType::U128, "sum".to_owned()),
+            (DataType::Bool, "overflow".to_owned()),
+        ]
     }
 
     /// Four top elements of stack are assumed to be valid u32s. So to have
     /// a value that's less than 2^32.
     fn code(&self, _: &mut Library) -> Vec<LabelledInstruction> {
-        let add_code = OverflowingAddU128::addition_code();
+        let add_code = Self::addition_code();
 
         triton_asm! {
-            // BEFORE: _ rhs_3 rhs_2 rhs_1 rhs_0 lhs_3 lhs_2 lhs_1 lhs_0
-            // AFTER:  _ sum_3 sum_2 sum_1 sum_0
             {self.entrypoint()}:
                 {&add_code}
-                // _ sum_3 sum_2 sum_1 sum_0 overflow
-
-                push 0
-                eq
-                assert error_id {Self::OVERFLOW_ERROR_ID}
                 return
         }
     }
@@ -55,35 +98,30 @@ mod tests {
     use rand::rngs::StdRng;
     use rand::Rng;
     use rand::SeedableRng;
-    use tasm_lib::test_helpers::test_assertion_failure;
 
     use super::*;
+    use crate::pop_encodable;
+    use crate::push_encodable;
     use crate::snippet_bencher::BenchmarkCase;
     use crate::test_helpers::test_rust_equivalence_given_complete_state;
     use crate::traits::closure::Closure;
     use crate::traits::closure::ShadowedClosure;
     use crate::traits::rust_shadow::RustShadow;
-    use crate::InitVmState;
 
     #[test]
-    fn add_u128_test() {
-        ShadowedClosure::new(SafeAddU128).test()
+    fn overflowing_add_u128_test() {
+        ShadowedClosure::new(OverflowingAddU128).test()
     }
 
     #[test]
-    fn add_u128_unit_test() {
-        let snippet = SafeAddU128;
-        let mut expected = snippet.init_stack_for_isolated_run();
-        expected.push(BFieldElement::new(0));
-        expected.push(BFieldElement::new(1 << 4));
-        expected.push(BFieldElement::new(0));
-        expected.push(BFieldElement::new(0));
-        snippet.assert_expected_add_behavior(1u128 << 67, 1u128 << 67, Some(&expected))
+    fn overflowing_add_u128_unit_test() {
+        let snippet = OverflowingAddU128;
+        snippet.assert_expected_add_behavior(1u128 << 67, 1u128 << 67)
     }
 
     #[test]
-    fn add_u128_overflow_test() {
-        let snippet = SafeAddU128;
+    fn overflowing_add_u128_overflow_test() {
+        let snippet = OverflowingAddU128;
 
         for (a, b) in [
             (1u128 << 127, 1u128 << 127),
@@ -100,16 +138,8 @@ mod tests {
             (u128::MAX, 1 << 97),
             (u128::MAX - 1, 2),
         ] {
-            test_assertion_failure(
-                &ShadowedClosure::new(snippet),
-                InitVmState::with_stack(snippet.setup_init_stack(a, b)),
-                &[170],
-            );
-            test_assertion_failure(
-                &ShadowedClosure::new(snippet),
-                InitVmState::with_stack(snippet.setup_init_stack(b, a)),
-                &[170],
-            );
+            snippet.assert_expected_add_behavior(a, b);
+            snippet.assert_expected_add_behavior(b, a);
         }
 
         for i in 0..128 {
@@ -121,35 +151,29 @@ mod tests {
             assert!(is_overflow, "i = {i}. a = {a}, b = {b}");
             assert!(wrapped_add.is_zero());
 
-            test_assertion_failure(
-                &ShadowedClosure::new(snippet),
-                InitVmState::with_stack(snippet.setup_init_stack(a, b)),
-                &[170],
-            );
-            test_assertion_failure(
-                &ShadowedClosure::new(snippet),
-                InitVmState::with_stack(snippet.setup_init_stack(b, a)),
-                &[170],
-            );
+            snippet.assert_expected_add_behavior(b, a);
         }
     }
 
-    impl SafeAddU128 {
-        fn assert_expected_add_behavior(
-            &self,
-            lhs: u128,
-            rhs: u128,
-            expected: Option<&[BFieldElement]>,
-        ) {
+    impl OverflowingAddU128 {
+        fn assert_expected_add_behavior(&self, lhs: u128, rhs: u128) {
             let init_stack = self.setup_init_stack(lhs, rhs);
 
+            let expected = {
+                let (sum, overflow) = lhs.overflowing_add(rhs);
+                let mut stack = self.init_stack_for_isolated_run();
+                push_encodable(&mut stack, &sum);
+                push_encodable(&mut stack, &overflow);
+                stack
+            };
+
             test_rust_equivalence_given_complete_state(
-                &ShadowedClosure::new(SafeAddU128),
+                &ShadowedClosure::new(OverflowingAddU128),
                 &init_stack,
                 &[],
                 &NonDeterminism::default(),
                 &None,
-                expected,
+                Some(&expected),
             );
         }
 
@@ -163,35 +187,13 @@ mod tests {
         }
     }
 
-    impl Closure for SafeAddU128 {
+    impl Closure for OverflowingAddU128 {
         fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
-            fn to_u128(a: u32, b: u32, c: u32, d: u32) -> u128 {
-                a as u128
-                    + b as u128 * (1u128 << 32)
-                    + c as u128 * (1u128 << 64)
-                    + d as u128 * (1u128 << 96)
-            }
-
-            // top element on stack
-            let a0: u32 = stack.pop().unwrap().try_into().unwrap();
-            let b0: u32 = stack.pop().unwrap().try_into().unwrap();
-            let c0: u32 = stack.pop().unwrap().try_into().unwrap();
-            let d0: u32 = stack.pop().unwrap().try_into().unwrap();
-            let ab0 = to_u128(a0, b0, c0, d0);
-
-            // second element on stack
-            let a1: u32 = stack.pop().unwrap().try_into().unwrap();
-            let b1: u32 = stack.pop().unwrap().try_into().unwrap();
-            let c1: u32 = stack.pop().unwrap().try_into().unwrap();
-            let d1: u32 = stack.pop().unwrap().try_into().unwrap();
-            let ab1 = to_u128(a1, b1, c1, d1);
-
-            let ab0_plus_ab1 = ab0.checked_add(ab1).unwrap();
-
-            let mut res = ab0_plus_ab1.encode();
-            for _ in 0..res.len() {
-                stack.push(res.pop().unwrap());
-            }
+            let left = pop_encodable::<u128>(stack);
+            let right = pop_encodable(stack);
+            let (sum, is_overflow) = left.overflowing_add(right);
+            push_encodable(stack, &sum);
+            push_encodable(stack, &is_overflow);
         }
 
         fn pseudorandom_initial_state(
@@ -201,9 +203,7 @@ mod tests {
         ) -> Vec<BFieldElement> {
             let mut rng = StdRng::from_seed(seed);
             let lhs: u128 = rng.gen();
-            let lhs = lhs / 2;
             let rhs: u128 = rng.gen();
-            let rhs = rhs / 2;
 
             self.setup_init_stack(lhs, rhs)
         }
@@ -218,7 +218,6 @@ mod tests {
             points_with_plus_minus_one
                 .iter()
                 .cartesian_product(&points_with_plus_minus_one)
-                .filter(|(&l, &r)| l.checked_add(r).is_some())
                 .map(|(&l, &r)| self.setup_init_stack(l, r))
                 .collect()
         }
@@ -232,7 +231,7 @@ mod benches {
     use crate::traits::rust_shadow::RustShadow;
 
     #[test]
-    fn add_u128_benchmark() {
-        ShadowedClosure::new(SafeAddU128).bench()
+    fn overflowing_add_u128_benchmark() {
+        ShadowedClosure::new(OverflowingAddU128).bench()
     }
 }

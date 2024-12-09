@@ -1,21 +1,21 @@
 [
   {
-    "name": "tasmlib_arithmetic_u128_safe_add",
+    "name": "tasmlib_arithmetic_u128_overflowing_add",
     "benchmark_result": {
       "clock_cycle_count": 21,
-      "hash_table_height": 24,
-      "u32_table_height": 125,
+      "hash_table_height": 18,
+      "u32_table_height": 128,
       "op_stack_table_height": 11,
       "ram_table_height": 0
     },
     "case": "CommonCase"
   },
   {
-    "name": "tasmlib_arithmetic_u128_safe_add",
+    "name": "tasmlib_arithmetic_u128_overflowing_add",
     "benchmark_result": {
       "clock_cycle_count": 21,
-      "hash_table_height": 24,
-      "u32_table_height": 127,
+      "hash_table_height": 18,
+      "u32_table_height": 126,
       "op_stack_table_height": 11,
       "ram_table_height": 0
     },
