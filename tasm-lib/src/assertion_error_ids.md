@@ -41,3 +41,4 @@ often.
 |  230..300 | [`StarkVerify`](verifier/stark_verify.rs)                                                   |
 |  300..310 | [`vm_proof_iter::New`](verifier/vm_proof_iter/new.rs)                                       |
 |  310..320 | [`AddU64`](arithmetic/u64/add_u64.rs)                                                       |
+|  320..330 | [`ShiftRightI128`](arithmetic/u128/shift_right_i128.rs)                                                       |
