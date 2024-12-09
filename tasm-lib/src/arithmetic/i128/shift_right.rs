@@ -99,119 +99,120 @@ impl BasicSnippet for ShiftRight {
                 /* extract top bit */
 
                 dup 4 push 31 call {shr_u32}
-                hint top = stack[0]
-                // _ arg3 arg2 arg1 arg0 shamt top
+                hint msb = stack[0]
+                // _ arg3 arg2 arg1 arg0 shamt msb
 
 
                 /* shift right by multiple of 32 */
 
                 call {shr_i128_by_32n}
-                // _ arg3' arg2' arg1' arg0' (shamt % 32) top
-                // _ arg3' arg2' arg1' arg0' shamt' top
+                // _ arg3' arg2' arg1' arg0' (shamt % 32) msb
+                // _ arg3' arg2' arg1' arg0' shamt' msb
 
 
                 /* early return if possible */
                 dup 1 push 0 eq dup 0
-                // _ arg3' arg2' arg1' arg0' shamt' top (shamt' == 0) (shamt' == 0)
+                // _ arg3' arg2' arg1' arg0' shamt' msb (shamt' == 0) (shamt' == 0)
 
                 skiz call {clean_up_for_early_return}
                 skiz return
-                // _ arg3' arg2' arg1' arg0' shamt' top
+                // _ arg3' arg2' arg1' arg0' shamt' msb
+
 
                 /* shift right by the remainder modulo 32 */
 
-                push 32 dup 2 push {-1} mul add
-                // _ arg3' arg2' arg1' arg0' shamt' top (32-shamt')
-                // _ arg3' arg2' arg1' arg0' shamt' top compl'
+                push 32 dup 2 push -1 mul add
+                // _ arg3' arg2' arg1' arg0' shamt' msb (32-shamt')
+                // _ arg3' arg2' arg1' arg0' shamt' msb compl'
 
                 push {u32::MAX} dup 2 mul
-                // _ arg3' arg2' arg1' arg0' shamt' top compl' (u32::MAX * top)
+                // _ arg3' arg2' arg1' arg0' shamt' msb compl' (u32::MAX * msb)
 
                 dup 1 call {shl_u32}
-                // _ arg3' arg2' arg1' arg0' shamt' top compl' ((u32::MAX * top) << compl')
-                // _ arg3' arg2' arg1' arg0' shamt' top compl' top_new
+                // _ arg3' arg2' arg1' arg0' shamt' msb compl' ((u32::MAX * msb) << compl')
+                // _ arg3' arg2' arg1' arg0' shamt' msb compl' new_ms_limb
 
                 pick 7 dup 0
-                // _ arg2' arg1' arg0' shamt' top compl' top_new arg3' arg3'
+                // _ arg2' arg1' arg0' shamt' msb compl' new_ms_limb arg3' arg3'
 
                 dup 3 call {shl_u32}
-                // _ arg2' arg1' arg0' shamt' top compl' top_new arg3' (arg3' << compl')
-                // _ arg2' arg1' arg0' shamt' top compl' top_new arg3' arg3'_lo
+                // _ arg2' arg1' arg0' shamt' msb compl' new_ms_limb arg3' (arg3' << compl')
+                // _ arg2' arg1' arg0' shamt' msb compl' new_ms_limb arg3' arg3'_lo
 
                 place 2
-                // _ arg2' arg1' arg0' shamt' top compl' arg3'_lo top_new arg3'
+                // _ arg2' arg1' arg0' shamt' msb compl' arg3'_lo new_ms_limb arg3'
 
                 dup 5 call {shr_u32}
-                // _ arg2' arg1' arg0' shamt' top compl' arg3'_lo top_new (arg3' >> shamt')
-                // _ arg2' arg1' arg0' shamt' top compl' arg3'_lo top_new arg3_hi
+                // _ arg2' arg1' arg0' shamt' msb compl' arg3'_lo new_ms_limb (arg3' >> shamt')
+                // _ arg2' arg1' arg0' shamt' msb compl' arg3'_lo new_ms_limb arg3_hi
 
                 add
-                // _ arg2' arg1' arg0' shamt' top compl' arg3'_lo arg3''
+                // _ arg2' arg1' arg0' shamt' msb compl' arg3'_lo arg3''
 
                 swap 7 dup 0
-                // _ arg3'' arg1' arg0' shamt' top compl' arg3'_lo arg2' arg2'
+                // _ arg3'' arg1' arg0' shamt' msb compl' arg3'_lo arg2' arg2'
 
                 dup 3 call {shl_u32}
-                // _ arg3'' arg1' arg0' shamt' top compl' arg3'_lo arg2' (arg2' << compl')
-                // _ arg3'' arg1' arg0' shamt' top compl' arg3'_lo arg2' arg2'_lo
+                // _ arg3'' arg1' arg0' shamt' msb compl' arg3'_lo arg2' (arg2' << compl')
+                // _ arg3'' arg1' arg0' shamt' msb compl' arg3'_lo arg2' arg2'_lo
 
                 place 2
-                // _ arg3'' arg1' arg0' shamt' top compl' arg2'_lo arg3'_lo arg2'
+                // _ arg3'' arg1' arg0' shamt' msb compl' arg2'_lo arg3'_lo arg2'
 
                 dup 5 call {shr_u32}
-                // _ arg3'' arg1' arg0' shamt' top compl' arg2'_lo arg3'_lo (arg2' >> shamt')
-                // _ arg3'' arg1' arg0' shamt' top compl' arg2'_lo arg3'_lo arg2'_hi
+                // _ arg3'' arg1' arg0' shamt' msb compl' arg2'_lo arg3'_lo (arg2' >> shamt')
+                // _ arg3'' arg1' arg0' shamt' msb compl' arg2'_lo arg3'_lo arg2'_hi
 
                 add
-                // _ arg3'' arg1' arg0' shamt' top compl' arg2'_lo (arg3'_lo + arg2'_hi)
-                // _ arg3'' arg1' arg0' shamt' top compl' arg2'_lo arg2''
+                // _ arg3'' arg1' arg0' shamt' msb compl' arg2'_lo (arg3'_lo + arg2'_hi)
+                // _ arg3'' arg1' arg0' shamt' msb compl' arg2'_lo arg2''
 
                 swap 6 dup 0
-                // _ arg3'' arg2'' arg0' shamt' top compl' arg2'_lo arg1' arg1'
+                // _ arg3'' arg2'' arg0' shamt' msb compl' arg2'_lo arg1' arg1'
 
                 dup 3 call {shl_u32}
-                // _ arg3'' arg2'' arg0' shamt' top compl' arg2'_lo arg1' (arg1' << compl')
-                // _ arg3'' arg2'' arg0' shamt' top compl' arg2'_lo arg1' arg1'_lo
+                // _ arg3'' arg2'' arg0' shamt' msb compl' arg2'_lo arg1' (arg1' << compl')
+                // _ arg3'' arg2'' arg0' shamt' msb compl' arg2'_lo arg1' arg1'_lo
 
                 place 2
-                // _ arg3'' arg2'' arg0' shamt' top compl' arg1'_lo arg2'_lo arg1'
+                // _ arg3'' arg2'' arg0' shamt' msb compl' arg1'_lo arg2'_lo arg1'
 
                 dup 5 call {shr_u32}
-                // _ arg3'' arg2'' arg0' shamt' top compl' arg1'_lo arg2'_lo (arg1' >> shamt')
-                // _ arg3'' arg2'' arg0' shamt' top compl' arg1'_lo arg2'_lo arg1'_hi
+                // _ arg3'' arg2'' arg0' shamt' msb compl' arg1'_lo arg2'_lo (arg1' >> shamt')
+                // _ arg3'' arg2'' arg0' shamt' msb compl' arg1'_lo arg2'_lo arg1'_hi
 
                 add
-                // _ arg3'' arg2'' arg0' shamt' top compl' arg1'_lo (arg2'_lo+ arg1'_hi)
-                // _ arg3'' arg2'' arg0' shamt' top compl' arg1'_lo arg1''
+                // _ arg3'' arg2'' arg0' shamt' msb compl' arg1'_lo (arg2'_lo+ arg1'_hi)
+                // _ arg3'' arg2'' arg0' shamt' msb compl' arg1'_lo arg1''
 
                 swap 5
-                // _ arg3'' arg2'' arg1'' shamt' top compl' arg1'_lo arg0'
+                // _ arg3'' arg2'' arg1'' shamt' msb compl' arg1'_lo arg0'
 
                 pick 4
-                // _ arg3'' arg2'' arg1'' top compl' arg1'_lo arg0' shamt'
+                // _ arg3'' arg2'' arg1'' msb compl' arg1'_lo arg0' shamt'
 
                 call {shr_u32}
-                // _ arg3'' arg2'' arg1'' top compl' arg1'_lo (arg0' >> shamt')
-                // _ arg3'' arg2'' arg1'' top compl' arg1'_lo arg0'_hi
+                // _ arg3'' arg2'' arg1'' msb compl' arg1'_lo (arg0' >> shamt')
+                // _ arg3'' arg2'' arg1'' msb compl' arg1'_lo arg0'_hi
 
                 add
-                // _ arg3'' arg2'' arg1'' top compl' (arg1'_lo + arg0'_hi)
-                // _ arg3'' arg2'' arg1'' top compl' argo0''
+                // _ arg3'' arg2'' arg1'' msb compl' (arg1'_lo + arg0'_hi)
+                // _ arg3'' arg2'' arg1'' msb compl' argo0''
 
                 place 2 pop 2
                 // _ arg3'' arg2'' arg1'' argo0''
 
                 return
 
-            // BEFORE: _ arg3  arg2  arg1  arg0  shamt  top
-            // AFTER:  _ arg3' arg2' arg1' arg0' shamt' top
+            // BEFORE: _ arg3  arg2  arg1  arg0  shamt  msb
+            // AFTER:  _ arg3' arg2' arg1' arg0' shamt' msb
             // where `arg >> shamt == arg' >> shamt'` and `shamt' < 32`
             {shr_i128_by_32n}:
 
                 /* evaluate termination condition */
 
                 push 32 dup 2 lt
-                // _ arg3 arg2 arg1 arg0 shamt top (shamt < 32)
+                // _ arg3 arg2 arg1 arg0 shamt msb (shamt < 32)
 
                 skiz return
 
@@ -219,21 +220,21 @@ impl BasicSnippet for ShiftRight {
                 /* apply one limb-shift */
 
                 push {u32::MAX} dup 1 mul
-                // _ arg3 arg2 arg1 arg0 shamt top (u32::MAX * top)
-                // _ arg3 arg2 arg1 arg0 shamt top top_limb
+                // _ arg3 arg2 arg1 arg0 shamt msb (u32::MAX * msb)
+                // _ arg3 arg2 arg1 arg0 shamt msb ms_limb
 
                 place 6
-                // _ top_limb arg3 arg2 arg1 arg0 shamt top
+                // _ ms_limb arg3 arg2 arg1 arg0 shamt msb
 
                 pick 2 pop 1
-                // _ top_limb arg3 arg2 arg1 shamt top
+                // _ ms_limb arg3 arg2 arg1 shamt msb
 
                 pick 1 addi -32 place 1
-                // _ top_limb arg3 arg2 arg1 (shamt-32) top
+                // _ ms_limb arg3 arg2 arg1 (shamt-32) msb
 
                 recurse
 
-            // BEFORE: _ arg3' arg2' arg1' arg0' shamt' top b
+            // BEFORE: _ arg3' arg2' arg1' arg0' shamt' msb b
             // AFTER:  _ arg3' arg2' arg1' arg0' b
             {clean_up_for_early_return}:
                 place 2
@@ -247,19 +248,19 @@ impl BasicSnippet for ShiftRight {
 #[cfg(test)]
 mod test {
     use itertools::Itertools;
-    use num::BigUint;
     use num::PrimInt;
     use proptest_arbitrary_interop::arb;
     use rand::rngs::StdRng;
     use rand::Rng;
     use rand::SeedableRng;
     use test_strategy::proptest;
-    use triton_vm::prelude::bfe;
     use triton_vm::prelude::BFieldElement;
     use triton_vm::vm::NonDeterminism;
 
+    use crate::pop_encodable;
     use crate::prelude::BasicSnippet;
     use crate::push_encodable;
+    use crate::snippet_bencher::BenchmarkCase;
     use crate::test_helpers::test_rust_equivalence_given_complete_state;
     use crate::traits::closure::Closure;
     use crate::traits::closure::ShadowedClosure;
@@ -268,35 +269,19 @@ mod test {
     use super::ShiftRight;
 
     impl ShiftRight {
-        pub(crate) fn prepare_stack(&self, arg: u128, shamt: u32) -> Vec<BFieldElement> {
+        pub(crate) fn prepare_stack(&self, arg: i128, shamt: u32) -> Vec<BFieldElement> {
             let mut stack = self.init_stack_for_isolated_run();
-
-            let mut arg_limbs = BigUint::from(arg)
-                .to_u32_digits()
-                .into_iter()
-                .pad_using(4, |_| 0)
-                .map(u64::from)
-                .map(BFieldElement::new)
-                .collect_vec();
-
-            while let Some(element) = arg_limbs.pop() {
-                stack.push(element);
-            }
-
-            stack.push(bfe!(shamt));
+            push_encodable(&mut stack, &arg);
+            push_encodable(&mut stack, &shamt);
 
             stack
         }
 
-        fn assert_expected_shift_behavior(&self, arg: u128, shamt: u32) {
+        fn assert_expected_shift_behavior(&self, arg: i128, shamt: u32) {
             let init_stack = self.prepare_stack(arg, shamt);
 
-            let expected = {
-                let res = arg.signed_shr(shamt);
-                let mut stack = self.init_stack_for_isolated_run();
-                push_encodable(&mut stack, &res);
-                stack
-            };
+            let mut expected_stack = self.init_stack_for_isolated_run();
+            push_encodable(&mut expected_stack, &(arg >> shamt));
 
             test_rust_equivalence_given_complete_state(
                 &ShadowedClosure::new(Self),
@@ -304,40 +289,25 @@ mod test {
                 &[],
                 &NonDeterminism::default(),
                 &None,
-                Some(&expected),
+                Some(&expected_stack),
             );
         }
     }
 
     impl Closure for ShiftRight {
-        fn rust_shadow(&self, stack: &mut Vec<triton_vm::prelude::BFieldElement>) {
-            let shamt: u32 = stack.pop().unwrap().value().try_into().unwrap();
-            let arg_limbs = (0..4)
-                .map(|_| stack.pop().unwrap().value().try_into().unwrap())
-                .collect_vec();
-            let arg = u128::try_from(BigUint::from_slice(&arg_limbs)).unwrap();
-
-            let res = arg.signed_shr(shamt);
-
-            let mut res_limbs = BigUint::from(res)
-                .to_u32_digits()
-                .into_iter()
-                .pad_using(4, |_| 0)
-                .map(u64::from)
-                .map(BFieldElement::new)
-                .collect_vec();
-            while let Some(element) = res_limbs.pop() {
-                stack.push(element);
-            }
+        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
+            let shamt = pop_encodable::<u32>(stack);
+            let arg = pop_encodable::<u128>(stack);
+            push_encodable(stack, &arg.signed_shr(shamt));
         }
 
         fn pseudorandom_initial_state(
             &self,
             seed: [u8; 32],
-            _bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
-        ) -> Vec<triton_vm::prelude::BFieldElement> {
+            _: Option<BenchmarkCase>,
+        ) -> Vec<BFieldElement> {
             let mut rng = StdRng::from_seed(seed);
-            let arg: u128 = rng.gen();
+            let arg: i128 = rng.gen();
             let shamt: u32 = rng.gen_range(0..128);
             self.prepare_stack(arg, shamt)
         }
@@ -349,7 +319,7 @@ mod test {
     }
 
     #[proptest]
-    fn proptest(#[strategy(arb())] arg: u128, #[strategy(0u32..128)] shamt: u32) {
+    fn proptest(#[strategy(arb())] arg: i128, #[strategy(0u32..128)] shamt: u32) {
         ShiftRight.assert_expected_shift_behavior(arg, shamt);
     }
 
@@ -358,8 +328,10 @@ mod test {
         [0, 1, u32::MAX]
             .into_iter()
             .map(u128::from)
-            .tuple_combinations()
-            .map(|(l0, l1, l2, l3)| l0 + (l1 << 32) + (l2 << 64) + (l3 << 96))
+            .combinations_with_replacement(4)
+            .flat_map(TryInto::<[u128; 4]>::try_into)
+            .map(|[l0, l1, l2, l3]| l0 + (l1 << 32) + (l2 << 64) + (l3 << 96))
+            .map(|u| u as i128)
             .cartesian_product(
                 [0, 1, 16, 31]
                     .into_iter()
