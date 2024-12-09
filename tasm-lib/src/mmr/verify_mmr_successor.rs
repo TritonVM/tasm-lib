@@ -2,15 +2,8 @@ use triton_vm::prelude::*;
 use twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
 use twenty_first::util_types::mmr::mmr_successor_proof::MmrSuccessorProof;
 
-use crate::arithmetic::u64::add::Add;
-use crate::arithmetic::u64::log_2_floor::Log2Floor;
-use crate::arithmetic::u64::lt::Lt;
-use crate::arithmetic::u64::popcount::PopCount;
-use crate::arithmetic::u64::shift_right::ShiftRight;
-use crate::arithmetic::u64::sub::Sub;
 use crate::field;
 use crate::hashing::merkle_step_u64_index::MerkleStepU64Index;
-use crate::mmr::bag_peaks::BagPeaks;
 use crate::mmr::leaf_index_to_mt_index_and_peak_index::MmrLeafIndexToMtIndexAndPeakIndex;
 use crate::prelude::*;
 
@@ -23,14 +16,35 @@ use crate::prelude::*;
 /// correctly with the `MmrSuccessorProof`.
 ///
 /// This snippet crashes if the relation does not hold (or if the proof is invalid).
+///
+/// ### Behavior
+///
+/// ```text
+/// BEFORE: _ *old_mmr *new_mmr
+/// AFTER:  _
+/// ```
+///
+/// ### Preconditions
+///
+/// - todo
+///
+/// ### Postconditions
+///
+/// - todo
 pub struct VerifyMmrSuccessor;
+
+impl VerifyMmrSuccessor {
+    pub(crate) const A_ERROR_ID: i128 = 150;
+    pub(crate) const B_ERROR_ID: i128 = 151;
+    pub(crate) const C_ERROR_ID: i128 = 152;
+    pub(crate) const UNEQUAL_PEAK_DESPITE_EQUAL_NUM_LEAFS_ERROR_ID: i128 = 153;
+}
 
 impl BasicSnippet for VerifyMmrSuccessor {
     fn inputs(&self) -> Vec<(DataType, String)> {
-        vec![
-            (DataType::VoidPointer, "*old_mmr".to_string()),
-            (DataType::VoidPointer, "*new_mmr".to_string()),
-        ]
+        ["*old_mmr", "*new_mmr"]
+            .map(|ptr_name| (DataType::VoidPointer, ptr_name.to_string()))
+            .to_vec()
     }
 
     fn outputs(&self) -> Vec<(DataType, String)> {
@@ -42,36 +56,28 @@ impl BasicSnippet for VerifyMmrSuccessor {
     }
 
     fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
-        let field_peaks = field!(MmrAccumulator::peaks);
-        let field_leaf_count = field!(MmrAccumulator::leaf_count);
-        let num_peaks = triton_asm! {
-            // _ *mmr
-            {&field_peaks}
-            // _ *peaks
-            read_mem 1
-            // _ len (*peaks-1)
-            pop 1
-            // _ len
-        };
         let num_leafs = triton_asm!(
             // _ *mmr
-            {&field_leaf_count}
+            {&field!(MmrAccumulator::leaf_count)}
             // _ *leaf_count
-            push 1 add read_mem 2
+            addi 1 read_mem 2
             // _ [num_leafs] (*leaf_count-1)
             pop 1
         );
-        let ltu64 = library.import(Box::new(Lt));
-        let popcount_u64 = library.import(Box::new(PopCount));
-        let add_u64 = library.import(Box::new(Add));
+
+        let add_u64 = library.import(Box::new(crate::arithmetic::u64::add::Add));
+        let ilog2_u64 = library.import(Box::new(crate::arithmetic::u64::log_2_floor::Log2Floor));
+        let ltu64 = library.import(Box::new(crate::arithmetic::u64::lt::Lt));
+        let popcount_u64 = library.import(Box::new(crate::arithmetic::u64::popcount::PopCount));
+        let shr_u64 = library.import(Box::new(crate::arithmetic::u64::shift_right::ShiftRight));
+        let sub_u64 = library.import(Box::new(crate::arithmetic::u64::sub::Sub));
+
+        let bag_peaks = library.import(Box::new(crate::mmr::bag_peaks::BagPeaks));
         let leaf_index_to_mti_and_pki = library.import(Box::new(MmrLeafIndexToMtIndexAndPeakIndex));
         let merkle_step_u64 = library.import(Box::new(MerkleStepU64Index));
-        let ilog2_u64 = library.import(Box::new(Log2Floor));
-        let sub_u64 = library.import(Box::new(Sub));
-        let shr_u64 = library.import(Box::new(ShiftRight));
-        let compare_digests = DataType::Digest.compare();
+
         let compare_u64 = DataType::U64.compare();
-        let bag_peaks = library.import(Box::new(BagPeaks));
+
         let entrypoint = self.entrypoint();
         let main_loop = format!("{entrypoint}_main_loop");
         let traverse = format!("{entrypoint}_traverse_partial_auth_path");
@@ -80,7 +86,7 @@ impl BasicSnippet for VerifyMmrSuccessor {
 
         let strip_top_bit = triton_asm!(
             // BEFORE: [num_leafs_remaining] garbage
-            // AFTER: [num_leafs_remaining*] old_height
+            // AFTER:  [num_leafs_remaining*] old_height
             pop 1
             dup 1 dup 1 call {ilog2_u64}
             // [num_leafs_remaining] old_height
@@ -148,10 +154,10 @@ impl BasicSnippet for VerifyMmrSuccessor {
 
             // new num leafs < old num leafs  ?
             dup 1 {&num_leafs}
-            // _ *old_mmr *new_mmr [old_num_leafs]
+            // _ *old_mmr *new_mmr [old_num_leafs: u64]
 
             dup 2 {&num_leafs}
-            // _ *old_mmr *new_mmr [old_num_leafs] [new_num_leafs]
+            // _ *old_mmr *new_mmr [old_num_leafs: u64] [new_num_leafs: u64]
 
             call {ltu64}
             // _ *old_mmr *new_mmr (new_num_leafs < old_num_leafs)
@@ -159,23 +165,28 @@ impl BasicSnippet for VerifyMmrSuccessor {
             push 0 eq
             // _ *old_mmr *new_mmr (new_num_leafs >= old_num_leafs)
 
-            assert error_id 150
+            assert error_id {Self::A_ERROR_ID}
             // _ *old_mmr *new_mmr
 
 
             // consistent new mmr?
-            dup 0 {&num_peaks}
+            dup 0
+            {&field!(MmrAccumulator::peaks)}
+            // _ *old_mmr *new_mmr *new_mmr_peaks
+
+            read_mem 1
+            pop 1
             // _ *old_mmr *new_mmr new_num_peaks
 
             dup 1 {&num_leafs} call {popcount_u64}
             // _ *old_mmr *new_mmr new_num_peaks (popcount of new_num_leafs)
 
-            eq assert error_id 151
+            eq assert error_id  {Self::B_ERROR_ID}
             // _ *old_mmr *new_mmr
 
 
             /* prepare and call loop */
-            dup 1 {&field_peaks}
+            dup 1 {&field!(MmrAccumulator::peaks)}
             // _ *old_mmr *new_mmr *old_peaks
 
             read_mem 1 push 2 add
@@ -250,7 +261,7 @@ impl BasicSnippet for VerifyMmrSuccessor {
                 hint merkle_index = stack[5..7]
                 hint peak_index = stack[7]
 
-                dup 15 {&field_peaks}
+                dup 15 {&field!(MmrAccumulator::peaks)}
                 // _ *new_mmr *current_peak *end_of_memory [running_leaf_count] [num_leafs_remaining*] old_height peak_index [1] [some_new_peak] *new_peaks
 
                 push {1 + Digest::LEN - 1} dup 9
@@ -262,7 +273,8 @@ impl BasicSnippet for VerifyMmrSuccessor {
                 add read_mem {Digest::LEN} pop 1
                 // _ *new_mmr *current_peak *end_of_memory [running_leaf_count] [num_leafs_remaining*] old_height peak_index [1] [some_new_peak] [new_peaks[peak_index]]
 
-                {&compare_digests} assert error_id 152
+                assert_vector error_id {Self::C_ERROR_ID}
+                pop 5
                 // _ *new_mmr *current_peak *end_of_memory [running_leaf_count] [num_leafs_remaining*] old_height peak_index [1]
 
 
@@ -313,27 +325,23 @@ impl BasicSnippet for VerifyMmrSuccessor {
             // BEFORE: _ *old_mmr *new_mmr 0
             // AFTER:  _ 1
             {assert_mmrs_equal}:
-                dup 1 {&field_peaks}
-                // _ *old_mmr *new_mmr 0 *new_mmr_peaks
+                pick 1 {&field!(MmrAccumulator::peaks)}
+                // _ *old_mmr 0 *new_mmr_peaks
 
                 call {bag_peaks}
-                // _ *old_mmr *new_mmr 0 [new_bagged]
+                // _ *old_mmr 0 [new_bagged: Digest]
 
-                dup 7 {&field_peaks}
-                // _ *old_mmr *new_mmr 0 [new_bagged] *old_mmr_peaks
+                pick 6 {&field!(MmrAccumulator::peaks)}
+                // _ 0 [new_bagged: Digest] *old_mmr_peaks
 
                 call {bag_peaks}
-                // _ *old_mmr *new_mmr 0 [new_bagged] [old_bagged]
+                // _ 0 [new_bagged: Digest] [old_bagged: Digest]
 
-                {&compare_digests}
-                // _ *old_mmr *new_mmr 0 (new_bagged == old_bagged)
+                assert_vector error_id {Self::UNEQUAL_PEAK_DESPITE_EQUAL_NUM_LEAFS_ERROR_ID}
+                pop 5
+                // _ 0
 
-                assert error_id 153
-                // _ *old_mmr *new_mmr 0
-
-                pop 3
-                // _
-
+                pop 1
                 push 1
                 // _ 1
 
@@ -359,8 +367,6 @@ impl VerifyMmrSuccessor {
 mod tests {
     use std::collections::VecDeque;
 
-    use triton_vm::isa::error::AssertionError;
-    use triton_vm::isa::instruction::AssertionContext;
     use twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
     use twenty_first::util_types::mmr::mmr_successor_proof::MmrSuccessorProof;
     use twenty_first::util_types::mmr::shared_advanced::get_peak_heights;
@@ -368,7 +374,6 @@ mod tests {
 
     use super::*;
     use crate::empty_stack;
-    use crate::test_helpers::negative_test;
     use crate::test_prelude::*;
     use crate::traits::mem_preserver::MemPreserver;
     use crate::traits::mem_preserver::MemPreserverInitialState;
@@ -404,23 +409,26 @@ mod tests {
         new_mmr: &MmrAccumulator,
         mmr_successor_proof: &MmrSuccessorProof,
     ) -> MemPreserverInitialState {
-        let seed = Tip5::hash_pair(Tip5::hash(old_mmr), Tip5::hash(new_mmr));
-        let seed: u64 = seed.0[0].value();
-        let seed: [u8; 8] = seed.to_be_bytes();
-        let seed: [u8; 32] = seed.repeat(4).try_into().unwrap();
-        let mut rng = StdRng::from_seed(seed);
-        let old_mmr_address: u32 = rng.gen_range(0..1 << 30);
-        let new_mmr_address: u32 = old_mmr_address + rng.gen_range(0..1 << 28);
-        let old_mmr_address = bfe!(old_mmr_address);
-        let new_mmr_address = old_mmr_address + bfe!(new_mmr_address);
+        let Digest(seed) = Tip5::hash_pair(Tip5::hash(old_mmr), Tip5::hash(new_mmr));
+        let seed = seed
+            .into_iter()
+            .flat_map(|bfe| bfe.raw_bytes())
+            .take(32)
+            .collect_vec();
+        let mut rng = StdRng::from_seed(seed.try_into().unwrap());
 
-        let mut nondeterminism = NonDeterminism::new(vec![]);
+        let old_mmr_address = bfe!(rng.gen_range(0_u32..1 << 30));
+        let new_mmr_address = old_mmr_address + bfe!(rng.gen_range(0_u32..1 << 28));
+
+        let mut nondeterminism = NonDeterminism::default();
         VerifyMmrSuccessor::update_nondeterminism(&mut nondeterminism, mmr_successor_proof);
         encode_to_memory(&mut nondeterminism.ram, old_mmr_address, old_mmr);
         encode_to_memory(&mut nondeterminism.ram, new_mmr_address, new_mmr);
+
         let mut stack = empty_stack();
         stack.push(old_mmr_address);
         stack.push(new_mmr_address);
+
         MemPreserverInitialState {
             stack,
             nondeterminism,
@@ -431,90 +439,61 @@ mod tests {
     fn failing_initial_states() -> Vec<MemPreserverInitialState> {
         let mut rng = thread_rng();
         let mut initial_states = vec![];
-        for old_num_leafs in [1u64, 2, 3, 8] {
-            for num_new_leafs in [0u64, 1, 8] {
-                if [(0, 0)]
-                    .into_iter()
-                    .contains(&(old_num_leafs, num_new_leafs))
-                {
-                    continue;
-                }
 
-                let old_mmr = MmrAccumulator::init(
-                    (0..old_num_leafs.count_ones())
-                        .map(|_| rng.gen::<Digest>())
-                        .collect_vec(),
-                    old_num_leafs,
-                );
-                let new_leafs = (0..num_new_leafs)
-                    .map(|_| rng.gen::<Digest>())
-                    .collect_vec();
-                let mut new_mmr = old_mmr.clone();
-                for leaf in new_leafs.iter().copied() {
-                    new_mmr.append(leaf);
-                }
-                let mmr_successor_proof =
-                    MmrSuccessorProof::new_from_batch_append(&old_mmr, &new_leafs);
-
-                // rotate old num leafs
-                let old_mmr_fake_1 = MmrAccumulator::init(
-                    old_mmr.peaks(),
-                    (old_mmr.num_leafs() >> 1) ^ (old_mmr.num_leafs() << 63),
-                );
-                initial_states.push(initial_state_from_mmr_tuple(
-                    &old_mmr_fake_1,
-                    &new_mmr,
-                    &mmr_successor_proof,
-                ));
-
-                // rotate new num leafs
-                let new_mmr_fake_1 = MmrAccumulator::init(
-                    new_mmr.peaks(),
-                    (new_mmr.num_leafs() >> 1) ^ (new_mmr.num_leafs() << 63),
-                );
-                initial_states.push(initial_state_from_mmr_tuple(
-                    &old_mmr,
-                    &new_mmr_fake_1,
-                    &mmr_successor_proof,
-                ));
-
-                // modify path element
-                if !mmr_successor_proof.paths.is_empty() {
-                    let mut mmr_successor_proof_fake_1 = mmr_successor_proof.clone();
-                    mmr_successor_proof_fake_1.paths
-                        [rng.gen_range(0..mmr_successor_proof.paths.len())]
-                    .0[rng.gen_range(0..Digest::LEN)]
-                    .increment();
-                    initial_states.push(initial_state_from_mmr_tuple(
-                        &old_mmr,
-                        &new_mmr,
-                        &mmr_successor_proof_fake_1,
-                    ));
-                }
-
-                // We can't actually test this failing state because the rust
-                // code doesn't crash when it runs out of digests, whereas we
-                // don't know how to catch this crash in TritonVM when the digests
-                // come from nondeterminism.
-                // // flip old and new
-                // initial_states.push(initial_state_from_mmr_tuple(
-                //     &new_mmr,
-                //     &old_mmr,
-                //     &mmr_successor_proof,
-                // ));
-
-                // inconsistent new mmr
-                let new_mmr_fake_2 = MmrAccumulator::init(
-                    [new_mmr.peaks(), vec![rng.gen::<Digest>()]].concat(),
-                    new_mmr.num_leafs(),
-                );
-                initial_states.push(initial_state_from_mmr_tuple(
-                    &old_mmr,
-                    &new_mmr_fake_2,
-                    &mmr_successor_proof,
-                ));
+        for (old_num_leafs, new_num_leafs) in
+            [1_u64, 2, 3, 8].into_iter().cartesian_product([0, 1, 8])
+        {
+            if (old_num_leafs, new_num_leafs) == (0, 0) {
+                continue;
             }
+
+            let old_peaks = (0..old_num_leafs.count_ones()).map(|_| rng.gen()).collect();
+            let old_mmr = MmrAccumulator::init(old_peaks, old_num_leafs);
+
+            let new_leafs = (0..new_num_leafs).map(|_| rng.gen()).collect_vec();
+            let mut new_mmr = old_mmr.clone();
+            for &leaf in &new_leafs {
+                new_mmr.append(leaf);
+            }
+            let new_mmr = new_mmr;
+
+            let mmr_successor_proof =
+                MmrSuccessorProof::new_from_batch_append(&old_mmr, &new_leafs);
+
+            let old_mmr_fake =
+                MmrAccumulator::init(old_mmr.peaks(), old_mmr.num_leafs().rotate_right(1));
+            let rotate_old_num_leafs =
+                initial_state_from_mmr_tuple(&old_mmr_fake, &new_mmr, &mmr_successor_proof);
+            initial_states.push(rotate_old_num_leafs);
+
+            let new_mmr_fake =
+                MmrAccumulator::init(new_mmr.peaks(), new_mmr.num_leafs().rotate_right(1));
+            let rotate_new_num_leafs =
+                initial_state_from_mmr_tuple(&old_mmr, &new_mmr_fake, &mmr_successor_proof);
+            initial_states.push(rotate_new_num_leafs);
+
+            let mut fake_new_peaks = new_mmr.peaks();
+            fake_new_peaks.push(rng.gen());
+            let new_mmr_fake_peak = MmrAccumulator::init(fake_new_peaks, new_mmr.num_leafs());
+            let inconsistent_new_mmr =
+                initial_state_from_mmr_tuple(&old_mmr, &new_mmr_fake_peak, &mmr_successor_proof);
+            initial_states.push(inconsistent_new_mmr);
+
+            if mmr_successor_proof.paths.is_empty() {
+                continue;
+            }
+
+            let mut mmr_successor_proof_fake_1 = mmr_successor_proof.clone();
+            let proof_paths = &mut mmr_successor_proof_fake_1.paths;
+            let digest_to_disturb_idx = rng.gen_range(0..proof_paths.len());
+            let digest_innard_to_disturb_idx = rng.gen_range(0..Digest::LEN);
+            let Digest(ref mut digest_to_disturb) = &mut proof_paths[digest_to_disturb_idx];
+            digest_to_disturb[digest_innard_to_disturb_idx].increment();
+            let modify_path_element =
+                initial_state_from_mmr_tuple(&old_mmr, &new_mmr, &mmr_successor_proof_fake_1);
+            initial_states.push(modify_path_element);
         }
+
         initial_states
     }
 
@@ -535,9 +514,8 @@ mod tests {
             let old_mmr = *MmrAccumulator::decode_from_memory(memory, old_mmr_pointer).unwrap();
 
             let num_digests = num_digests_to_read(&old_mmr, &new_mmr);
-
-            let digests = (0..num_digests).map(|i| nd_digests[i]).collect_vec();
-            let mmr_successor_proof = MmrSuccessorProof { paths: digests };
+            let paths = (0..num_digests).map(|i| nd_digests[i]).collect();
+            let mmr_successor_proof = MmrSuccessorProof { paths };
 
             assert!(mmr_successor_proof.verify(&old_mmr, &new_mmr));
 
@@ -555,9 +533,7 @@ mod tests {
                 Some(BenchmarkCase::CommonCase) => u32::MAX as u64,
                 None => rng.next_u64() & (u64::MAX >> 1),
             };
-            let old_peaks = (0..old_num_leafs.count_ones())
-                .map(|_| rng.gen::<Digest>())
-                .collect_vec();
+            let old_peaks = (0..old_num_leafs.count_ones()).map(|_| rng.gen()).collect();
             let old_mmr = MmrAccumulator::init(old_peaks, old_num_leafs);
 
             let num_new_leafs = match bench_case {
@@ -565,9 +541,7 @@ mod tests {
                 Some(BenchmarkCase::WorstCase) => 1000,
                 None => 1 << rng.gen_range(0..5),
             };
-            let new_leafs = (0..num_new_leafs)
-                .map(|_| rng.gen::<Digest>())
-                .collect_vec();
+            let new_leafs = (0..num_new_leafs).map(|_| rng.gen()).collect_vec();
             let mmr_successor_proof =
                 MmrSuccessorProof::new_from_batch_append(&old_mmr, &new_leafs);
             let mut new_mmr = old_mmr.clone();
@@ -581,32 +555,27 @@ mod tests {
         fn corner_case_initial_states(&self) -> Vec<MemPreserverInitialState> {
             let mut rng = thread_rng();
             let mut initial_states = vec![];
-            for old_num_leafs in [0u64, 1, 2, 3, 4, 8] {
-                for num_inserted_leafs in [0u64, 1, 2, 3, 4, 8] {
-                    let old_mmr = MmrAccumulator::init(
-                        (0..old_num_leafs.count_ones())
-                            .map(|_| rng.gen::<Digest>())
-                            .collect_vec(),
-                        old_num_leafs,
-                    );
-                    let new_leafs = (0..num_inserted_leafs)
-                        .map(|_| rng.gen::<Digest>())
-                        .collect_vec();
-                    let mut new_mmr = old_mmr.clone();
-                    for leaf in new_leafs.iter().copied() {
-                        new_mmr.append(leaf);
-                    }
-                    let mmr_successor_proof =
-                        MmrSuccessorProof::new_from_batch_append(&old_mmr, &new_leafs);
 
-                    // correct
-                    initial_states.push(initial_state_from_mmr_tuple(
-                        &old_mmr,
-                        &new_mmr,
-                        &mmr_successor_proof,
-                    ));
+            for (old_num_leafs, num_inserted_leafs) in [0_u64, 1, 2, 3, 4, 8]
+                .into_iter()
+                .cartesian_product([0, 1, 2, 3, 4, 8])
+            {
+                let old_peaks = (0..old_num_leafs.count_ones()).map(|_| rng.gen()).collect();
+                let old_mmr = MmrAccumulator::init(old_peaks, old_num_leafs);
+
+                let mut new_mmr = old_mmr.clone();
+                let new_leafs = (0..num_inserted_leafs).map(|_| rng.gen()).collect_vec();
+                for leaf in new_leafs.iter().copied() {
+                    new_mmr.append(leaf);
                 }
+                let mmr_successor_proof =
+                    MmrSuccessorProof::new_from_batch_append(&old_mmr, &new_leafs);
+
+                let initial_state =
+                    initial_state_from_mmr_tuple(&old_mmr, &new_mmr, &mmr_successor_proof);
+                initial_states.push(initial_state);
             }
+
             initial_states
         }
     }
@@ -618,23 +587,17 @@ mod tests {
 
     #[test]
     fn verify_mmr_successor_negative_test() {
-        // this is a bit round-about because it tests for assertion failures _and_
-        // a different kind of error, which is not really supported
-        let assertion_error = |id| AssertionError::new(1, 0).with_context(AssertionContext::ID(id));
-        let expected_errors = [
-            InstructionError::AssertionFailed(assertion_error(150)),
-            InstructionError::AssertionFailed(assertion_error(151)),
-            InstructionError::AssertionFailed(assertion_error(152)),
-            InstructionError::AssertionFailed(assertion_error(153)),
-            InstructionError::EmptySecretDigestInput,
-        ];
-
         for (i, init_state) in failing_initial_states().into_iter().enumerate() {
-            println!("Trying failing initial state {i}.");
-            negative_test(
+            dbg!(i);
+            test_assertion_failure(
                 &ShadowedMemPreserver::new(VerifyMmrSuccessor),
                 init_state.into(),
-                &expected_errors,
+                &[
+                    VerifyMmrSuccessor::A_ERROR_ID,
+                    VerifyMmrSuccessor::B_ERROR_ID,
+                    VerifyMmrSuccessor::C_ERROR_ID,
+                    VerifyMmrSuccessor::UNEQUAL_PEAK_DESPITE_EQUAL_NUM_LEAFS_ERROR_ID,
+                ],
             );
         }
     }
@@ -648,21 +611,19 @@ mod tests {
 
     fn num_digests_prop(old_mmr_num_leafs: u64, num_new_leafs: u64) {
         let mut rng = thread_rng();
-        let old_peaks = (0..old_mmr_num_leafs.count_ones())
-            .map(|_| rng.gen::<Digest>())
-            .collect_vec();
+        let old_num_peaks = old_mmr_num_leafs.count_ones();
+        let old_peaks = (0..old_num_peaks).map(|_| rng.gen()).collect();
         let old_mmr = MmrAccumulator::init(old_peaks, old_mmr_num_leafs);
-        let new_leafs = (0..num_new_leafs)
-            .map(|_| rng.gen::<Digest>())
-            .collect_vec();
+
+        let new_leafs = (0..num_new_leafs).map(|_| rng.gen()).collect_vec();
         let mut new_mmr = old_mmr.clone();
         for leaf in new_leafs.iter().copied() {
             new_mmr.append(leaf);
         }
 
-        let num_leafs_on_path = num_digests_to_read(&old_mmr, &new_mmr);
         let mmr_successor_proof = MmrSuccessorProof::new_from_batch_append(&old_mmr, &new_leafs);
 
+        let num_leafs_on_path = num_digests_to_read(&old_mmr, &new_mmr);
         assert_eq!(mmr_successor_proof.paths.len(), num_leafs_on_path);
     }
 }
