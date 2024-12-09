@@ -50,15 +50,15 @@ impl BasicSnippet for Lt {
         const TWO_POW_31: u32 = 1 << 31;
         let flip_msbs = triton_asm!(
             // _ [rhs: i128] [lhs: i128]
-            swap 3
+            pick 3
             push {TWO_POW_31}
             xor
-            swap 3
+            place 3
 
-            swap 7
+            pick 7
             push {TWO_POW_31}
             xor
-            swap 7
+            place 7
             // _ [rhs+(1<<127): u128] [rhs+(1<<127): u128]
         );
 
@@ -81,6 +81,8 @@ impl BasicSnippet for Lt {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashSet;
+
     use itertools::Itertools;
     use proptest_arbitrary_interop::arb;
     use rand::random;
@@ -170,6 +172,23 @@ mod tests {
         );
     }
 
+    #[proptest]
+    fn equal_elements_are_not_lt_prop(value: i128) {
+        let init_stack = Lt.init_state(value, value);
+        let mut expected_end_stack = Lt.init_stack_for_isolated_run();
+        push_encodable(&mut expected_end_stack, &false);
+
+        let stdin = &[];
+        test_rust_equivalence_given_complete_state(
+            &ShadowedClosure::new(Lt),
+            &init_stack,
+            stdin,
+            &NonDeterminism::default(),
+            &None,
+            Some(&expected_end_stack),
+        );
+    }
+
     impl Lt {
         fn init_state(&self, lhs: i128, rhs: i128) -> Vec<BFieldElement> {
             let mut stack = self.init_stack_for_isolated_run();
@@ -203,7 +222,6 @@ mod tests {
                 -(1 << 64),
                 -(1 << 32),
                 -1,
-                0,
                 1,
                 1 << 32,
                 1 << 64,
@@ -214,6 +232,8 @@ mod tests {
             .into_iter()
             .flat_map(|p| [p.checked_sub(1), Some(p), p.checked_add(1)])
             .flatten()
+            .collect::<HashSet<_>>()
+            .into_iter()
             .collect_vec();
 
             points_with_plus_minus_one
