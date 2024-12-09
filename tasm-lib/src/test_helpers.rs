@@ -11,6 +11,7 @@ use crate::execute_with_terminal_state;
 use crate::exported_snippets;
 use crate::library::Library;
 use crate::traits::basic_snippet::BasicSnippet;
+use crate::traits::basic_snippet::SignedOffSnippet;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::traits::rust_shadow::RustShadow;
 use crate::InitVmState;
@@ -414,6 +415,11 @@ pub fn test_rust_equivalence_given_complete_state<T: RustShadow>(
     sponge: &Option<VmHasher>,
     expected_final_stack: Option<&[BFieldElement]>,
 ) -> VMState {
+    shadowed_snippet
+        .inner()
+        .borrow()
+        .assert_all_sign_offs_are_up_to_date();
+
     let init_stack = stack.to_vec();
 
     let rust = rust_final_state(shadowed_snippet, stack, stdin, nondeterminism, sponge);
