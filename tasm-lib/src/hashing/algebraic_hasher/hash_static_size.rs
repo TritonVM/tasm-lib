@@ -63,12 +63,12 @@ mod tests {
     use triton_vm::twenty_first::util_types::sponge::Sponge;
 
     use super::*;
+    use crate::prelude::Tip5;
     use crate::snippet_bencher::BenchmarkCase;
     use crate::traits::procedure::Procedure;
     use crate::traits::procedure::ProcedureInitialState;
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
-    use crate::VmHasher;
 
     #[test]
     fn hash_static_size_small_pbt() {
@@ -93,7 +93,7 @@ mod tests {
             memory: &mut HashMap<BFieldElement, BFieldElement>,
             nondeterminism: &NonDeterminism,
             public_input: &[BFieldElement],
-            sponge: &mut Option<VmHasher>,
+            sponge: &mut Option<Tip5>,
         ) -> Vec<BFieldElement> {
             *sponge = Some(Tip5::init());
 

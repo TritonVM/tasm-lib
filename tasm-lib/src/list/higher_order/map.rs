@@ -555,12 +555,12 @@ mod tests {
     use crate::list::higher_order::inner_function::InnerFunction;
     use crate::list::higher_order::inner_function::RawCode;
     use crate::neptune::mutator_set::get_swbf_indices::u32_to_u128_add_another_u128;
+    use crate::prelude::Tip5;
     use crate::test_helpers::test_rust_equivalence_given_execution_state;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
     use crate::twenty_first::prelude::x_field_element::EXTENSION_DEGREE;
     use crate::InitVmState;
-    use crate::VmHasher;
 
     /// Specifically exists to implement [`DeprecatedSnippet`]. Should only be
     /// upgraded to a regular snippet once [`InnerFunction`] stops supporting
@@ -705,7 +705,7 @@ mod tests {
                 xfield_element.push(stack.pop().unwrap());
             }
 
-            let digest = VmHasher::hash_varlen(&xfield_element);
+            let digest = Tip5::hash_varlen(&xfield_element);
             stack.extend(digest.reversed().values());
         }
     }

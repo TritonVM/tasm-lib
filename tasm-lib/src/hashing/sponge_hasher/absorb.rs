@@ -88,12 +88,12 @@ mod test {
 
     use super::*;
     use crate::empty_stack;
+    use crate::prelude::Tip5;
     use crate::snippet_bencher::BenchmarkCase;
     use crate::traits::procedure::Procedure;
     use crate::traits::procedure::ProcedureInitialState;
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
-    use crate::VmHasher;
 
     fn init_memory_and_stack() -> (HashMap<BFieldElement, BFieldElement>, Vec<BFieldElement>) {
         let array_pointer: BFieldElement = random();
@@ -113,7 +113,7 @@ mod test {
             memory: &mut HashMap<BFieldElement, BFieldElement>,
             _nondeterminism: &NonDeterminism,
             _public_input: &[BFieldElement],
-            sponge: &mut Option<VmHasher>,
+            sponge: &mut Option<Tip5>,
         ) -> Vec<BFieldElement> {
             let sponge = sponge.as_mut().expect("sponge must be initialized");
             let input_pointer: BFieldElement = stack.pop().unwrap();

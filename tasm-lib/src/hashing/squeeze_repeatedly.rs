@@ -7,11 +7,11 @@ use triton_vm::twenty_first::prelude::Sponge;
 
 use crate::data_type::DataType;
 use crate::empty_stack;
+use crate::prelude::Tip5;
 use crate::snippet_bencher::BenchmarkCase;
 use crate::traits::basic_snippet::BasicSnippet;
 use crate::traits::procedure::Procedure;
 use crate::traits::procedure::ProcedureInitialState;
-use crate::VmHasher;
 
 /// Squeeze the sponge n times, storing all the produced pseudorandom `BFieldElement`s
 /// contiguously in memory. It is the caller's responsibility to allocate enough memory.
@@ -72,7 +72,7 @@ impl Procedure for SqueezeRepeatedly {
         memory: &mut HashMap<BFieldElement, BFieldElement>,
         _nondeterminism: &NonDeterminism,
         _public_input: &[BFieldElement],
-        sponge: &mut Option<VmHasher>,
+        sponge: &mut Option<Tip5>,
     ) -> Vec<BFieldElement> {
         let num_squeezes = stack.pop().unwrap().value() as usize;
         let address = stack.pop().unwrap();
@@ -105,7 +105,7 @@ impl Procedure for SqueezeRepeatedly {
             None => rng.gen_range(0..10),
         };
 
-        let sponge = VmHasher { state: rng.gen() };
+        let sponge = Tip5 { state: rng.gen() };
         let mut stack = empty_stack();
         let address = BFieldElement::new(rng.next_u64() % (1 << 20));
         stack.push(address);

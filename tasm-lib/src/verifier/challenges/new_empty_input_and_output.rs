@@ -161,6 +161,7 @@ mod tests {
     use triton_vm::challenges::Challenges;
 
     use super::*;
+    use crate::prelude::Tip5;
     use crate::rust_shadowing_helper_functions::array::insert_as_array;
     use crate::traits::basic_snippet::BasicSnippet;
     use crate::traits::procedure::Procedure;
@@ -168,7 +169,6 @@ mod tests {
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
     use crate::verifier::challenges::shared;
-    use crate::VmHasher;
 
     impl Procedure for NewEmptyInputAndOutput {
         fn rust_shadow(
@@ -177,7 +177,7 @@ mod tests {
             memory: &mut std::collections::HashMap<BFieldElement, BFieldElement>,
             _nondeterminism: &NonDeterminism,
             _public_input: &[BFieldElement],
-            sponge: &mut Option<VmHasher>,
+            sponge: &mut Option<Tip5>,
         ) -> Vec<BFieldElement> {
             let sponge = sponge.as_mut().expect("sponge must be initialized");
             let program_digest = Digest::new([

@@ -4,8 +4,8 @@ use num::Zero;
 use triton_vm::proof::Claim;
 use triton_vm::twenty_first::math::b_field_element::BFieldElement;
 
+use crate::prelude::Digest;
 use crate::structure::tasm_object::decode_from_memory_with_size;
-use crate::Digest;
 
 pub fn load_claim_from_memory(
     claim_pointer: BFieldElement,

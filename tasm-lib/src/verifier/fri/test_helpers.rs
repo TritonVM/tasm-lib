@@ -8,7 +8,7 @@ use triton_vm::table::master_table::MasterTable;
 use triton_vm::table::NUM_QUOTIENT_SEGMENTS;
 use triton_vm::twenty_first::prelude::*;
 
-use crate::Digest;
+use crate::prelude::Digest;
 
 pub struct StarkProofExtraction {
     pub fri_proof_stream: ProofStream,

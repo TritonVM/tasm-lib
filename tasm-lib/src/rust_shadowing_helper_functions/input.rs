@@ -2,7 +2,7 @@ use num::Zero;
 use triton_vm::prelude::*;
 use twenty_first::math::other::random_elements;
 
-use crate::Digest;
+use crate::prelude::Digest;
 
 pub fn write_digest_to_std_in(std_in: &mut Vec<BFieldElement>, digest: Digest) {
     let digest_elements = digest.values();

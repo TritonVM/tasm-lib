@@ -7,11 +7,11 @@ use triton_vm::twenty_first::prelude::Sponge;
 
 use crate::data_type::DataType;
 use crate::empty_stack;
+use crate::prelude::Tip5;
 use crate::snippet_bencher::BenchmarkCase;
 use crate::traits::basic_snippet::BasicSnippet;
 use crate::traits::procedure::Procedure;
 use crate::traits::procedure::ProcedureInitialState;
-use crate::VmHasher;
 
 /// Absorb a sequence of field elements stored in memory, into the Sponge.
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
@@ -145,7 +145,7 @@ impl Procedure for AbsorbMultiple {
         memory: &mut HashMap<BFieldElement, BFieldElement>,
         _nondeterminism: &NonDeterminism,
         _public_input: &[BFieldElement],
-        sponge: &mut Option<VmHasher>,
+        sponge: &mut Option<Tip5>,
     ) -> Vec<BFieldElement> {
         // read arguments
         let length = stack.pop().unwrap().value() as usize;

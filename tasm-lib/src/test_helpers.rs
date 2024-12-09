@@ -10,13 +10,13 @@ use crate::execute_test;
 use crate::execute_with_terminal_state;
 use crate::exported_snippets;
 use crate::library::Library;
+use crate::prelude::Tip5;
 use crate::traits::basic_snippet::BasicSnippet;
 use crate::traits::basic_snippet::SignedOffSnippet;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::traits::rust_shadow::RustShadow;
 use crate::InitVmState;
 use crate::RustShadowOutputState;
-use crate::VmHasher;
 
 #[allow(dead_code)]
 pub fn test_rust_equivalence_multiple_deprecated<T: DeprecatedSnippet>(
@@ -272,7 +272,7 @@ pub fn rust_final_state<T: RustShadow>(
     stack: &[BFieldElement],
     stdin: &[BFieldElement],
     nondeterminism: &NonDeterminism,
-    sponge: &Option<VmHasher>,
+    sponge: &Option<Tip5>,
 ) -> RustShadowOutputState {
     let mut rust_memory = nondeterminism.ram.clone();
     let mut rust_stack = stack.to_vec();
@@ -300,7 +300,7 @@ pub fn tasm_final_state<T: RustShadow>(
     stack: &[BFieldElement],
     stdin: &[BFieldElement],
     nondeterminism: NonDeterminism,
-    sponge: &Option<VmHasher>,
+    sponge: &Option<Tip5>,
 ) -> VMState {
     // run tvm
     link_and_run_tasm_for_test(
@@ -399,7 +399,7 @@ pub fn verify_stack_growth<T: RustShadow>(
     );
 }
 
-pub fn verify_sponge_equivalence(a: &Option<VmHasher>, b: &Option<VmHasher>) {
+pub fn verify_sponge_equivalence(a: &Option<Tip5>, b: &Option<Tip5>) {
     match (a, b) {
         (Some(state_a), Some(state_b)) => assert_eq!(state_a.state, state_b.state),
         (None, None) => (),
@@ -412,7 +412,7 @@ pub fn test_rust_equivalence_given_complete_state<T: RustShadow>(
     stack: &[BFieldElement],
     stdin: &[BFieldElement],
     nondeterminism: &NonDeterminism,
-    sponge: &Option<VmHasher>,
+    sponge: &Option<Tip5>,
     expected_final_stack: Option<&[BFieldElement]>,
 ) -> VMState {
     shadowed_snippet
@@ -458,7 +458,7 @@ pub fn link_and_run_tasm_for_test<T: RustShadow>(
     stack: &mut Vec<BFieldElement>,
     std_in: Vec<BFieldElement>,
     nondeterminism: NonDeterminism,
-    maybe_sponge: Option<VmHasher>,
+    maybe_sponge: Option<Tip5>,
 ) -> VMState {
     let code = snippet_struct.inner().borrow().link_for_isolated_run();
 

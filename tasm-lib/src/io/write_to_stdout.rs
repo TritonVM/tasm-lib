@@ -5,10 +5,10 @@ use triton_vm::prelude::*;
 
 use crate::data_type::DataType;
 use crate::empty_stack;
+use crate::prelude::Tip5;
 use crate::traits::basic_snippet::BasicSnippet;
 use crate::traits::procedure::Procedure;
 use crate::traits::procedure::ProcedureInitialState;
-use crate::VmHasher;
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct WriteToStdout {
@@ -47,7 +47,7 @@ impl Procedure for WriteToStdout {
         _memory: &mut HashMap<BFieldElement, BFieldElement>,
         _nondeterminism: &NonDeterminism,
         _public_input: &[BFieldElement],
-        _sponge: &mut Option<VmHasher>,
+        _sponge: &mut Option<Tip5>,
     ) -> Vec<BFieldElement> {
         let mut ret = vec![];
         for _ in 0..self.data_type.stack_size() {

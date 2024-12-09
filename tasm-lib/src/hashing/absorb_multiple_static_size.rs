@@ -8,11 +8,11 @@ use triton_vm::twenty_first::prelude::Sponge;
 
 use crate::data_type::DataType;
 use crate::memory::load_words_from_memory_pop_pointer;
+use crate::prelude::Tip5;
 use crate::snippet_bencher::BenchmarkCase;
 use crate::traits::basic_snippet::BasicSnippet;
 use crate::traits::procedure::Procedure;
 use crate::traits::procedure::ProcedureInitialState;
-use crate::VmHasher;
 
 /// Absorb a sequence of field elements stored in memory, into the Sponge.
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
@@ -117,7 +117,7 @@ impl Procedure for AbsorbMultipleStaticSize {
         memory: &mut HashMap<BFieldElement, BFieldElement>,
         _nondeterminism: &NonDeterminism,
         _public_input: &[BFieldElement],
-        sponge: &mut Option<VmHasher>,
+        sponge: &mut Option<Tip5>,
     ) -> Vec<BFieldElement> {
         // read arguments
         let address = stack.pop().unwrap();

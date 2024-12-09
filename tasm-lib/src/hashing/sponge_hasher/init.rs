@@ -42,12 +42,12 @@ mod test {
 
     use super::*;
     use crate::empty_stack;
+    use crate::prelude::Tip5;
     use crate::snippet_bencher::BenchmarkCase;
     use crate::traits::procedure::Procedure;
     use crate::traits::procedure::ProcedureInitialState;
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
-    use crate::VmHasher;
 
     impl Procedure for Init {
         fn rust_shadow(
@@ -56,7 +56,7 @@ mod test {
             _memory: &mut HashMap<BFieldElement, BFieldElement>,
             _nondeterminism: &NonDeterminism,
             _public_input: &[BFieldElement],
-            sponge: &mut Option<VmHasher>,
+            sponge: &mut Option<Tip5>,
         ) -> Vec<BFieldElement> {
             *sponge = Some(Tip5::init());
             Vec::default()

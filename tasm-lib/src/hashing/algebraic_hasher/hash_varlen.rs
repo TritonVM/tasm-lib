@@ -8,11 +8,11 @@ use triton_vm::twenty_first::util_types::sponge::Sponge;
 use crate::data_type::DataType;
 use crate::hashing::absorb_multiple::AbsorbMultiple;
 use crate::library::Library;
+use crate::prelude::Tip5;
 use crate::snippet_bencher::BenchmarkCase;
 use crate::traits::basic_snippet::BasicSnippet;
 use crate::traits::procedure::Procedure;
 use crate::traits::procedure::ProcedureInitialState;
-use crate::VmHasher;
 
 /// Calculate hash of a raw sequence of a `BFieldElement`.
 #[derive(Clone, Debug)]
@@ -40,7 +40,7 @@ impl HashVarlen {
 
     /// Mutate the sponge with the same operations as this snippet
     /// Used to facilitate rust-shadowing in downstream dependencies.
-    pub fn sponge_mutation(&self, sponge: &mut VmHasher, preimage: &[BFieldElement]) {
+    pub fn sponge_mutation(&self, sponge: &mut Tip5, preimage: &[BFieldElement]) {
         *sponge = Tip5::init();
 
         sponge.pad_and_absorb_all(preimage);
@@ -93,7 +93,7 @@ impl Procedure for HashVarlen {
         memory: &mut HashMap<BFieldElement, BFieldElement>,
         nondeterminism: &NonDeterminism,
         public_input: &[BFieldElement],
-        sponge: &mut Option<VmHasher>,
+        sponge: &mut Option<Tip5>,
     ) -> Vec<BFieldElement> {
         *sponge = Some(Tip5::init());
 

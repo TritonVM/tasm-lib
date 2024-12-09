@@ -93,7 +93,7 @@ mod tests {
             memory: &mut HashMap<BFieldElement, BFieldElement>,
             nondeterminism: &NonDeterminism,
             public_input: &[BFieldElement],
-            sponge: &mut Option<crate::VmHasher>,
+            sponge: &mut Option<crate::prelude::Tip5>,
         ) -> Vec<BFieldElement> {
             stack.push(BFieldElement::new(self.num_squeezes as u64));
             let ret =

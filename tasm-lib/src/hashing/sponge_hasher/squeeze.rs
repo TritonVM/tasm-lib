@@ -78,13 +78,13 @@ mod test {
     use crate::empty_stack;
     use crate::memory::dyn_malloc;
     use crate::memory::dyn_malloc::DYN_MALLOC_ADDRESS;
+    use crate::prelude::Tip5;
     use crate::rust_shadowing_helper_functions;
     use crate::snippet_bencher::BenchmarkCase;
     use crate::traits::procedure::Procedure;
     use crate::traits::procedure::ProcedureInitialState;
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
-    use crate::VmHasher;
 
     impl Procedure for Squeeze {
         fn rust_shadow(
@@ -93,7 +93,7 @@ mod test {
             memory: &mut HashMap<BFieldElement, BFieldElement>,
             _nondeterminism: &NonDeterminism,
             _public_input: &[BFieldElement],
-            sponge: &mut Option<VmHasher>,
+            sponge: &mut Option<Tip5>,
         ) -> Vec<BFieldElement> {
             let sponge = sponge.as_mut().expect("sponge must be initialized");
             let mut array_pointer =

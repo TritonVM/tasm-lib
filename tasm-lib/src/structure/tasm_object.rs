@@ -224,8 +224,8 @@ mod test {
     use crate::list::length::Length;
     use crate::memory::encode_to_memory;
     use crate::memory::FIRST_NON_DETERMINISTICALLY_INITIALIZED_MEMORY_ADDRESS;
+    use crate::prelude::Digest;
     use crate::structure::tasm_object::TasmObject;
-    use crate::Digest;
 
     #[derive(Debug, Clone, PartialEq, Eq, BFieldCodec, TasmObject, Arbitrary)]
     struct InnerStruct(XFieldElement, u32);

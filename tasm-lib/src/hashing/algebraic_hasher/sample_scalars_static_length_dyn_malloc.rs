@@ -90,6 +90,7 @@ mod tests {
 
     use super::SampleScalarsStaticLengthDynMalloc;
     use crate::memory::dyn_malloc::DYN_MALLOC_FIRST_ADDRESS;
+    use crate::prelude::Tip5;
     use crate::rust_shadowing_helper_functions;
     use crate::test_helpers::tasm_final_state;
     use crate::traits::basic_snippet::BasicSnippet;
@@ -97,7 +98,6 @@ mod tests {
     use crate::traits::procedure::ProcedureInitialState;
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
-    use crate::VmHasher;
 
     impl Procedure for SampleScalarsStaticLengthDynMalloc {
         fn rust_shadow(
@@ -106,7 +106,7 @@ mod tests {
             memory: &mut std::collections::HashMap<BFieldElement, BFieldElement>,
             _nondeterminism: &NonDeterminism,
             _public_input: &[BFieldElement],
-            sponge: &mut Option<VmHasher>,
+            sponge: &mut Option<Tip5>,
         ) -> Vec<BFieldElement> {
             let sponge = sponge.as_mut().expect("sponge must be initialized");
             let num_squeezes = Self::num_squeezes(self.num_elements);

@@ -106,13 +106,13 @@ mod tests {
     use twenty_first::util_types::mmr::shared_basic::leaf_index_to_mt_index_and_peak_index;
 
     use super::*;
+    use crate::prelude::Tip5;
     use crate::rust_shadowing_helper_functions;
     use crate::snippet_bencher::BenchmarkCase;
     use crate::traits::procedure::Procedure;
     use crate::traits::procedure::ProcedureInitialState;
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
-    use crate::VmHasher;
 
     #[test]
     fn prop() {
@@ -166,7 +166,7 @@ mod tests {
             memory: &mut HashMap<BFieldElement, BFieldElement>,
             nondeterminism: &NonDeterminism,
             _public_input: &[BFieldElement],
-            _sponge: &mut Option<VmHasher>,
+            _sponge: &mut Option<Tip5>,
         ) -> Vec<BFieldElement> {
             let leaf_index_lo: u32 = stack.pop().unwrap().try_into().unwrap();
             let leaf_index_hi: u32 = stack.pop().unwrap().try_into().unwrap();

@@ -7,8 +7,8 @@ use twenty_first::math::other::random_elements;
 
 use crate::data_type::DataType;
 use crate::empty_stack;
+use crate::prelude::Digest;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::Digest;
 use crate::InitVmState;
 
 /// Returns the number of elements of a contiguous list.

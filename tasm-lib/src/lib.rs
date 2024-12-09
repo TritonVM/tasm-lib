@@ -54,8 +54,9 @@ pub use triton_vm::twenty_first;
 
 use crate::test_helpers::prepend_program_with_stack_setup;
 
-// The hasher type must match whatever algebraic hasher the VM is using
+#[deprecated(since = "0.44.0", note = "use `tasm_lib::prelude::Tip5` instead")]
 pub type VmHasher = Tip5;
+#[deprecated(since = "0.44.0", note = "use `tasm_lib::prelude::Digest` instead")]
 pub type Digest = tip5::Digest;
 
 #[derive(Clone, Debug, Default)]
@@ -63,7 +64,7 @@ pub struct InitVmState {
     pub stack: Vec<BFieldElement>,
     pub public_input: Vec<BFieldElement>,
     pub nondeterminism: NonDeterminism,
-    pub sponge: Option<VmHasher>,
+    pub sponge: Option<Tip5>,
 }
 
 impl InitVmState {
@@ -94,7 +95,7 @@ pub struct RustShadowOutputState {
     pub public_output: Vec<BFieldElement>,
     pub stack: Vec<BFieldElement>,
     pub ram: HashMap<BFieldElement, BFieldElement>,
-    pub sponge: Option<VmHasher>,
+    pub sponge: Option<Tip5>,
 }
 
 pub fn empty_stack() -> Vec<BFieldElement> {
@@ -176,7 +177,7 @@ pub fn execute_test(
     expected_stack_diff: isize,
     std_in: Vec<BFieldElement>,
     nondeterminism: NonDeterminism,
-    maybe_sponge: Option<VmHasher>,
+    maybe_sponge: Option<Tip5>,
 ) -> VMState {
     let init_stack = stack.to_owned();
     let public_input = PublicInput::new(std_in.clone());
@@ -276,7 +277,7 @@ pub fn execute_with_terminal_state(
     std_in: &[BFieldElement],
     stack: &[BFieldElement],
     nondeterminism: &NonDeterminism,
-    maybe_sponge: Option<VmHasher>,
+    maybe_sponge: Option<Tip5>,
 ) -> Result<VMState, InstructionError> {
     let public_input = PublicInput::new(std_in.into());
     let mut vm_state = VMState::new(program, public_input, nondeterminism.to_owned());

@@ -125,6 +125,7 @@ mod tests {
     use test_strategy::proptest;
 
     use super::*;
+    use crate::prelude::Tip5;
     use crate::snippet_bencher::BenchmarkCase;
     use crate::test_helpers::negative_test;
     use crate::test_helpers::test_assertion_failure;
@@ -132,7 +133,6 @@ mod tests {
     use crate::traits::read_only_algorithm::ReadOnlyAlgorithmInitialState;
     use crate::traits::read_only_algorithm::ShadowedReadOnlyAlgorithm;
     use crate::traits::rust_shadow::RustShadow;
-    use crate::VmHasher;
 
     #[test]
     fn merkle_verify_test() {
@@ -352,8 +352,8 @@ mod tests {
                 for &sibling in path.iter() {
                     let node_is_left_sibling = node_index % 2 == 0;
                     node_digest = match node_is_left_sibling {
-                        true => VmHasher::hash_pair(node_digest, sibling),
-                        false => VmHasher::hash_pair(sibling, node_digest),
+                        true => Tip5::hash_pair(node_digest, sibling),
+                        false => Tip5::hash_pair(sibling, node_digest),
                     };
                     node_index /= 2;
                 }

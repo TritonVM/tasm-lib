@@ -92,7 +92,7 @@ mod tests {
             memory: &mut std::collections::HashMap<BFieldElement, BFieldElement>,
             _nondeterminism: &NonDeterminism,
             _public_input: &[BFieldElement],
-            sponge: &mut Option<crate::VmHasher>,
+            sponge: &mut Option<crate::prelude::Tip5>,
         ) -> Vec<BFieldElement> {
             let claim_pointer = stack.pop().unwrap();
 

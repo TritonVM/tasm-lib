@@ -19,9 +19,9 @@ use crate::hashing::eq_digest::EqDigest;
 use crate::hashing::swap_digest::SwapDigest;
 use crate::library::Library;
 use crate::list::get::Get;
+use crate::prelude::Digest;
 use crate::rust_shadowing_helper_functions;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::Digest;
 use crate::InitVmState;
 
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash)]

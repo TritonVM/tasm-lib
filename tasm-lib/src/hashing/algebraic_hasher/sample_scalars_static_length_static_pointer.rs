@@ -82,6 +82,7 @@ pub(crate) mod tests {
     use triton_vm::twenty_first::util_types::sponge::Sponge;
 
     use super::*;
+    use crate::prelude::Tip5;
     use crate::rust_shadowing_helper_functions::array::array_get;
     use crate::rust_shadowing_helper_functions::array::insert_as_array;
     use crate::test_helpers::tasm_final_state;
@@ -89,7 +90,6 @@ pub(crate) mod tests {
     use crate::traits::procedure::ProcedureInitialState;
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
-    use crate::VmHasher;
 
     impl Procedure for SampleScalarsStaticLengthStaticPointer {
         fn rust_shadow(
@@ -98,7 +98,7 @@ pub(crate) mod tests {
             memory: &mut std::collections::HashMap<BFieldElement, BFieldElement>,
             _nondeterminism: &NonDeterminism,
             _public_input: &[BFieldElement],
-            sponge: &mut Option<VmHasher>,
+            sponge: &mut Option<Tip5>,
         ) -> Vec<BFieldElement> {
             let sponge = sponge.as_mut().expect("sponge must be initialized");
             let num_squeezes =

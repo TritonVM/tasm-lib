@@ -3,10 +3,10 @@ use triton_vm::prelude::*;
 
 use crate::data_type::DataType;
 use crate::empty_stack;
+use crate::prelude::Digest;
+use crate::prelude::Tip5;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::Digest;
 use crate::InitVmState;
-use crate::VmHasher;
 
 #[derive(Clone, Debug)]
 pub struct Commit;
@@ -181,10 +181,7 @@ impl DeprecatedSnippet for Commit {
             stack.pop().unwrap(),
             stack.pop().unwrap(),
         ]);
-        let commitment = VmHasher::hash_pair(
-            VmHasher::hash_pair(item, sender_randomness),
-            receiver_digest,
-        );
+        let commitment = Tip5::hash_pair(Tip5::hash_pair(item, sender_randomness), receiver_digest);
         stack.push(commitment.values()[4]);
         stack.push(commitment.values()[3]);
         stack.push(commitment.values()[2]);

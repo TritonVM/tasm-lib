@@ -3,8 +3,8 @@ use triton_vm::prelude::*;
 
 use crate::data_type::DataType;
 use crate::empty_stack;
+use crate::prelude::Digest;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::Digest;
 use crate::InitVmState;
 
 /// Reverse the order of elements in a digest: [d4, d3, d2, d1, d0] -> [d0, d1, d2, d3, d4]

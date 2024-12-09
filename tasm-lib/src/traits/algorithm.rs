@@ -9,12 +9,12 @@ use super::basic_snippet::BasicSnippet;
 use super::rust_shadow::RustShadow;
 use crate::linker::execute_bench;
 use crate::linker::link_for_isolated_run;
+use crate::prelude::Tip5;
 use crate::snippet_bencher::write_benchmarks;
 use crate::snippet_bencher::BenchmarkCase;
 use crate::snippet_bencher::NamedBenchmarkResult;
 use crate::test_helpers::test_rust_equivalence_given_complete_state;
 use crate::InitVmState;
-use crate::VmHasher;
 
 /// An Algorithm can modify memory and take ND_input.
 ///
@@ -113,7 +113,7 @@ where
         nondeterminism: &NonDeterminism,
         stack: &mut Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
-        _sponge: &mut Option<VmHasher>,
+        _sponge: &mut Option<Tip5>,
     ) -> Vec<BFieldElement> {
         self.algorithm
             .borrow()

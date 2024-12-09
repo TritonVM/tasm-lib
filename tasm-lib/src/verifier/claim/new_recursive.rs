@@ -122,13 +122,13 @@ pub mod tests {
     use test_strategy::proptest;
 
     use super::*;
+    use crate::prelude::Tip5;
     use crate::snippet_bencher::BenchmarkCase;
     use crate::traits::procedure::Procedure;
     use crate::traits::procedure::ProcedureInitialState;
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
     use crate::verifier::claim::shared::insert_claim_into_static_memory;
-    use crate::VmHasher;
 
     #[test]
     fn new_recursive_claim_small_params_pbt() {
@@ -158,7 +158,7 @@ pub mod tests {
             memory: &mut HashMap<BFieldElement, BFieldElement>,
             nondeterminism: &NonDeterminism,
             _public_input: &[BFieldElement],
-            _sponge: &mut Option<VmHasher>,
+            _sponge: &mut Option<Tip5>,
         ) -> Vec<BFieldElement> {
             println!(
                 "nondeterminism.individual_tokens: {}",

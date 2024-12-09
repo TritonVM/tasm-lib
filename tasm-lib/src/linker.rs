@@ -4,10 +4,10 @@ use std::rc::Rc;
 use triton_vm::prelude::*;
 
 use crate::library::Library;
+use crate::prelude::Tip5;
 use crate::prove_and_verify;
 use crate::snippet_bencher::BenchmarkResult;
 use crate::traits::basic_snippet::BasicSnippet;
-use crate::VmHasher;
 
 pub fn link_for_isolated_run<T: BasicSnippet>(snippet: Rc<RefCell<T>>) -> Vec<LabelledInstruction> {
     let mut snippet_state = Library::new();
@@ -34,7 +34,7 @@ pub fn execute_bench(
     stack: &[BFieldElement],
     std_in: Vec<BFieldElement>,
     nondeterminism: NonDeterminism,
-    sponge: Option<VmHasher>,
+    sponge: Option<Tip5>,
 ) -> BenchmarkResult {
     let program = Program::new(code);
     let public_input = PublicInput::new(std_in.clone());

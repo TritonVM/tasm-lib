@@ -5,7 +5,7 @@ use std::rc::Rc;
 use triton_vm::prelude::*;
 
 use super::basic_snippet::BasicSnippet;
-use crate::VmHasher;
+use crate::prelude::Tip5;
 
 pub trait RustShadow {
     fn inner(&self) -> Rc<RefCell<dyn BasicSnippet>>;
@@ -16,7 +16,7 @@ pub trait RustShadow {
         nondeterminism: &NonDeterminism,
         stack: &mut Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
-        sponge: &mut Option<VmHasher>,
+        sponge: &mut Option<Tip5>,
     ) -> Vec<BFieldElement>;
 
     fn test(&self);

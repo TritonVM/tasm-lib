@@ -220,13 +220,13 @@ mod tests {
 
     use super::*;
     use crate::memory::encode_to_memory;
+    use crate::prelude::Tip5;
     use crate::rust_shadowing_helper_functions::list::list_insert;
     use crate::snippet_bencher::BenchmarkCase;
     use crate::traits::procedure::Procedure;
     use crate::traits::procedure::ProcedureInitialState;
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
-    use crate::VmHasher;
 
     #[test]
     fn verify_table_pbt_main() {
@@ -298,7 +298,7 @@ mod tests {
             memory: &mut HashMap<BFieldElement, BFieldElement>,
             nondeterminism: &NonDeterminism,
             _public_input: &[BFieldElement],
-            sponge: &mut Option<VmHasher>,
+            sponge: &mut Option<Tip5>,
         ) -> Vec<BFieldElement> {
             fn verify_one_row(
                 leaf_index: u32,
@@ -306,11 +306,11 @@ mod tests {
                 merkle_tree_height: u32,
                 authentication_path: Vec<Digest>,
                 row: &[BFieldElement],
-                sponge: &mut VmHasher,
+                sponge: &mut Tip5,
             ) {
                 // We define a local hash_varlen to be able to simulate what happens to the sponge,
                 // as this is required by the test framework.
-                fn local_hash_varlen(input: &[BFieldElement], sponge: &mut VmHasher) -> Digest {
+                fn local_hash_varlen(input: &[BFieldElement], sponge: &mut Tip5) -> Digest {
                     *sponge = Tip5::init();
                     sponge.pad_and_absorb_all(input);
                     let produce: [BFieldElement; RATE] = sponge.squeeze();

@@ -51,7 +51,7 @@ impl Procedure for ReadInput {
         _memory: &mut HashMap<BFieldElement, BFieldElement>,
         nondeterminism: &NonDeterminism,
         public_input: &[BFieldElement],
-        _sponge: &mut Option<crate::VmHasher>,
+        _sponge: &mut Option<crate::prelude::Tip5>,
     ) -> Vec<BFieldElement> {
         let input_source = match self.input_source {
             InputSource::StdIn => public_input,

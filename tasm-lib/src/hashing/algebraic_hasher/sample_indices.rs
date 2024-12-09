@@ -9,11 +9,11 @@ use crate::empty_stack;
 use crate::list::length::Length;
 use crate::list::new::New;
 use crate::list::push::Push;
+use crate::prelude::Tip5;
 use crate::rust_shadowing_helper_functions;
 use crate::traits::basic_snippet::BasicSnippet;
 use crate::traits::procedure::Procedure;
 use crate::traits::procedure::ProcedureInitialState;
-use crate::VmHasher;
 
 /// Sample n pseudorandom integers between 0 and k. It does this by squeezing the sponge. It is the
 /// caller's responsibility to ensure that the sponge is initialized to the right state.
@@ -142,7 +142,7 @@ impl Procedure for SampleIndices {
         memory: &mut HashMap<BFieldElement, BFieldElement>,
         _nondeterminism: &NonDeterminism,
         _public_input: &[BFieldElement],
-        sponge: &mut Option<VmHasher>,
+        sponge: &mut Option<Tip5>,
     ) -> Vec<BFieldElement> {
         let sponge = sponge.as_mut().expect("sponge must be initialized");
 
@@ -206,7 +206,7 @@ impl Procedure for SampleIndices {
         stack.push(BFieldElement::new(upper_bound as u64));
 
         let public_input: Vec<BFieldElement> = vec![];
-        let state = VmHasher { state: rng.gen() };
+        let state = Tip5 { state: rng.gen() };
 
         ProcedureInitialState {
             stack,

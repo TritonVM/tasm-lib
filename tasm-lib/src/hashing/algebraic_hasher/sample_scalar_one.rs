@@ -75,7 +75,7 @@ mod tests {
             _memory: &mut HashMap<BFieldElement, BFieldElement>,
             _nondeterminism: &NonDeterminism,
             _public_input: &[BFieldElement],
-            sponge: &mut Option<crate::VmHasher>,
+            sponge: &mut Option<crate::prelude::Tip5>,
         ) -> Vec<BFieldElement> {
             let vals = sponge.as_mut().unwrap().squeeze();
 

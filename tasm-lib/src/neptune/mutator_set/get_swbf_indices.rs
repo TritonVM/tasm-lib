@@ -13,11 +13,11 @@ use crate::hashing::algebraic_hasher::sample_indices::SampleIndices;
 use crate::list::higher_order::inner_function::InnerFunction;
 use crate::list::higher_order::inner_function::RawCode;
 use crate::list::higher_order::map::Map;
+use crate::prelude::Digest;
 use crate::rust_shadowing_helper_functions;
 use crate::traits::basic_snippet::BasicSnippet;
 use crate::traits::function::Function;
 use crate::traits::function::FunctionInitialState;
-use crate::Digest;
 
 /// Derives the indices that make up the removal record from the item
 /// (a digest), the sender randomness (also a digest), receiver

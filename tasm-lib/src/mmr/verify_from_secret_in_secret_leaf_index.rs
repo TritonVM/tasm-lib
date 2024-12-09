@@ -132,6 +132,7 @@ mod tests {
     use twenty_first::util_types::mmr::shared_basic::leaf_index_to_mt_index_and_peak_index;
 
     use super::*;
+    use crate::prelude::Tip5;
     use crate::rust_shadowing_helper_functions;
     use crate::snippet_bencher::BenchmarkCase;
     use crate::test_helpers::test_rust_equivalence_given_complete_state;
@@ -139,7 +140,6 @@ mod tests {
     use crate::traits::procedure::ProcedureInitialState;
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
-    use crate::VmHasher;
 
     #[test]
     fn prop() {
@@ -150,7 +150,7 @@ mod tests {
 
     #[test]
     fn mmra_ap_verify_test_one() {
-        let digest0 = VmHasher::hash(&BFieldElement::new(4545));
+        let digest0 = Tip5::hash(&BFieldElement::new(4545));
         let (mmra, _mps) = mmra_with_mps(1u64, vec![(0, digest0)]);
         MmrVerifyFromSecretInSecretLeafIndex.prop_verify_from_secret_in_positive_test(
             &mmra,
@@ -162,8 +162,8 @@ mod tests {
 
     #[test]
     fn mmra_ap_verify_test_two() {
-        let digest0 = VmHasher::hash(&BFieldElement::new(123));
-        let digest1 = VmHasher::hash(&BFieldElement::new(456));
+        let digest0 = Tip5::hash(&BFieldElement::new(123));
+        let digest1 = Tip5::hash(&BFieldElement::new(456));
 
         let leaf_count = 2u64;
         let (mmr, _mps) = mmra_with_mps(leaf_count, vec![(0u64, digest0), (1u64, digest1)]);
@@ -299,7 +299,7 @@ mod tests {
             memory: &mut HashMap<BFieldElement, BFieldElement>,
             nondeterminism: &NonDeterminism,
             _public_input: &[BFieldElement],
-            _sponge: &mut Option<VmHasher>,
+            _sponge: &mut Option<Tip5>,
         ) -> Vec<BFieldElement> {
             let mut leaf_digest = [BFieldElement::new(0); Digest::LEN];
             for elem in leaf_digest.iter_mut() {

@@ -12,4 +12,5 @@ pub use crate::memory::dyn_malloc::DynMalloc;
 pub use crate::memory::memcpy::MemCpy;
 pub use crate::structure::tasm_object::TasmObject;
 pub use crate::traits::basic_snippet::BasicSnippet;
-pub use crate::Digest;
+pub use crate::triton_vm::prelude::Digest;
+pub use crate::triton_vm::prelude::Tip5;

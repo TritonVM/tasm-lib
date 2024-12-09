@@ -7,6 +7,7 @@ use triton_vm::prelude::*;
 
 use crate::linker::execute_bench;
 use crate::linker::link_for_isolated_run;
+use crate::prelude::Tip5;
 use crate::snippet_bencher::write_benchmarks;
 use crate::snippet_bencher::BenchmarkCase;
 use crate::snippet_bencher::NamedBenchmarkResult;
@@ -19,7 +20,6 @@ use crate::test_helpers::verify_stack_growth;
 use crate::traits::basic_snippet::BasicSnippet;
 use crate::traits::rust_shadow::RustShadow;
 use crate::InitVmState;
-use crate::VmHasher;
 
 /// A trait that can modify all parts of the VM state.
 ///
@@ -46,7 +46,7 @@ pub trait Procedure: BasicSnippet {
         memory: &mut HashMap<BFieldElement, BFieldElement>,
         nondeterminism: &NonDeterminism,
         public_input: &[BFieldElement],
-        sponge: &mut Option<VmHasher>,
+        sponge: &mut Option<Tip5>,
     ) -> Vec<BFieldElement>;
 
     fn preprocess<T: BFieldCodec>(_meta_input: T, _nondeterminism: &mut NonDeterminism) {}
@@ -67,7 +67,7 @@ pub struct ProcedureInitialState {
     pub stack: Vec<BFieldElement>,
     pub nondeterminism: NonDeterminism,
     pub public_input: Vec<BFieldElement>,
-    pub sponge: Option<VmHasher>,
+    pub sponge: Option<Tip5>,
 }
 
 impl From<ProcedureInitialState> for InitVmState {
@@ -104,7 +104,7 @@ impl<P: Procedure + 'static> RustShadow for ShadowedProcedure<P> {
         nondeterminism: &NonDeterminism,
         stack: &mut Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
-        sponge: &mut Option<VmHasher>,
+        sponge: &mut Option<Tip5>,
     ) -> Vec<BFieldElement> {
         self.procedure
             .borrow()

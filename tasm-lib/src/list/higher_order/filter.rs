@@ -285,11 +285,11 @@ mod tests {
     use super::*;
     use crate::arithmetic;
     use crate::list::higher_order::inner_function::RawCode;
+    use crate::prelude::Tip5;
     use crate::traits::deprecated_snippet::DeprecatedSnippet;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
     use crate::InitVmState;
-    use crate::VmHasher;
 
     #[derive(Debug, Clone)]
     pub struct TestHashXFieldElementLsb;
@@ -435,7 +435,7 @@ mod tests {
             for _ in 0..3 {
                 xfield_element.push(stack.pop().unwrap());
             }
-            let digest = VmHasher::hash_varlen(&xfield_element).values().to_vec();
+            let digest = Tip5::hash_varlen(&xfield_element).values().to_vec();
             let b = digest[0].value() % 2;
             stack.push(BFieldElement::new(b));
         }

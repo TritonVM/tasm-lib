@@ -249,9 +249,9 @@ pub(crate) mod tests {
 
     use super::*;
     use crate::arithmetic;
+    use crate::prelude::Tip5;
     use crate::test_helpers::test_rust_equivalence_given_execution_state_deprecated;
     use crate::traits::rust_shadow::RustShadow;
-    use crate::VmHasher;
 
     pub(crate) struct DeprecatedSnippetWrapper<S: DeprecatedSnippet> {
         pub(crate) deprecated_snippet: S,
@@ -274,7 +274,7 @@ pub(crate) mod tests {
             nondeterminism: &NonDeterminism,
             stack: &mut Vec<BFieldElement>,
             memory: &mut HashMap<BFieldElement, BFieldElement>,
-            _sponge: &mut Option<VmHasher>,
+            _sponge: &mut Option<Tip5>,
         ) -> Vec<BFieldElement> {
             let mut stack_copy = stack.to_vec();
             self.deprecated_snippet.rust_shadowing(

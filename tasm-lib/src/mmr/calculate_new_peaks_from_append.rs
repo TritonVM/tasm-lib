@@ -19,10 +19,10 @@ use crate::list::pop::Pop;
 use crate::list::push::Push;
 use crate::list::set_length::SetLength;
 use crate::memory::dyn_malloc;
+use crate::prelude::Tip5;
 use crate::rust_shadowing_helper_functions;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::InitVmState;
-use crate::VmHasher;
 
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct CalculateNewPeaksFromAppend;
@@ -298,9 +298,7 @@ impl DeprecatedSnippet for CalculateNewPeaksFromAppend {
             );
             list_push(
                 peaks_pointer,
-                VmHasher::hash_pair(previous_peak, new_hash)
-                    .values()
-                    .to_vec(),
+                Tip5::hash_pair(previous_peak, new_hash).values().to_vec(),
                 memory,
                 Digest::LEN,
             );
@@ -342,15 +340,15 @@ mod tests {
     #[test]
     fn mmra_append_test_empty() {
         let mmra = MmrAccumulator::new_from_leafs(vec![]);
-        let digest = VmHasher::hash(&BFieldElement::zero());
+        let digest = Tip5::hash(&BFieldElement::zero());
         let expected_final_mmra = MmrAccumulator::new_from_leafs(vec![digest]);
         prop_calculate_new_peaks_from_append(mmra, digest, expected_final_mmra);
     }
 
     #[test]
     fn mmra_append_test_single() {
-        let digest0 = VmHasher::hash(&BFieldElement::new(4545));
-        let digest1 = VmHasher::hash(&BFieldElement::new(12345));
+        let digest0 = Tip5::hash(&BFieldElement::new(4545));
+        let digest1 = Tip5::hash(&BFieldElement::new(12345));
         let mmra = MmrAccumulator::new_from_leafs(vec![digest0]);
         let expected_final_mmra = MmrAccumulator::new_from_leafs(vec![digest0, digest1]);
         prop_calculate_new_peaks_from_append(mmra, digest1, expected_final_mmra);
@@ -358,19 +356,19 @@ mod tests {
 
     #[test]
     fn mmra_append_test_two_leaves() {
-        let digest0 = VmHasher::hash(&BFieldElement::new(4545));
-        let digest1 = VmHasher::hash(&BFieldElement::new(12345));
-        let digest2 = VmHasher::hash(&BFieldElement::new(55488));
+        let digest0 = Tip5::hash(&BFieldElement::new(4545));
+        let digest1 = Tip5::hash(&BFieldElement::new(12345));
+        let digest2 = Tip5::hash(&BFieldElement::new(55488));
         let mmra = MmrAccumulator::new_from_leafs(vec![digest0, digest1]);
         let expected_final_mmra = MmrAccumulator::new_from_leafs(vec![digest0, digest1, digest2]);
         prop_calculate_new_peaks_from_append(mmra, digest2, expected_final_mmra);
     }
     #[test]
     fn mmra_append_test_three_leaves() {
-        let digest0 = VmHasher::hash(&BFieldElement::new(4545));
-        let digest1 = VmHasher::hash(&BFieldElement::new(12345));
-        let digest2 = VmHasher::hash(&BFieldElement::new(55488));
-        let digest3 = VmHasher::hash(&BFieldElement::new(554880000000));
+        let digest0 = Tip5::hash(&BFieldElement::new(4545));
+        let digest1 = Tip5::hash(&BFieldElement::new(12345));
+        let digest2 = Tip5::hash(&BFieldElement::new(55488));
+        let digest3 = Tip5::hash(&BFieldElement::new(554880000000));
         let mmra = MmrAccumulator::new_from_leafs(vec![digest0, digest1, digest2]);
         let expected_final_mmra =
             MmrAccumulator::new_from_leafs(vec![digest0, digest1, digest2, digest3]);
@@ -379,7 +377,7 @@ mod tests {
 
     #[test]
     fn mmra_append_pbt() {
-        let inserted_digest: Digest = VmHasher::hash(&BFieldElement::new(1337));
+        let inserted_digest: Digest = Tip5::hash(&BFieldElement::new(1337));
         for init_size in 0..40 {
             println!("init_size = {init_size}");
             let leaf_digests: Vec<Digest> = random_elements(init_size);
@@ -393,21 +391,17 @@ mod tests {
     #[test]
     fn mmra_append_big_mmr() {
         // Set MMR to be with 2^32 - 1 leaves and 32 peaks. Prepending one leaf should then reduce the number of leaves to 1.
-        let inserted_digest: Digest = VmHasher::hash(&BFieldElement::new(1337));
-        let init_mmra = MmrAccumulator::init(
-            vec![VmHasher::hash(&BFieldElement::zero()); 32],
-            (1 << 32) - 1,
-        );
+        let inserted_digest: Digest = Tip5::hash(&BFieldElement::new(1337));
+        let init_mmra =
+            MmrAccumulator::init(vec![Tip5::hash(&BFieldElement::zero()); 32], (1 << 32) - 1);
         let mut expected_final_mmr = init_mmra.clone();
         expected_final_mmr.append(inserted_digest);
         prop_calculate_new_peaks_from_append(init_mmra, inserted_digest, expected_final_mmr);
 
         // Set MMR to be with 2^33 - 1 leaves and 33 peaks. Prepending one leaf should then reduce the number of leaves to 1.
-        let inserted_digest: Digest = VmHasher::hash(&BFieldElement::new(1337));
-        let init_mmra = MmrAccumulator::init(
-            vec![VmHasher::hash(&BFieldElement::zero()); 33],
-            (1 << 33) - 1,
-        );
+        let inserted_digest: Digest = Tip5::hash(&BFieldElement::new(1337));
+        let init_mmra =
+            MmrAccumulator::init(vec![Tip5::hash(&BFieldElement::zero()); 33], (1 << 33) - 1);
         let mut expected_final_mmr = init_mmra.clone();
         expected_final_mmr.append(inserted_digest);
         prop_calculate_new_peaks_from_append(init_mmra, inserted_digest, expected_final_mmr);

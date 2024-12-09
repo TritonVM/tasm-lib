@@ -9,7 +9,7 @@ use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
 use crate::data_type::DataType;
 use crate::hashing::algebraic_hasher::sample_scalars_static_length_static_pointer::SampleScalarsStaticLengthStaticPointer;
 use crate::library::Library;
-use crate::tip5::Digest;
+use crate::prelude::Digest;
 use crate::traits::basic_snippet::BasicSnippet;
 use crate::verifier::challenges::shared::challenges_data_type;
 use crate::verifier::claim::shared::claim_type;
@@ -225,6 +225,7 @@ mod tests {
 
     use super::*;
     use crate::memory::encode_to_memory;
+    use crate::prelude::Tip5;
     use crate::rust_shadowing_helper_functions::array::insert_as_array;
     use crate::rust_shadowing_helper_functions::claim::load_claim_from_memory;
     use crate::snippet_bencher::BenchmarkCase;
@@ -234,7 +235,6 @@ mod tests {
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
     use crate::verifier::challenges::shared::conventional_challenges_pointer;
-    use crate::VmHasher;
 
     impl Procedure for NewGenericDynClaim {
         fn rust_shadow(
@@ -243,7 +243,7 @@ mod tests {
             memory: &mut HashMap<BFieldElement, BFieldElement>,
             _nondeterminism: &NonDeterminism,
             _public_input: &[BFieldElement],
-            sponge: &mut Option<VmHasher>,
+            sponge: &mut Option<Tip5>,
         ) -> Vec<BFieldElement> {
             let sponge = sponge.as_mut().expect("sponge must be initialized");
             let claim_pointer = stack.pop().unwrap();

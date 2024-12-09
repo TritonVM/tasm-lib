@@ -141,13 +141,13 @@ mod test {
     use triton_vm::twenty_first::prelude::*;
 
     use super::*;
+    use crate::prelude::Digest;
     use crate::rust_shadowing_helper_functions;
     use crate::snippet_bencher::BenchmarkCase;
     use crate::traits::algorithm::Algorithm;
     use crate::traits::algorithm::AlgorithmInitialState;
     use crate::traits::algorithm::ShadowedAlgorithm;
     use crate::traits::rust_shadow::RustShadow;
-    use crate::Digest;
 
     #[derive(Clone, Debug, EnumIter, Copy)]
     enum IndexType {
