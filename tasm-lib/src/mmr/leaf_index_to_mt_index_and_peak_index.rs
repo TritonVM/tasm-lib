@@ -33,7 +33,7 @@ use crate::traits::basic_snippet::SignOffFingerprint;
 /// - all output arguments are properly [`BFieldCodec`] encoded
 ///
 /// [rust]: twenty_first::util_types::mmr::shared_basic::leaf_index_to_mt_index_and_peak_index
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct MmrLeafIndexToMtIndexAndPeakIndex;
 
 impl MmrLeafIndexToMtIndexAndPeakIndex {

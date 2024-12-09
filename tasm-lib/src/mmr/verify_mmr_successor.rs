@@ -1,36 +1,60 @@
+use std::collections::HashMap;
+
 use triton_vm::prelude::*;
 use twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
 use twenty_first::util_types::mmr::mmr_successor_proof::MmrSuccessorProof;
 
-use crate::arithmetic::u64::add::Add;
-use crate::arithmetic::u64::log_2_floor::Log2Floor;
-use crate::arithmetic::u64::lt::Lt;
-use crate::arithmetic::u64::popcount::PopCount;
-use crate::arithmetic::u64::shift_right::ShiftRight;
-use crate::arithmetic::u64::sub::Sub;
+use crate::arithmetic::u64 as u64_lib;
 use crate::field;
+use crate::hashing::merkle_step_mem_u64_index::MerkleStepMemU64Index;
 use crate::hashing::merkle_step_u64_index::MerkleStepU64Index;
-use crate::mmr::bag_peaks::BagPeaks;
 use crate::mmr::leaf_index_to_mt_index_and_peak_index::MmrLeafIndexToMtIndexAndPeakIndex;
 use crate::prelude::*;
+use crate::traits::basic_snippet::Reviewer;
+use crate::traits::basic_snippet::SignOffFingerprint;
 
 /// Verify that one MMR is a successor to another.
 ///
-/// Verify the successorship relation between two MMRs. A `MmrSuccessorProof`
+/// Verify the successorship relation between two MMRs. A [`MmrSuccessorProof`]
 /// is necessary to demonstrate this relation, but it is not a *stack* argument
 /// because this algorithm obtains the relevant info (authentication paths) from
-/// nondeterministic digests. Accordingly, nondeterminism must be initialized
-/// correctly with the `MmrSuccessorProof`.
+/// nondeterminism. Accordingly, nondeterminism must be [initialized] correctly with
+/// the `MmrSuccessorProof`.
 ///
-/// This snippet crashes if the relation does not hold (or if the proof is invalid).
+/// The snippet crashes if the relation does not hold, or if the proof is invalid.
+///
+/// ### Behavior
+///
+/// ```text
+/// BEFORE: _ *old_mmr *new_mmr
+/// AFTER:  _
+/// ```
+///
+/// ### Preconditions
+///
+/// None.
+///
+/// ### Postconditions
+///
+/// - the `new_mmr` is a successor of the `old_mmr`
+///
+/// [initialized]: VerifyMmrSuccessor::update_nondeterminism
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct VerifyMmrSuccessor;
+
+impl VerifyMmrSuccessor {
+    pub(crate) const OLD_HAS_MORE_LEAFS_THAN_NEW_ERROR_ID: i128 = 150;
+    pub(crate) const INCONSISTENT_OLD_MMR_ERROR_ID: i128 = 151;
+    pub(crate) const INCONSISTENT_NEW_MMR_ERROR_ID: i128 = 152;
+    pub(crate) const DIFFERING_SHARED_PEAK_ERROR_ID: i128 = 153;
+    pub(crate) const DIFFERING_UNSHARED_PEAK_ERROR_ID: i128 = 154;
+}
 
 impl BasicSnippet for VerifyMmrSuccessor {
     fn inputs(&self) -> Vec<(DataType, String)> {
-        vec![
-            (DataType::VoidPointer, "*old_mmr".to_string()),
-            (DataType::VoidPointer, "*new_mmr".to_string()),
-        ]
+        ["*old_mmr", "*new_mmr"]
+            .map(|ptr_name| (DataType::VoidPointer, ptr_name.to_string()))
+            .to_vec()
     }
 
     fn outputs(&self) -> Vec<(DataType, String)> {
@@ -42,316 +66,344 @@ impl BasicSnippet for VerifyMmrSuccessor {
     }
 
     fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
-        let field_peaks = field!(MmrAccumulator::peaks);
-        let field_leaf_count = field!(MmrAccumulator::leaf_count);
-        let num_peaks = triton_asm! {
-            // _ *mmr
-            {&field_peaks}
-            // _ *peaks
-            read_mem 1
-            // _ len (*peaks-1)
-            pop 1
-            // _ len
-        };
-        let num_leafs = triton_asm!(
-            // _ *mmr
-            {&field_leaf_count}
-            // _ *leaf_count
-            push 1 add read_mem 2
-            // _ [num_leafs] (*leaf_count-1)
-            pop 1
-        );
-        let ltu64 = library.import(Box::new(Lt));
-        let popcount_u64 = library.import(Box::new(PopCount));
-        let add_u64 = library.import(Box::new(Add));
+        let sub_u64 = library.import(Box::new(u64_lib::sub::Sub));
+        let lt_u64 = library.import(Box::new(u64_lib::lt::Lt));
+        let popcount_u64 = library.import(Box::new(u64_lib::popcount::PopCount));
+        let trailing_zeros_u64 = library.import(Box::new(u64_lib::trailing_zeros::TrailingZeros));
+        let shl_u64 = library.import(Box::new(u64_lib::shift_left::ShiftLeft));
+        let shr_u64 = library.import(Box::new(u64_lib::shift_right::ShiftRight));
+
         let leaf_index_to_mti_and_pki = library.import(Box::new(MmrLeafIndexToMtIndexAndPeakIndex));
         let merkle_step_u64 = library.import(Box::new(MerkleStepU64Index));
-        let ilog2_u64 = library.import(Box::new(Log2Floor));
-        let sub_u64 = library.import(Box::new(Sub));
-        let shr_u64 = library.import(Box::new(ShiftRight));
-        let compare_digests = DataType::Digest.compare();
-        let compare_u64 = DataType::U64.compare();
-        let bag_peaks = library.import(Box::new(BagPeaks));
+        let merkle_step_mem_u64 = library.import(Box::new(MerkleStepMemU64Index));
+
         let entrypoint = self.entrypoint();
-        let main_loop = format!("{entrypoint}_main_loop");
-        let traverse = format!("{entrypoint}_traverse_partial_auth_path");
-        let cleanup_and_return = format!("{entrypoint}_cleanup_and_return");
-        let assert_mmrs_equal = format!("{entrypoint}_assert_mmrs_equal");
-
-        let strip_top_bit = triton_asm!(
-            // BEFORE: [num_leafs_remaining] garbage
-            // AFTER: [num_leafs_remaining*] old_height
-            pop 1
-            dup 1 dup 1 call {ilog2_u64}
-            // [num_leafs_remaining] old_height
-            hint old_height = stack[0]
-
-            dup 0 push 2 pow split
-            // [num_leafs_remaining] old_height [1<<old_height]
-            hint two_pow_old_height = stack[0..2]
-
-            dup 4 dup 4
-            // [num_leafs_remaining] old_height [1<<old_height] [num_leafs_remaining]
-            call {sub_u64}
-            // [num_leafs_remaining] old_height [num_leafs_remaining*]
-            hint new_num_leafs_remaining = stack[0..2]
-
-            swap 3 swap 1 swap 4
-            // [num_leafs_remaining*] old_height [num_leafs_remaining]
-            pop 2
-            // [num_leafs_remaining*] old_height
-            hint num_leafs_remaining = stack[1..3]
-        );
+        let clean_up_because_old_mmr_has_0_leafs =
+            format!("{entrypoint}_clean_up_because_old_mmr_has_0_leafs");
+        let assert_mmr_equality = format!("{entrypoint}_assert_mmr_equality");
+        let assert_unchanged_peaks_equality =
+            format!("{entrypoint}_assert_unchanged_peaks_equality");
+        let clean_up_because_new_leafs_dont_affect_old_peaks =
+            format!("{entrypoint}_clean_up_because_new_leafs_dont_affect_old_peaks");
+        let traverse_new_tree = format!("{entrypoint}_traverse_new_tree");
+        let traverse_new_tree_right_sibling = format!("{traverse_new_tree}_right_sibling");
 
         triton_asm! {
-            // BEFORE: _ *old_mmr *new_mmr
+            // BEFORE: _ *old *new
             // AFTER:  _
             {entrypoint}:
+                /* consistent old MMR? */
+                dup 1
+                {&field!(MmrAccumulator::peaks)} hint old_peaks: Pointer = stack[0]
+                // _ *old *new *old_peaks
 
-            /* tests before preparing loop */
+                read_mem 1 hint old_peaks_len = stack[1]
+                addi 1
+                place 1
+                // _ *old *new *old_peaks old_peaks_len
 
-            // num old leafs == 0 ?
-            push 0
-            // _ *old_mmr *new_mmr 0
+                pick 3
+                {&field!(MmrAccumulator::leaf_count)} hint old_leaf_count: Pointer = stack[0]
+                addi 1
+                read_mem 2 hint old_num_leafs: u64 = stack[1..3]
+                pop 1
+                // _ *new *old_peaks old_peaks_len [old_num_leafs: u64]
 
-            dup 2 {&num_leafs}
-            // _ *old_mmr *new_mmr 0 [old_num_leafs]
+                place 3 place 3
+                // _ *new [old_num_leafs: u64] *old_peaks old_peaks_len
 
-            push 0 push 0
-            // _ *old_mmr *new_mmr 0 [old_num_leafs] [0]
+                dup 3 dup 3
+                call {popcount_u64}
+                // _ *new [old_num_leafs: u64] *old_peaks old_peaks_len (popcount of old_num_leafs)
 
-            {&compare_u64}
-            // _ *old_mmr *new_mmr 0 (old_num_leafs == 0)
+                eq assert error_id {Self::INCONSISTENT_OLD_MMR_ERROR_ID}
+                // _ *new [old_num_leafs: u64] *old_peaks
 
-            skiz call {cleanup_and_return}
-            skiz return
-            // _ *old_mmr *new_mmr
-
-
-            // new num leafs == old num leafs
-            push 0
-            // _ *old_mmr *new_mmr 0
-
-            dup 2 {&num_leafs}
-            // _ *old_mmr *new_mmr 0 [old_num_leafs]
-
-            dup 3 {&num_leafs}
-            // _ *old_mmr *new_mmr 0 [old_num_leafs] [new_num_leafs]
-
-            {&compare_u64}
-            // _ *old_mmr *new_mmr 0 (old_num_leafs == new_num_leafs)
-
-            skiz call {assert_mmrs_equal}
-            skiz return
-            // _ *old_mmr *new_mmr
-
-
-            // new num leafs < old num leafs  ?
-            dup 1 {&num_leafs}
-            // _ *old_mmr *new_mmr [old_num_leafs]
-
-            dup 2 {&num_leafs}
-            // _ *old_mmr *new_mmr [old_num_leafs] [new_num_leafs]
-
-            call {ltu64}
-            // _ *old_mmr *new_mmr (new_num_leafs < old_num_leafs)
-
-            push 0 eq
-            // _ *old_mmr *new_mmr (new_num_leafs >= old_num_leafs)
-
-            assert error_id 150
-            // _ *old_mmr *new_mmr
-
-
-            // consistent new mmr?
-            dup 0 {&num_peaks}
-            // _ *old_mmr *new_mmr new_num_peaks
-
-            dup 1 {&num_leafs} call {popcount_u64}
-            // _ *old_mmr *new_mmr new_num_peaks (popcount of new_num_leafs)
-
-            eq assert error_id 151
-            // _ *old_mmr *new_mmr
-
-
-            /* prepare and call loop */
-            dup 1 {&field_peaks}
-            // _ *old_mmr *new_mmr *old_peaks
-
-            read_mem 1 push 2 add
-            // _ *old_mmr *new_mmr num_old_peaks *old_peaks[0]
-            hint current_peak_ptr = stack[0]
-
-            swap 1 push {Digest::LEN} mul
-            // _ *old_mmr *new_mmr *old_peaks[0] (num_old_peaks*5)
-
-            dup 1 add
-            // _ *old_mmr *new_mmr *old_peaks[0] *end_of_memory
-            hint end_of_memory = stack[0]
-
-            push 0 push 0
-            // _ *old_mmr *new_mmr *old_peaks[0] *end_of_memory [0]
-            hint running_leaf_count = stack[0..2]
-
-            dup 5 {&num_leafs}
-            // _ *old_mmr *new_mmr *old_peaks[0] *end_of_memory [0] [old_num_leafs]
-            hint num_leafs_remaining = stack[0..2]
-
-            push {0x455b00b5}
-            // _ *old_mmr *new_mmr *old_peaks[0] *end_of_memory [0] [old_num_leafs] garbage
-
-            call {main_loop}
-            // _ *old_mmr *new_mmr *end_of_memory *end_of_memory [old_num_leafs] [0] garbage
-
-            /* clean up after loop */
-            pop 5
-            // _ *old_mmr *new_mmr *end_of_memory *end_of_memory
-
-            pop 4
-            // _
-
-            return
-
-            // INVARIANT: _ *new_mmr *current_peak *end_of_memory [running_leaf_count] [num_leafs_remaining] garbage
-            {main_loop}:
-
-                {&strip_top_bit}
-                // _ *new_mmr *current_peak *end_of_memory [running_leaf_count] [num_leafs_remaining*] old_height
-
-                dup 7 {&num_leafs}
-                // _ *new_mmr *current_peak *end_of_memory [running_leaf_count] [num_leafs_remaining*] old_height [new_num_leafs]
-
-                dup 6 dup 6
-                // _ *new_mmr *current_peak *end_of_memory [running_leaf_count] [num_leafs_remaining*] old_height [new_num_leafs] [running_leaf_count]
-
-                call {leaf_index_to_mti_and_pki}
-                // _ *new_mmr *current_peak *end_of_memory [running_leaf_count] [num_leafs_remaining*] old_height [merkle_tree_index] peak_index
-                hint merkle_tree_index = stack[1..3]
-                hint peak_index = stack[0]
-
-                swap 2 swap 1
-                // _ *new_mmr *current_peak *end_of_memory [running_leaf_count] [num_leafs_remaining*] old_height peak_index [merkle_tree_index]
-
+                /* consistent new MMR? */
                 dup 3
-                // _ *new_mmr *current_peak *end_of_memory [running_leaf_count] [num_leafs_remaining*] old_height peak_index [merkle_tree_index] old_height
+                {&field!(MmrAccumulator::peaks)} hint new_peaks: Pointer = stack[0]
+                // _ *new [old_num_leafs: u64] *old_peaks *new_peaks
 
-                call {shr_u64}
-                // _ *new_mmr *current_peak *end_of_memory [running_leaf_count] [num_leafs_remaining*] old_height peak_index [merkle_tree_index >> old_height]
+                read_mem 1 hint new_peaks_len = stack[1]
+                addi 1
+                place 1
+                // _ *new [old_num_leafs: u64] *old_peaks *new_peaks new_peaks_len
 
+                pick 5
+                {&field!(MmrAccumulator::leaf_count)} hint new_leaf_count: Pointer = stack[0]
+                addi 1
+                read_mem 2 hint new_num_leafs: u64 = stack[1..3]
+                pop 1
+                // _ [old_num_leafs: u64] *old_peaks *new_peaks new_peaks_len [new_num_leafs: u64]
 
-                /* prepare & traverse */
-                dup 9 push {Digest::LEN-1} add read_mem {Digest::LEN} pop 1
-                // _ *new_mmr *current_peak *end_of_memory [running_leaf_count] [num_leafs_remaining*] old_height peak_index [merkle_tree_index >> old_height] [current_old_peak]
-                hint merkle_node = stack[0..5]
+                place 3 place 3
+                // _ [old_num_leafs: u64] *old_peaks [new_num_leafs: u64] *new_peaks new_peaks_len
 
-                call {traverse}
-                // _ *new_mmr *current_peak *end_of_memory [running_leaf_count] [num_leafs_remaining*] old_height peak_index [1] [some_new_peak]
-                hint landed_peak = stack[0..5]
-                hint merkle_index = stack[5..7]
-                hint peak_index = stack[7]
+                dup 3 dup 3
+                call {popcount_u64}
+                // _ [old_num_leafs: u64] *old_peaks [new_num_leafs: u64] *new_peaks new_peaks_len (popcount of new_num_leafs)
 
-                dup 15 {&field_peaks}
-                // _ *new_mmr *current_peak *end_of_memory [running_leaf_count] [num_leafs_remaining*] old_height peak_index [1] [some_new_peak] *new_peaks
+                eq assert error_id {Self::INCONSISTENT_NEW_MMR_ERROR_ID}
+                // _ [old_num_leafs: u64] *old_peaks [new_num_leafs: u64] *new_peaks
 
-                push {1 + Digest::LEN - 1} dup 9
-                hint peak_index = stack[0]
+                /* edge case: old MMR has 0 leafs – nothing to verify */
+                push 0
+                dup 6 dup 6
+                // _ [old_num_leafs: u64] *old_peaks [new_num_leafs: u64] *new_peaks 0 [old_num_leafs: u64]
 
-                push {Digest::LEN} mul add
-                // _ *new_mmr *current_peak *end_of_memory [running_leaf_count] [num_leafs_remaining*] old_height peak_index [1] [some_new_peak] *new_peaks (5+peak_index*5)
+                push 0 push 0 hint zero: u64 = stack[0..2]
+                {&DataType::U64.compare()}
+                // _ [old_num_leafs: u64] *old_peaks [new_num_leafs: u64] *new_peaks 0 (old_num_leafs == 0)
 
-                add read_mem {Digest::LEN} pop 1
-                // _ *new_mmr *current_peak *end_of_memory [running_leaf_count] [num_leafs_remaining*] old_height peak_index [1] [some_new_peak] [new_peaks[peak_index]]
-
-                {&compare_digests} assert error_id 152
-                // _ *new_mmr *current_peak *end_of_memory [running_leaf_count] [num_leafs_remaining*] old_height peak_index [1]
-
-
-                /* prepare for next iteration */
-                pop 3
-                // _ *new_mmr *current_peak *end_of_memory [running_leaf_count] [num_leafs_remaining*] old_height
-
-                push 2 pow split
-                // _ *new_mmr *current_peak *end_of_memory [running_leaf_count] [num_leafs_remaining*] [1<<old_height]
-
-                dup 5 dup 5 call {add_u64}
-                // _ *new_mmr *current_peak *end_of_memory [running_leaf_count] [num_leafs_remaining*] [running_leaf_count*]
-                hint running_leaf_count = stack[0..2]
-
-                swap 4 swap 1 swap 5 pop 1
-                // _ *new_mmr *current_peak *end_of_memory [running_leaf_count*] [num_leafs_remaining*] garbage
-
-                swap 6 push {Digest::LEN} add swap 6
-                // _ *new_mmr *next_peak *end_of_memory [running_leaf_count*] [num_leafs_remaining*] garbage
-                hint next_peak_ptr = stack[6]
-
-                recurse_or_return
-
-            // INVARIANT: _ [merkle_tree_index] [current_node]
-            {traverse}:
-                // evaluate termination condition
-                dup 6 dup 6 push 0 push 1
-                // _ [merkle_tree_index] [current_node] [merkle_tree_index] [1]
-
-                {&compare_u64}
-                // _ [merkle_tree_index] [current_node] (merkle_tree_index == 1)
-
+                skiz call {clean_up_because_old_mmr_has_0_leafs}
                 skiz return
-                // _ [merkle_tree_index] [current_node]
+                // _ [old_num_leafs: u64] *old_peaks [new_num_leafs: u64] *new_peaks
 
-                call {merkle_step_u64}
-                // _ [merkle_tree_index] [current_node*]
+                /* edge case: old and new MMRs have the same number of leafs
+                 * Check equality of peaks. Treated separately to simplify nominal case.
+                 */
+                push 0
+                dup 6 dup 6
+                dup 5 dup 5
+                {&DataType::U64.compare()}
+                // _ [old_num_leafs: u64] *old_peaks [new_num_leafs: u64] *new_peaks 0 (old_num_leafs == new_num_leafs)
+
+                skiz call {assert_mmr_equality}
+                skiz return
+                // _ [old_num_leafs: u64] *old_peaks [new_num_leafs: u64] *new_peaks
+
+                /* crash if num_old_leafs > num_new_leafs */
+                dup 5 dup 5
+                dup 4 dup 4
+                call {lt_u64}
+                // _ [old_num_leafs: u64] *old_peaks [new_num_leafs: u64] *new_peaks (new_num_leafs < old_num_leafs)
+
+                push 0 eq
+                // _ [old_num_leafs: u64] *old_peaks [new_num_leafs: u64] *new_peaks (new_num_leafs >= old_num_leafs)
+
+                assert error_id {Self::OLD_HAS_MORE_LEAFS_THAN_NEW_ERROR_ID}
+                // _ [old_num_leafs: u64] *old_peaks [new_num_leafs: u64] *new_peaks
+
+                /* nominal case */
+                dup 2 dup 2
+                dup 7 dup 7
+                call {leaf_index_to_mti_and_pki}    hint num_unchanged_peaks = stack[0]
+                                                    hint merkle_tree_idx: u64 = stack[1..3]
+                // _ [old_num_leafs: u64] *old_peaks [new_num_leafs: u64] *new_peaks [mt_index: u64] num_unchanged_peaks
+
+                pick 2 pick 2
+                place 8 place 8
+                // _ [mt_index: u64] [old_num_leafs: u64] *old_peaks [new_num_leafs: u64] *new_peaks num_unchanged_peaks
+
+                pick 4
+                read_mem 1
+                addi 2
+                // _ [mt_index: u64] [old_num_leafs: u64] [new_num_leafs: u64] *new_peaks num_unchanged_peaks old_num_peaks *old_peaks[0]
+
+                pick 1
+                addi -1
+                push {Digest::LEN}
+                mul
+                dup 1
+                add hint last_old_peak: Pointer = stack[0]
+                place 1
+                // _ [mt_index: u64] [old_num_leafs: u64] [new_num_leafs: u64] *new_peaks num_unchanged_peaks *old_peaks[-1] *old_peaks[0]
+
+                pick 3
+                addi 1
+                pick 3
+                // _ [mt_index: u64] [old_num_leafs: u64] [new_num_leafs: u64] *old_peaks[-1] *old_peaks[0] *new_peaks[0] num_unchanged_peaks
+
+                call {assert_unchanged_peaks_equality}
+                // _ [mt_index: u64] [old_num_leafs: u64] [new_num_leafs: u64] *old_peaks[-1] *old_peaks[i] *new_peaks[i] 0
+
+                pick 2
+                pop 2
+                // _ [mt_index: u64] [old_num_leafs: u64] [new_num_leafs: u64] *old_peaks[-1] *new_peaks[i]
+
+                place 5
+                place 5
+                // _ [mt_index: u64] *old_peaks[-1] *new_peaks[i] [old_num_leafs: u64] [new_num_leafs: u64]
+
+                dup 3 dup 3
+                call {trailing_zeros_u64} hint height_of_lowest_old_peak = stack[0]
+                // _ [mt_index: u64] *old_peaks[-1] *new_peaks[i] [old_num_leafs: u64] [new_num_leafs: u64] height_of_lowest_old_peak
+
+                push 0 push 1 hint one: u64 = stack[0..2]
+                dup 2
+                call {shl_u64} hint num_leafs_in_lowest_old_peak: u64 = stack[0..2]
+                // _ [mt_index: u64] *old_peaks[-1] *new_peaks[i] [old_num_leafs: u64] [new_num_leafs: u64] height_of_lowest_old_peak [num_leafs_in_lowest_old_peak: u64]
+
+                pick 6 pick 6
+                pick 6 pick 6
+                call {sub_u64}
+                // _ [mt_index: u64] *old_peaks[-1] *new_peaks[i] height_of_lowest_old_peak [num_leafs_in_lowest_old_peak: u64] [num_new_leafs: u64]
+
+                call {lt_u64}
+                // _ [mt_index: u64] *old_peaks[-1] *new_peaks[i] height_of_lowest_old_peak (num_new_leafs < num_leafs_in_lowest_old_peak)
+
+                push 0
+                place 1
+                skiz call {clean_up_because_new_leafs_dont_affect_old_peaks}
+                skiz return
+                // _ [mt_index: u64] *old_peaks[-1] *new_peaks[i] height_of_lowest_old_peak
+
+                pick 4 pick 4
+                pick 2
+                // _ *old_peaks[-1] *new_peaks[i] [mt_index: u64] height_of_lowest_old_peak
+
+                call {shr_u64} hint merkle_tree_idx: u64 = stack[0..2]
+                // _ *old_peaks[-1] *new_peaks[i] [mt_index: u64]
+
+                pick 2
+                place 3
+                divine 5
+                // _ *new_peaks[i] *old_peaks[-1] [mt_index: u64] [current_node: Digest]
+
+                call {traverse_new_tree}
+                // _ *new_peaks[i] *old_peaks[j] [one: u64] [root: Digest]
+
+                pick 8
+                addi {Digest::LEN - 1}
+                read_mem {Digest::LEN}
+                pop 1
+                // _ *old_peaks[j] [one: u64] [root: Digest] [new_peak[i]: Digest]
+
+                assert_vector error_id {Self::DIFFERING_UNSHARED_PEAK_ERROR_ID}
+                pop 5
+                // _ *old_peaks[j] [one: u64]
+
+                pop 3
+                return
+
+            // BEFORE: _ [old_num_leafs: u64] *old_peaks [new_num_leafs: u64] *new_peaks 0
+            // AFTER:  _ 1
+            {clean_up_because_old_mmr_has_0_leafs}:
+                pop 5
+                pop 2
+                push 1
+                return
+
+            // BEFORE: _ [num_leafs: u64] *old_peaks [num_leafs: u64] *new_peaks 0
+            // AFTER:  _ 1
+            {assert_mmr_equality}:
+                pick 4
+                addi 1
+                // _ [num_leafs: u64] [num_leafs: u64] *new_peaks 0 *old_peaks[0]
+
+                pick 2
+                addi 1
+                // _ [num_leafs: u64] [num_leafs: u64] 0 *old_peaks[0] *new_peaks[0]
+
+                pick 4 pick 4
+                call {popcount_u64}
+                // _ [num_leafs: u64] 0 *old_peaks[0] *new_peaks[0] num_peaks
+
+                call {assert_unchanged_peaks_equality}
+                // _ [num_leafs: u64] 0 *old_peaks[n] *new_peaks[n] 0
+
+                pop 5
+                pop 1
+                push 1
+                return
+
+            // BEFORE:    _ *old_peaks[0] *new_peaks[0] n
+            // INVARIANT: _ *old_peaks[i] *new_peaks[i] (n - i)
+            // AFTER:     _ *old_peaks[n] *new_peaks[n] 0
+            {assert_unchanged_peaks_equality}:
+                dup 0
+                push 0
+                eq
+                skiz return
+                // _ *old_peaks[i] *new_peaks[i] (n - i)
+
+                pick 2
+                addi {Digest::LEN - 1}
+                read_mem {Digest::LEN}
+                addi {Digest::LEN + 1}
+                place 7
+                // _ *old_peaks[i + 1] *new_peaks[i] (n - i) [old_peak[i]: Digest]
+
+                pick 6
+                addi {Digest::LEN - 1}
+                read_mem {Digest::LEN}
+                addi {Digest::LEN + 1}
+                place 11
+                // _ *old_peaks[i + 1] *new_peaks[i + 1] (n - i) [old_peak[i]: Digest] [new_peak[i]: Digest]
+
+                assert_vector error_id {Self::DIFFERING_SHARED_PEAK_ERROR_ID}
+                pop 5
+                // _ *old_peaks[i + 1] *new_peaks[i + 1] (n - i)
+
+                addi -1
+                recurse
+
+            // BEFORE: _ [mt_index: u64] *old_peaks[-1] *new_peaks[i] height_of_lowest_old_peak 0
+            // AFTER:  _ 1
+            {clean_up_because_new_leafs_dont_affect_old_peaks}:
+                pop 5
+                pop 1
+                push 1
+                return
+
+            // INVARIANT: _ *old_peaks[j] [mt_index >> i: u64] [current_node: Digest]
+            {traverse_new_tree}:
+                dup 6 dup 6
+                push 0 push 1 hint merkle_tree_root_index: u64 = stack[0..2]
+                {&DataType::U64.compare()}
+                skiz return
+                // _ *old_peaks[j] [mt_index >> i: u64] [current_node: Digest]
+
+                push 1
+                dup 6
+                push 1
+                and
+                // _ *old_peaks[j] [mt_index >> i: u64] [current_node: Digest] 1 is_right_sibling
+
+                skiz call {traverse_new_tree_right_sibling}
+                skiz call {merkle_step_u64}
+                // _ *old_peaks[j'] [mt_index >> (i + 1): u64] [next_node: Digest]
 
                 recurse
 
-            // BEFORE: _ *old_mmr *new_mmr 0
-            // AFTER:  _ 1
-            {cleanup_and_return}:
-                pop 3
-                push 1
-                return
+            // BEFORE: _ *old_peaks[j]   [mt_index >> i: u64]       [current_node: Digest] 1
+            // AFTER:  _ *old_peaks[j-1] [mt_index >> (i + 1): u64] [next_node: Digest]    0
+            {traverse_new_tree_right_sibling}:
+                pop 1
+                call {merkle_step_mem_u64}
+                // _ *old_peaks[j+1] [mt_index >> (i + 1): u64] [next_node: Digest]
 
-            // BEFORE: _ *old_mmr *new_mmr 0
-            // AFTER:  _ 1
-            {assert_mmrs_equal}:
-                dup 1 {&field_peaks}
-                // _ *old_mmr *new_mmr 0 *new_mmr_peaks
+                pick 7
+                addi -10 // -(2 · Digest::LEN)
+                place 7
+                // _ *old_peaks[j-1] [mt_index >> (i + 1): u64] [next_node: Digest]
 
-                call {bag_peaks}
-                // _ *old_mmr *new_mmr 0 [new_bagged]
-
-                dup 7 {&field_peaks}
-                // _ *old_mmr *new_mmr 0 [new_bagged] *old_mmr_peaks
-
-                call {bag_peaks}
-                // _ *old_mmr *new_mmr 0 [new_bagged] [old_bagged]
-
-                {&compare_digests}
-                // _ *old_mmr *new_mmr 0 (new_bagged == old_bagged)
-
-                assert error_id 153
-                // _ *old_mmr *new_mmr 0
-
-                pop 3
-                // _
-
-                push 1
-                // _ 1
-
+                push 0
                 return
         }
+    }
+
+    fn sign_offs(&self) -> HashMap<Reviewer, SignOffFingerprint> {
+        let mut sign_offs = HashMap::new();
+        sign_offs.insert(Reviewer("ferdinand"), 0x8aea33a7d02a94a1.into());
+        sign_offs
     }
 }
 
 impl VerifyMmrSuccessor {
-    /// Update a nondeterminism in accordance with verifying a given `MmrSuccessorProof`
+    /// Update a nondeterminism in accordance with verifying a given [`MmrSuccessorProof`]
     /// with this snippet.
     pub fn update_nondeterminism(
         nondeterminism: &mut NonDeterminism,
         mmr_successor_proof: &MmrSuccessorProof,
     ) {
-        nondeterminism
-            .digests
-            .append(&mut mmr_successor_proof.paths.clone())
+        let mut auth_path = mmr_successor_proof.paths.iter();
+        if let Some(&first) = auth_path.next() {
+            nondeterminism
+                .individual_tokens
+                .extend(first.reversed().values());
+            nondeterminism.digests.extend(auth_path);
+        };
     }
 }
 
@@ -359,311 +411,219 @@ impl VerifyMmrSuccessor {
 mod tests {
     use std::collections::VecDeque;
 
-    use triton_vm::isa::error::AssertionError;
-    use triton_vm::isa::instruction::AssertionContext;
     use twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
     use twenty_first::util_types::mmr::mmr_successor_proof::MmrSuccessorProof;
-    use twenty_first::util_types::mmr::shared_advanced::get_peak_heights;
-    use twenty_first::util_types::mmr::shared_basic::leaf_index_to_mt_index_and_peak_index;
 
     use super::*;
     use crate::empty_stack;
-    use crate::test_helpers::negative_test;
     use crate::test_prelude::*;
-    use crate::traits::mem_preserver::MemPreserver;
-    use crate::traits::mem_preserver::MemPreserverInitialState;
     use crate::twenty_first::prelude::Mmr;
 
-    fn num_digests_to_read(old_mmr: &MmrAccumulator, new_mmr: &MmrAccumulator) -> usize {
-        if new_mmr.num_leafs() <= old_mmr.num_leafs() {
-            return 0;
-        }
-
-        let mut number = 0;
-        let mut running_leaf_count = 0;
-        let old_peak_heights = get_peak_heights(old_mmr.num_leafs());
-        let mut new_merkle_tree_indices_of_old_peaks = vec![];
-        for old_peak_height in old_peak_heights {
-            let (mut merkle_tree_index, _peak_index) =
-                leaf_index_to_mt_index_and_peak_index(running_leaf_count, new_mmr.num_leafs());
-            running_leaf_count += 1 << old_peak_height;
-            merkle_tree_index >>= old_peak_height;
-            new_merkle_tree_indices_of_old_peaks.push(merkle_tree_index);
-        }
-        for mut merkle_tree_index in new_merkle_tree_indices_of_old_peaks {
-            while merkle_tree_index != 1 {
-                number += 1;
-                merkle_tree_index >>= 1;
-            }
-        }
-        number
-    }
-
-    fn initial_state_from_mmr_tuple(
-        old_mmr: &MmrAccumulator,
-        new_mmr: &MmrAccumulator,
-        mmr_successor_proof: &MmrSuccessorProof,
-    ) -> MemPreserverInitialState {
-        let seed = Tip5::hash_pair(Tip5::hash(old_mmr), Tip5::hash(new_mmr));
-        let seed: u64 = seed.0[0].value();
-        let seed: [u8; 8] = seed.to_be_bytes();
-        let seed: [u8; 32] = seed.repeat(4).try_into().unwrap();
-        let mut rng = StdRng::from_seed(seed);
-        let old_mmr_address: u32 = rng.gen_range(0..1 << 30);
-        let new_mmr_address: u32 = old_mmr_address + rng.gen_range(0..1 << 28);
-        let old_mmr_address = bfe!(old_mmr_address);
-        let new_mmr_address = old_mmr_address + bfe!(new_mmr_address);
-
-        let mut nondeterminism = NonDeterminism::new(vec![]);
-        VerifyMmrSuccessor::update_nondeterminism(&mut nondeterminism, mmr_successor_proof);
-        encode_to_memory(&mut nondeterminism.ram, old_mmr_address, old_mmr);
-        encode_to_memory(&mut nondeterminism.ram, new_mmr_address, new_mmr);
-        let mut stack = empty_stack();
-        stack.push(old_mmr_address);
-        stack.push(new_mmr_address);
-        MemPreserverInitialState {
-            stack,
-            nondeterminism,
-            ..Default::default()
-        }
-    }
-
-    fn failing_initial_states() -> Vec<MemPreserverInitialState> {
-        let mut rng = thread_rng();
-        let mut initial_states = vec![];
-        for old_num_leafs in [1u64, 2, 3, 8] {
-            for num_new_leafs in [0u64, 1, 8] {
-                if [(0, 0)]
-                    .into_iter()
-                    .contains(&(old_num_leafs, num_new_leafs))
-                {
-                    continue;
-                }
-
-                let old_mmr = MmrAccumulator::init(
-                    (0..old_num_leafs.count_ones())
-                        .map(|_| rng.gen::<Digest>())
-                        .collect_vec(),
-                    old_num_leafs,
-                );
-                let new_leafs = (0..num_new_leafs)
-                    .map(|_| rng.gen::<Digest>())
-                    .collect_vec();
-                let mut new_mmr = old_mmr.clone();
-                for leaf in new_leafs.iter().copied() {
-                    new_mmr.append(leaf);
-                }
-                let mmr_successor_proof =
-                    MmrSuccessorProof::new_from_batch_append(&old_mmr, &new_leafs);
-
-                // rotate old num leafs
-                let old_mmr_fake_1 = MmrAccumulator::init(
-                    old_mmr.peaks(),
-                    (old_mmr.num_leafs() >> 1) ^ (old_mmr.num_leafs() << 63),
-                );
-                initial_states.push(initial_state_from_mmr_tuple(
-                    &old_mmr_fake_1,
-                    &new_mmr,
-                    &mmr_successor_proof,
-                ));
-
-                // rotate new num leafs
-                let new_mmr_fake_1 = MmrAccumulator::init(
-                    new_mmr.peaks(),
-                    (new_mmr.num_leafs() >> 1) ^ (new_mmr.num_leafs() << 63),
-                );
-                initial_states.push(initial_state_from_mmr_tuple(
-                    &old_mmr,
-                    &new_mmr_fake_1,
-                    &mmr_successor_proof,
-                ));
-
-                // modify path element
-                if !mmr_successor_proof.paths.is_empty() {
-                    let mut mmr_successor_proof_fake_1 = mmr_successor_proof.clone();
-                    mmr_successor_proof_fake_1.paths
-                        [rng.gen_range(0..mmr_successor_proof.paths.len())]
-                    .0[rng.gen_range(0..Digest::LEN)]
-                    .increment();
-                    initial_states.push(initial_state_from_mmr_tuple(
-                        &old_mmr,
-                        &new_mmr,
-                        &mmr_successor_proof_fake_1,
-                    ));
-                }
-
-                // We can't actually test this failing state because the rust
-                // code doesn't crash when it runs out of digests, whereas we
-                // don't know how to catch this crash in TritonVM when the digests
-                // come from nondeterminism.
-                // // flip old and new
-                // initial_states.push(initial_state_from_mmr_tuple(
-                //     &new_mmr,
-                //     &old_mmr,
-                //     &mmr_successor_proof,
-                // ));
-
-                // inconsistent new mmr
-                let new_mmr_fake_2 = MmrAccumulator::init(
-                    [new_mmr.peaks(), vec![rng.gen::<Digest>()]].concat(),
-                    new_mmr.num_leafs(),
-                );
-                initial_states.push(initial_state_from_mmr_tuple(
-                    &old_mmr,
-                    &new_mmr_fake_2,
-                    &mmr_successor_proof,
-                ));
-            }
-        }
-        initial_states
-    }
-
-    impl MemPreserver for VerifyMmrSuccessor {
+    impl ReadOnlyAlgorithm for VerifyMmrSuccessor {
         fn rust_shadow(
             &self,
             stack: &mut Vec<BFieldElement>,
             memory: &HashMap<BFieldElement, BFieldElement>,
-            _: VecDeque<BFieldElement>,
+            nd_tokens: VecDeque<BFieldElement>,
             nd_digests: VecDeque<Digest>,
-            _: VecDeque<BFieldElement>,
-            _: &mut Option<Tip5>,
-        ) -> Vec<BFieldElement> {
+        ) {
             let new_mmr_pointer = stack.pop().unwrap();
             let old_mmr_pointer = stack.pop().unwrap();
 
             let new_mmr = *MmrAccumulator::decode_from_memory(memory, new_mmr_pointer).unwrap();
             let old_mmr = *MmrAccumulator::decode_from_memory(memory, old_mmr_pointer).unwrap();
 
-            let num_digests = num_digests_to_read(&old_mmr, &new_mmr);
+            // figure out the length of the authentication path
+            let num_new_leafs = new_mmr.num_leafs() - old_mmr.num_leafs();
+            let new_dummy_leafs = vec![Digest::default(); num_new_leafs.try_into().unwrap()];
+            let dummy_proof = MmrSuccessorProof::new_from_batch_append(&old_mmr, &new_dummy_leafs);
+            let auth_path_len = dummy_proof.paths.len();
 
-            let digests = (0..num_digests).map(|i| nd_digests[i]).collect_vec();
-            let mmr_successor_proof = MmrSuccessorProof { paths: digests };
+            let mut paths = vec![];
+            if auth_path_len > 0 {
+                let first_element = (0..Digest::LEN).rev().map(|i| nd_tokens[i]).collect_vec();
+                paths.push(Digest::new(first_element.try_into().unwrap()));
+            }
+            if auth_path_len > 1 {
+                paths.extend((0..auth_path_len - 1).map(|i| nd_digests[i]));
+            }
 
-            assert!(mmr_successor_proof.verify(&old_mmr, &new_mmr));
-
-            vec![]
+            assert!(MmrSuccessorProof { paths }.verify(&old_mmr, &new_mmr));
         }
 
         fn pseudorandom_initial_state(
             &self,
             seed: [u8; 32],
             bench_case: Option<BenchmarkCase>,
-        ) -> MemPreserverInitialState {
+        ) -> ReadOnlyAlgorithmInitialState {
             let mut rng = StdRng::from_seed(seed);
             let old_num_leafs = match bench_case {
+                Some(BenchmarkCase::CommonCase) => u32::MAX.into(),
                 Some(BenchmarkCase::WorstCase) => u64::MAX >> 2,
-                Some(BenchmarkCase::CommonCase) => u32::MAX as u64,
-                None => rng.next_u64() & (u64::MAX >> 1),
+                None => rng.next_u64() >> 1,
             };
-            let old_peaks = (0..old_num_leafs.count_ones())
-                .map(|_| rng.gen::<Digest>())
-                .collect_vec();
-            let old_mmr = MmrAccumulator::init(old_peaks, old_num_leafs);
+            let old_peaks = (0..old_num_leafs.count_ones()).map(|_| rng.gen()).collect();
+            let old = MmrAccumulator::init(old_peaks, old_num_leafs);
 
             let num_new_leafs = match bench_case {
                 Some(BenchmarkCase::CommonCase) => 100,
                 Some(BenchmarkCase::WorstCase) => 1000,
                 None => 1 << rng.gen_range(0..5),
             };
-            let new_leafs = (0..num_new_leafs)
-                .map(|_| rng.gen::<Digest>())
-                .collect_vec();
-            let mmr_successor_proof =
-                MmrSuccessorProof::new_from_batch_append(&old_mmr, &new_leafs);
-            let mut new_mmr = old_mmr.clone();
+            let new_leafs = (0..num_new_leafs).map(|_| rng.gen()).collect_vec();
+            let proof = MmrSuccessorProof::new_from_batch_append(&old, &new_leafs);
+
+            let mut new = old.clone();
             for leaf in new_leafs {
-                new_mmr.append(leaf);
+                new.append(leaf);
             }
 
-            initial_state_from_mmr_tuple(&old_mmr, &new_mmr, &mmr_successor_proof)
+            initial_state(&old, &new, &proof)
         }
 
-        fn corner_case_initial_states(&self) -> Vec<MemPreserverInitialState> {
+        fn corner_case_initial_states(&self) -> Vec<ReadOnlyAlgorithmInitialState> {
             let mut rng = thread_rng();
             let mut initial_states = vec![];
-            for old_num_leafs in [0u64, 1, 2, 3, 4, 8] {
-                for num_inserted_leafs in [0u64, 1, 2, 3, 4, 8] {
-                    let old_mmr = MmrAccumulator::init(
-                        (0..old_num_leafs.count_ones())
-                            .map(|_| rng.gen::<Digest>())
-                            .collect_vec(),
-                        old_num_leafs,
-                    );
-                    let new_leafs = (0..num_inserted_leafs)
-                        .map(|_| rng.gen::<Digest>())
-                        .collect_vec();
-                    let mut new_mmr = old_mmr.clone();
-                    for leaf in new_leafs.iter().copied() {
-                        new_mmr.append(leaf);
-                    }
-                    let mmr_successor_proof =
-                        MmrSuccessorProof::new_from_batch_append(&old_mmr, &new_leafs);
 
-                    // correct
-                    initial_states.push(initial_state_from_mmr_tuple(
-                        &old_mmr,
-                        &new_mmr,
-                        &mmr_successor_proof,
-                    ));
+            for (num_old_leafs, num_inserted_leafs) in [0_u64, 1, 2, 3, 4, 8]
+                .into_iter()
+                .cartesian_product([0, 1, 2, 3, 4, 8])
+            {
+                let old_peaks = (0..num_old_leafs.count_ones()).map(|_| rng.gen()).collect();
+                let old = MmrAccumulator::init(old_peaks, num_old_leafs);
+
+                let mut new = old.clone();
+                let new_leafs = (0..num_inserted_leafs).map(|_| rng.gen()).collect_vec();
+                for &leaf in &new_leafs {
+                    new.append(leaf);
                 }
+                let proof = MmrSuccessorProof::new_from_batch_append(&old, &new_leafs);
+
+                initial_states.push(initial_state(&old, &new, &proof));
             }
+
             initial_states
         }
     }
 
+    fn initial_state(
+        old: &MmrAccumulator,
+        new: &MmrAccumulator,
+        proof: &MmrSuccessorProof,
+    ) -> ReadOnlyAlgorithmInitialState {
+        let Digest(seed) = Tip5::hash_pair(Tip5::hash(old), Tip5::hash(new));
+        let seed = seed
+            .into_iter()
+            .flat_map(|bfe| bfe.raw_bytes())
+            .take(32)
+            .collect_vec();
+        let mut rng = StdRng::from_seed(seed.try_into().unwrap());
+
+        let address_for_old = bfe!(rng.gen_range(0_u32..1 << 30));
+        let address_for_new =
+            address_for_old + bfe!(old.encode().len()) + bfe!(rng.gen_range(0_u32..1 << 28));
+
+        let mut nondeterminism = NonDeterminism::default();
+        VerifyMmrSuccessor::update_nondeterminism(&mut nondeterminism, proof);
+        encode_to_memory(&mut nondeterminism.ram, address_for_old, old);
+        encode_to_memory(&mut nondeterminism.ram, address_for_new, new);
+
+        let mut stack = empty_stack();
+        stack.push(address_for_old);
+        stack.push(address_for_new);
+
+        ReadOnlyAlgorithmInitialState {
+            stack,
+            nondeterminism,
+        }
+    }
+
+    fn failing_initial_states() -> Vec<ReadOnlyAlgorithmInitialState> {
+        let one_leaf = MmrAccumulator::new_from_leafs(vec![Digest::default()]);
+        let empty = MmrAccumulator::new_from_leafs(vec![]);
+        let bogus_proof = MmrSuccessorProof { paths: vec![] };
+        let mut initial_states = vec![initial_state(&one_leaf, &empty, &bogus_proof)];
+
+        let mut rng = StdRng::seed_from_u64(0x18c78fc35da66859);
+        for (old_num_leafs, new_num_leafs) in
+            [1_u64, 2, 3, 8].into_iter().cartesian_product([0, 1, 8])
+        {
+            let old_peaks = (0..old_num_leafs.count_ones()).map(|_| rng.gen()).collect();
+            let old = MmrAccumulator::init(old_peaks, old_num_leafs);
+
+            let new_leafs = (0..new_num_leafs).map(|_| rng.gen()).collect_vec();
+            let mut new_mmr = old.clone();
+            for &leaf in &new_leafs {
+                new_mmr.append(leaf);
+            }
+            let new = new_mmr;
+            let proof = MmrSuccessorProof::new_from_batch_append(&old, &new_leafs);
+
+            let wrong_old = MmrAccumulator::init(old.peaks(), old.num_leafs().rotate_left(1));
+            initial_states.push(initial_state(&wrong_old, &new, &proof));
+
+            let wrong_new = MmrAccumulator::init(new.peaks(), new.num_leafs().rotate_left(1));
+            initial_states.push(initial_state(&old, &wrong_new, &proof));
+
+            let mut wrong_new_peaks = new.peaks();
+            wrong_new_peaks.push(rng.gen());
+            let too_many_peaks_new = MmrAccumulator::init(wrong_new_peaks, new.num_leafs());
+            initial_states.push(initial_state(&old, &too_many_peaks_new, &proof));
+
+            for peak_idx in 0..old.peaks().len() {
+                let mut wrong_old_peaks = old.peaks();
+                let Digest(ref mut digest_to_disturb) = &mut wrong_old_peaks[peak_idx];
+                let digest_to_disturb_innards_idx = rng.gen_range(0..Digest::LEN);
+                digest_to_disturb[digest_to_disturb_innards_idx].increment();
+
+                let wrong_old = MmrAccumulator::init(wrong_old_peaks, old.num_leafs());
+                initial_states.push(initial_state(&wrong_old, &new, &proof));
+            }
+
+            for proof_path_idx in 0..proof.paths.len() {
+                let mut wrong_proof = proof.clone();
+                let proof_paths = &mut wrong_proof.paths;
+                let Digest(ref mut digest_to_disturb) = &mut proof_paths[proof_path_idx];
+                let digest_to_disturb_innards_idx = rng.gen_range(0..Digest::LEN);
+                digest_to_disturb[digest_to_disturb_innards_idx].increment();
+
+                initial_states.push(initial_state(&old, &new, &wrong_proof));
+            }
+        }
+
+        // the secret input being underpopulated is no acceptable failure reason
+        for state in &mut initial_states {
+            let non_determinism = &mut state.nondeterminism;
+            non_determinism.individual_tokens.extend(bfe_array![0; 5]);
+            non_determinism.digests.extend([Digest::default(); 1000]);
+        }
+
+        initial_states
+    }
+
     #[test]
-    fn verify_mmr_successor_simple_test() {
-        ShadowedMemPreserver::new(VerifyMmrSuccessor).test();
+    fn unit() {
+        ShadowedReadOnlyAlgorithm::new(VerifyMmrSuccessor).test();
     }
 
     #[test]
     fn verify_mmr_successor_negative_test() {
-        // this is a bit round-about because it tests for assertion failures _and_
-        // a different kind of error, which is not really supported
-        let assertion_error = |id| AssertionError::new(1, 0).with_context(AssertionContext::ID(id));
-        let expected_errors = [
-            InstructionError::AssertionFailed(assertion_error(150)),
-            InstructionError::AssertionFailed(assertion_error(151)),
-            InstructionError::AssertionFailed(assertion_error(152)),
-            InstructionError::AssertionFailed(assertion_error(153)),
-            InstructionError::EmptySecretDigestInput,
+        let all_error_ids = [
+            VerifyMmrSuccessor::OLD_HAS_MORE_LEAFS_THAN_NEW_ERROR_ID,
+            VerifyMmrSuccessor::INCONSISTENT_OLD_MMR_ERROR_ID,
+            VerifyMmrSuccessor::INCONSISTENT_NEW_MMR_ERROR_ID,
+            VerifyMmrSuccessor::DIFFERING_SHARED_PEAK_ERROR_ID,
+            VerifyMmrSuccessor::DIFFERING_UNSHARED_PEAK_ERROR_ID,
         ];
 
         for (i, init_state) in failing_initial_states().into_iter().enumerate() {
-            println!("Trying failing initial state {i}.");
-            negative_test(
-                &ShadowedMemPreserver::new(VerifyMmrSuccessor),
+            dbg!(i);
+            test_assertion_failure(
+                &ShadowedReadOnlyAlgorithm::new(VerifyMmrSuccessor),
                 init_state.into(),
-                &expected_errors,
+                &all_error_ids,
             );
         }
-    }
-
-    #[test]
-    fn test_num_digests_in_proof() {
-        for (old_num_leafs, new_num_leafs) in [(1, 0), (0, 1), (116, 182)] {
-            num_digests_prop(old_num_leafs, new_num_leafs);
-        }
-    }
-
-    fn num_digests_prop(old_mmr_num_leafs: u64, num_new_leafs: u64) {
-        let mut rng = thread_rng();
-        let old_peaks = (0..old_mmr_num_leafs.count_ones())
-            .map(|_| rng.gen::<Digest>())
-            .collect_vec();
-        let old_mmr = MmrAccumulator::init(old_peaks, old_mmr_num_leafs);
-        let new_leafs = (0..num_new_leafs)
-            .map(|_| rng.gen::<Digest>())
-            .collect_vec();
-        let mut new_mmr = old_mmr.clone();
-        for leaf in new_leafs.iter().copied() {
-            new_mmr.append(leaf);
-        }
-
-        let num_leafs_on_path = num_digests_to_read(&old_mmr, &new_mmr);
-        let mmr_successor_proof = MmrSuccessorProof::new_from_batch_append(&old_mmr, &new_leafs);
-
-        assert_eq!(mmr_successor_proof.paths.len(), num_leafs_on_path);
     }
 }
 
@@ -674,6 +634,6 @@ mod bench {
 
     #[test]
     fn benchmark() {
-        ShadowedMemPreserver::new(VerifyMmrSuccessor).bench();
+        ShadowedReadOnlyAlgorithm::new(VerifyMmrSuccessor).bench();
     }
 }
