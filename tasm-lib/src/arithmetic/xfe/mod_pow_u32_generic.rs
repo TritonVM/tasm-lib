@@ -144,7 +144,7 @@ impl BasicSnippet for XfeModPowU32Generic {
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use std::cell::RefCell;
     use std::rc::Rc;
 
@@ -204,7 +204,7 @@ mod tests {
     }
 
     impl XfeModPowU32Generic {
-        fn prepare_state(&self, base: XFieldElement, exponent: u32) -> Vec<BFieldElement> {
+        pub fn prepare_state(&self, base: XFieldElement, exponent: u32) -> Vec<BFieldElement> {
             let base = base.coefficients.into_iter().rev().collect();
             [
                 self.init_stack_for_isolated_run(),
