@@ -10,6 +10,10 @@ use crate::prelude::BasicSnippet;
 
 /// Sign-preserving right-shift for 128-bit integers AKA right-shift for `i128`.
 ///
+/// If the the 128-bit integer is signed (`i128`), this corresponds to regular
+/// right-shift (`>>`). If it is unsigned (`u128`) then this operation
+/// corresponds to `signed_shr`. Either way, the top bit is repeated.
+///
 /// # Behavior
 ///
 /// BEFORE: `_ arg3 arg2 arg1 arg0 shamt`
