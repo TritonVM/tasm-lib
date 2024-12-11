@@ -178,12 +178,10 @@ mod tests {
         }
 
         fn setup_init_stack(&self, lhs: u128, rhs: u128) -> Vec<BFieldElement> {
-            [
-                self.init_stack_for_isolated_run(),
-                lhs.encode().into_iter().rev().collect_vec(),
-                rhs.encode().into_iter().rev().collect_vec(),
-            ]
-            .concat()
+            let mut stack = self.init_stack_for_isolated_run();
+            push_encodable(&mut stack, &lhs);
+            push_encodable(&mut stack, &rhs);
+            stack
         }
     }
 
@@ -202,10 +200,7 @@ mod tests {
             _bench_case: Option<BenchmarkCase>,
         ) -> Vec<BFieldElement> {
             let mut rng = StdRng::from_seed(seed);
-            let lhs: u128 = rng.gen();
-            let rhs: u128 = rng.gen();
-
-            self.setup_init_stack(lhs, rhs)
+            self.setup_init_stack(rng.gen(), rng.gen())
         }
 
         fn corner_case_initial_states(&self) -> Vec<Vec<BFieldElement>> {
