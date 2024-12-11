@@ -1,6 +1,6 @@
 use triton_vm::prelude::*;
 
-use crate::arithmetic::u128::overflowing_add::OverflowingAddU128;
+use crate::arithmetic::u128::overflowing_add::OverflowingAdd;
 use crate::data_type::DataType;
 use crate::library::Library;
 use crate::traits::basic_snippet::BasicSnippet;
@@ -31,7 +31,7 @@ impl BasicSnippet for SafeAdd {
     /// Four top elements of stack are assumed to be valid u32s. So to have
     /// a value that's less than 2^32.
     fn code(&self, _: &mut Library) -> Vec<LabelledInstruction> {
-        let add_code = OverflowingAddU128::addition_code();
+        let add_code = OverflowingAdd::addition_code();
 
         triton_asm! {
             // BEFORE: _ rhs_3 rhs_2 rhs_1 rhs_0 lhs_3 lhs_2 lhs_1 lhs_0

@@ -5,9 +5,9 @@ use crate::library::Library;
 use crate::traits::basic_snippet::BasicSnippet;
 
 #[derive(Clone, Debug, Copy)]
-pub struct OverflowingAddU128;
+pub struct OverflowingAdd;
 
-impl OverflowingAddU128 {
+impl OverflowingAdd {
     /// Generate code to perform an addition on `u128`s.
     ///
     /// This function is called by both this snippet and [`SafeAdd`].
@@ -59,7 +59,7 @@ impl OverflowingAddU128 {
     }
 }
 
-impl BasicSnippet for OverflowingAddU128 {
+impl BasicSnippet for OverflowingAdd {
     fn entrypoint(&self) -> String {
         "tasmlib_arithmetic_u128_overflowing_add".to_string()
     }
@@ -110,18 +110,18 @@ mod tests {
 
     #[test]
     fn overflowing_add_u128_test() {
-        ShadowedClosure::new(OverflowingAddU128).test()
+        ShadowedClosure::new(OverflowingAdd).test()
     }
 
     #[test]
     fn overflowing_add_u128_unit_test() {
-        let snippet = OverflowingAddU128;
+        let snippet = OverflowingAdd;
         snippet.assert_expected_add_behavior(1u128 << 67, 1u128 << 67)
     }
 
     #[test]
     fn overflowing_add_u128_overflow_test() {
-        let snippet = OverflowingAddU128;
+        let snippet = OverflowingAdd;
 
         for (a, b) in [
             (1u128 << 127, 1u128 << 127),
@@ -155,7 +155,7 @@ mod tests {
         }
     }
 
-    impl OverflowingAddU128 {
+    impl OverflowingAdd {
         fn assert_expected_add_behavior(&self, lhs: u128, rhs: u128) {
             let init_stack = self.setup_init_stack(lhs, rhs);
 
@@ -168,7 +168,7 @@ mod tests {
             };
 
             test_rust_equivalence_given_complete_state(
-                &ShadowedClosure::new(OverflowingAddU128),
+                &ShadowedClosure::new(OverflowingAdd),
                 &init_stack,
                 &[],
                 &NonDeterminism::default(),
@@ -185,7 +185,7 @@ mod tests {
         }
     }
 
-    impl Closure for OverflowingAddU128 {
+    impl Closure for OverflowingAdd {
         fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
             let left = pop_encodable::<u128>(stack);
             let right = pop_encodable(stack);
@@ -227,6 +227,6 @@ mod benches {
 
     #[test]
     fn overflowing_add_u128_benchmark() {
-        ShadowedClosure::new(OverflowingAddU128).bench()
+        ShadowedClosure::new(OverflowingAdd).bench()
     }
 }
