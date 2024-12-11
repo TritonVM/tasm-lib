@@ -1,48 +1,48 @@
-use rand::prelude::*;
+use std::collections::HashMap;
 use triton_vm::prelude::*;
 
 use crate::data_type::DataType;
-use crate::empty_stack;
+use crate::library::Library;
 use crate::traits::basic_snippet::BasicSnippet;
-use crate::traits::closure::Closure;
+use crate::traits::basic_snippet::Reviewer;
+use crate::traits::basic_snippet::SignOffFingerprint;
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+/// Add two `u64`s, indicating whether overflow occurred.
+///
+/// ### Behavior
+///
+/// ```text
+/// BEFORE: _ [right: u64] [left: u64]
+/// AFTER:  _ [sum: u64] [is_overflow: bool]
+/// ```
+///
+/// ### Preconditions
+///
+/// - all input arguments are properly [`BFieldCodec`] encoded
+///
+/// ### Postconditions
+///
+/// - the `sum` is the sum of the input modulo [`u64::MAX`]
+/// - `is_overflow` is `true` if and only if the sum of the input exceeds
+///   [`u64::MAX`]
+/// - the `sum` is properly [`BFieldCodec`] encoded
+/// - `is_overflow` is properly [`BFieldCodec`] encoded
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct OverflowingAdd;
 
-impl BasicSnippet for OverflowingAdd {
-    fn inputs(&self) -> Vec<(DataType, String)> {
-        vec![
-            (DataType::U64, "lhs".to_string()),
-            (DataType::U64, "rhs".to_string()),
-        ]
-    }
-
-    fn outputs(&self) -> Vec<(DataType, String)> {
-        vec![
-            (DataType::U64, "wrapped_sum".to_owned()),
-            (DataType::Bool, "overflow".to_owned()),
-        ]
-    }
-
-    fn entrypoint(&self) -> String {
-        "tasmlib_arithmetic_u64_overflowing_add".to_string()
-    }
-
-    fn code(&self, _library: &mut crate::library::Library) -> Vec<LabelledInstruction> {
-        triton_asm!(
-        // BEFORE: _ lhs_hi lhs_lo rhs_hi rhs_lo
-        // AFTER:  _ sum_hi sum_lo overflow
-        { self.entrypoint() }:
-
-            swap 1 swap 2
-            // _ lhs_hi rhs_hi rhs_lo lhs_lo
+impl OverflowingAdd {
+    /// (See [`OverflowingAdd`])
+    pub(crate) fn addition_code() -> Vec<LabelledInstruction> {
+        triton_asm! {
+            pick 2
+            // _ rhs_hi lhs_hi lhs_lo rhs_lo
 
             add
             split
-            // _ lhs_hi rhs_hi carry sum_lo
+            // _ rhs_hi lhs_hi carry sum_lo
 
-            swap 3
-            // _ sum_lo rhs_hi carry rhs_hi
+            place 3
+            // _ sum_lo rhs_hi lhs_hi carry
 
             add
             add
@@ -51,101 +51,112 @@ impl BasicSnippet for OverflowingAdd {
             split
             // _ sum_lo overflow sum_hi
 
-            swap 2
-            swap 1
-            // _ sum_hi sum_lo overflow
-
-            return
-        )
+            place 2
+        }
     }
 }
 
-impl Closure for OverflowingAdd {
-    fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
-        let rhs_lo: u32 = stack.pop().unwrap().try_into().unwrap();
-        let rhs_hi: u32 = stack.pop().unwrap().try_into().unwrap();
-        let lhs_lo: u32 = stack.pop().unwrap().try_into().unwrap();
-        let lhs_hi: u32 = stack.pop().unwrap().try_into().unwrap();
-        let rhs: u64 = rhs_lo as u64 + ((rhs_hi as u64) << 32);
-        let lhs: u64 = lhs_lo as u64 + ((lhs_hi as u64) << 32);
-
-        let (wrapped_sum, overflow) = lhs.overflowing_add(rhs);
-        stack.push(BFieldElement::new(wrapped_sum >> 32));
-        stack.push(BFieldElement::new(wrapped_sum & (u32::MAX as u64)));
-        stack.push(BFieldElement::new(overflow as u64));
+impl BasicSnippet for OverflowingAdd {
+    fn inputs(&self) -> Vec<(DataType, String)> {
+        ["lhs", "rhs"]
+            .map(|s| (DataType::U64, s.to_string()))
+            .to_vec()
     }
 
-    fn pseudorandom_initial_state(
-        &self,
-        seed: [u8; 32],
-        bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
-    ) -> Vec<BFieldElement> {
-        let (lhs, rhs) = match bench_case {
-            Some(crate::snippet_bencher::BenchmarkCase::CommonCase) => {
-                (1u64 << 63, (1u64 << 63) - 1)
-            }
-            Some(crate::snippet_bencher::BenchmarkCase::WorstCase) => (1u64 << 63, 1u64 << 50),
-            None => {
-                let mut rng = StdRng::from_seed(seed);
-                (rng.next_u64(), rng.next_u64())
-            }
-        };
+    fn outputs(&self) -> Vec<(DataType, String)> {
+        vec![
+            (DataType::U64, "wrapped_sum".to_string()),
+            (DataType::Bool, "overflow".to_string()),
+        ]
+    }
 
-        [empty_stack(), lhs.encode(), rhs.encode()].concat()
+    fn entrypoint(&self) -> String {
+        "tasmlib_arithmetic_u64_overflowing_add".to_string()
+    }
+
+    fn code(&self, _: &mut Library) -> Vec<LabelledInstruction> {
+        triton_asm! {
+            {self.entrypoint()}:
+                {&Self::addition_code()}
+                return
+        }
+    }
+
+    fn sign_offs(&self) -> HashMap<Reviewer, SignOffFingerprint> {
+        let mut sign_offs = HashMap::new();
+        sign_offs.insert(Reviewer("ferdinand"), 0x7226f66f533b188a.into());
+        sign_offs
     }
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
+    use itertools::Itertools;
+    use rand::prelude::*;
+
     use super::*;
-    use crate::test_helpers::test_rust_equivalence_given_complete_state;
+    use crate::pop_encodable;
+    use crate::push_encodable;
+    use crate::snippet_bencher::BenchmarkCase;
+    use crate::traits::closure::Closure;
     use crate::traits::closure::ShadowedClosure;
     use crate::traits::rust_shadow::RustShadow;
+
+    impl OverflowingAdd {
+        pub fn set_up_initial_stack(&self, left: u64, right: u64) -> Vec<BFieldElement> {
+            let mut stack = self.init_stack_for_isolated_run();
+            push_encodable(&mut stack, &right);
+            push_encodable(&mut stack, &left);
+
+            stack
+        }
+
+        pub fn corner_case_points() -> Vec<u64> {
+            [0, 1 << 32, u64::MAX]
+                .into_iter()
+                .flat_map(|p| [p.checked_sub(1), Some(p), p.checked_add(1)])
+                .flatten()
+                .collect()
+        }
+    }
+
+    impl Closure for OverflowingAdd {
+        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
+            let right = pop_encodable::<u64>(stack);
+            let left = pop_encodable::<u64>(stack);
+            let (sum, is_overflow) = left.overflowing_add(right);
+            push_encodable(stack, &sum);
+            push_encodable(stack, &is_overflow);
+        }
+
+        fn pseudorandom_initial_state(
+            &self,
+            seed: [u8; 32],
+            bench_case: Option<BenchmarkCase>,
+        ) -> Vec<BFieldElement> {
+            let (left, right) = match bench_case {
+                Some(BenchmarkCase::CommonCase) => (1 << 63, (1 << 63) - 1),
+                Some(BenchmarkCase::WorstCase) => (1 << 63, 1 << 50),
+                None => StdRng::from_seed(seed).gen(),
+            };
+
+            self.set_up_initial_stack(left, right)
+        }
+
+        fn corner_case_initial_states(&self) -> Vec<Vec<BFieldElement>> {
+            let corner_case_points = Self::corner_case_points();
+
+            corner_case_points
+                .iter()
+                .cartesian_product(&corner_case_points)
+                .map(|(&l, &r)| self.set_up_initial_stack(l, r))
+                .collect()
+        }
+    }
 
     #[test]
     fn u64_overflowing_add_pbt() {
         ShadowedClosure::new(OverflowingAdd).test()
-    }
-
-    #[test]
-    fn u64_overflowing_add_unit_test() {
-        for (lhs, rhs) in [
-            (0u64, 0u64),
-            (0, 1),
-            (1, 0),
-            (1, 1),
-            (1 << 32, 1 << 32),
-            (1 << 63, 1 << 63),
-        ] {
-            let init_stack = [
-                empty_stack(),
-                vec![
-                    BFieldElement::new(lhs >> 32),
-                    BFieldElement::new(lhs & u32::MAX as u64),
-                    BFieldElement::new(rhs >> 32),
-                    BFieldElement::new(rhs & u32::MAX as u64),
-                ],
-            ]
-            .concat();
-            let expected = lhs.overflowing_add(rhs);
-            let expected_final_stack = [
-                empty_stack(),
-                vec![
-                    (expected.0 >> 32).into(),
-                    (expected.0 & u32::MAX as u64).into(),
-                    (expected.1 as u64).into(),
-                ],
-            ]
-            .concat();
-            let _vm_output_state = test_rust_equivalence_given_complete_state(
-                &ShadowedClosure::new(OverflowingAdd),
-                &init_stack,
-                &[],
-                &NonDeterminism::default(),
-                &None,
-                Some(&expected_final_stack),
-            );
-        }
     }
 }
 
