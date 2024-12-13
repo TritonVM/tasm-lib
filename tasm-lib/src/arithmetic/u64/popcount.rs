@@ -1,148 +1,129 @@
-use num::Zero;
-use rand::prelude::*;
+use std::collections::HashMap;
+
 use triton_vm::prelude::*;
-use triton_vm::twenty_first::prelude::U32s;
 
 use crate::data_type::DataType;
-use crate::empty_stack;
-use crate::library::Library;
-use crate::push_encodable;
-use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::InitVmState;
+use crate::prelude::*;
+use crate::traits::basic_snippet::Reviewer;
+use crate::traits::basic_snippet::SignOffFingerprint;
 
-#[derive(Clone, Debug)]
+/// Count [the number of ones](u64::count_ones) in the binary representation of
+/// the argument, also known as its population count.
+///
+/// ### Behavior
+///
+/// ```text
+/// BEFORE: _ [x: u64]
+/// AFTER:  _ [result: u32]
+/// ```
+///
+/// ### Preconditions
+///
+/// - the input argument is properly [`BFieldCodec`] encoded
+///
+/// ### Postconditions
+///
+/// - the output equals the number of 1s in the binary representation of the
+///   input argument
+/// - the output is properly [`BFieldCodec`] encoded
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct PopCount;
 
-impl DeprecatedSnippet for PopCount {
-    fn entrypoint_name(&self) -> String {
+impl BasicSnippet for PopCount {
+    fn inputs(&self) -> Vec<(DataType, String)> {
+        vec![(DataType::U64, "x".to_string())]
+    }
+
+    fn outputs(&self) -> Vec<(DataType, String)> {
+        vec![(DataType::U32, "pop_count(x)".to_string())]
+    }
+
+    fn entrypoint(&self) -> String {
         "tasmlib_arithmetic_u64_popcount".to_string()
     }
 
-    fn input_field_names(&self) -> Vec<String> {
-        vec!["value_hi".to_string(), "value_lo".to_string()]
-    }
-
-    fn input_types(&self) -> Vec<DataType> {
-        vec![DataType::U64]
-    }
-
-    fn output_field_names(&self) -> Vec<String> {
-        vec!["popcount".to_string()]
-    }
-
-    fn output_types(&self) -> Vec<DataType> {
-        vec![DataType::U32]
-    }
-
-    fn stack_diff(&self) -> isize {
-        -1
-    }
-
-    fn function_code(&self, _library: &mut Library) -> String {
-        let entrypoint = self.entrypoint_name();
-        format!(
-            "
-            // BEFORE: _ x_hi x_lo
-            // AFTER:  _ popcount
-            {entrypoint}:
+    fn code(&self, _: &mut Library) -> Vec<LabelledInstruction> {
+        triton_asm!(
+            {self.entrypoint()}:
                 pop_count
-                swap 1
+                pick 1
                 pop_count
                 add
-
                 return
-
-            "
         )
     }
 
-    fn crash_conditions(&self) -> Vec<String> {
-        vec!["Input are not valid u32s".to_string()]
+    fn sign_offs(&self) -> HashMap<Reviewer, SignOffFingerprint> {
+        let mut sign_offs = HashMap::new();
+        sign_offs.insert(Reviewer("ferdinand"), 0xeaae261c6df2bcbb.into());
+        sign_offs
     }
-
-    fn gen_input_states(&self) -> Vec<InitVmState> {
-        let mut rng = rand::thread_rng();
-
-        let mut ret = vec![];
-        for _ in 0..100 {
-            ret.push(prepare_state(rng.next_u64()));
-        }
-
-        // add cornercases
-        let mut init_stack_zero = empty_stack();
-        init_stack_zero.push(BFieldElement::zero());
-        init_stack_zero.push(BFieldElement::zero());
-        ret.push(InitVmState::with_stack(init_stack_zero));
-
-        let mut init_stack_max_value = empty_stack();
-        init_stack_max_value.push(BFieldElement::new((1u64 << 32) - 1));
-        init_stack_max_value.push(BFieldElement::new((1u64 << 32) - 1));
-        ret.push(InitVmState::with_stack(init_stack_max_value));
-
-        let mut init_stack_max_value2 = empty_stack();
-        init_stack_max_value2.push(BFieldElement::new((1u64 << 32) - 1));
-        init_stack_max_value2.push(BFieldElement::new((1u64 << 30) - 1));
-        ret.push(InitVmState::with_stack(init_stack_max_value2));
-
-        let mut init_stack_max_value3 = empty_stack();
-        init_stack_max_value3.push(BFieldElement::new((1u64 << 30) - 1));
-        init_stack_max_value3.push(BFieldElement::new((1u64 << 32) - 1));
-        ret.push(InitVmState::with_stack(init_stack_max_value3));
-
-        ret
-    }
-
-    fn common_case_input_state(&self) -> InitVmState {
-        prepare_state(1 << 60)
-    }
-
-    fn worst_case_input_state(&self) -> InitVmState {
-        prepare_state(1 << 60)
-    }
-
-    fn rust_shadowing(
-        &self,
-        stack: &mut Vec<BFieldElement>,
-        _std_in: Vec<BFieldElement>,
-        _secret_in: Vec<BFieldElement>,
-        _memory: &mut std::collections::HashMap<BFieldElement, BFieldElement>,
-    ) {
-        // top element on stack
-        let a_lo: u32 = stack.pop().unwrap().try_into().unwrap();
-        let a_hi: u32 = stack.pop().unwrap().try_into().unwrap();
-        let a = ((a_hi as u64) << 32) + a_lo as u64;
-
-        let pop_count = a.count_ones();
-
-        stack.push(BFieldElement::new(pop_count as u64));
-    }
-}
-
-fn prepare_state(a: u64) -> InitVmState {
-    let a = U32s::<2>::try_from(a).unwrap();
-    let mut init_stack = empty_stack();
-    push_encodable(&mut init_stack, &a);
-    InitVmState::with_stack(init_stack)
 }
 
 #[cfg(test)]
 mod tests {
+    use rand::prelude::*;
+
     use super::*;
-    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
+    use crate::pop_encodable;
+    use crate::push_encodable;
+    use crate::snippet_bencher::BenchmarkCase;
+    use crate::traits::closure::Closure;
+    use crate::traits::closure::ShadowedClosure;
+    use crate::traits::rust_shadow::RustShadow;
+
+    impl PopCount {
+        pub fn set_up_initial_stack(&self, x: u64) -> Vec<BFieldElement> {
+            let mut stack = self.init_stack_for_isolated_run();
+            push_encodable(&mut stack, &x);
+            stack
+        }
+    }
+
+    impl Closure for PopCount {
+        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
+            let x = pop_encodable::<u64>(stack);
+            push_encodable(stack, &x.count_ones());
+        }
+
+        fn pseudorandom_initial_state(
+            &self,
+            seed: [u8; 32],
+            bench_case: Option<BenchmarkCase>,
+        ) -> Vec<BFieldElement> {
+            let x = match bench_case {
+                Some(BenchmarkCase::CommonCase) => 1 << 25,
+                Some(BenchmarkCase::WorstCase) => u64::MAX,
+                None => StdRng::from_seed(seed).gen(),
+            };
+
+            self.set_up_initial_stack(x)
+        }
+
+        fn corner_case_initial_states(&self) -> Vec<Vec<BFieldElement>> {
+            [1, 1 << 32, u64::MAX]
+                .into_iter()
+                .flat_map(|x| [x.checked_sub(1), Some(x), x.checked_add(1)])
+                .flatten()
+                .map(|x| self.set_up_initial_stack(x))
+                .collect()
+        }
+    }
 
     #[test]
-    fn popcount_u64_test() {
-        test_rust_equivalence_multiple_deprecated(&PopCount, true);
+    fn rust_shadow_test() {
+        ShadowedClosure::new(PopCount).test()
     }
 }
 
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::snippet_bencher::bench_and_write;
+    use crate::traits::closure::ShadowedClosure;
+    use crate::traits::rust_shadow::RustShadow;
 
     #[test]
-    fn popcount_u64_benchmark() {
-        bench_and_write(PopCount);
+    fn benchmark() {
+        ShadowedClosure::new(PopCount).bench();
     }
 }
