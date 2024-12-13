@@ -1,5 +1,4 @@
-use triton_vm::isa::triton_asm;
-use triton_vm::prelude::LabelledInstruction;
+use triton_vm::prelude::*;
 
 use crate::arithmetic::u32::isu32::Isu32;
 use crate::arithmetic::u32::shiftleft::Shiftleft;
@@ -8,17 +7,14 @@ use crate::data_type::DataType;
 use crate::library::Library;
 use crate::prelude::BasicSnippet;
 
-/// Sign-preserving right-shift for 128-bit integers AKA right-shift for `i128`.
-///
-/// If the the 128-bit integer is signed (`i128`), this corresponds to regular
-/// right-shift (`>>`). If it is unsigned (`u128`) then this operation
-/// corresponds to `signed_shr`. Either way, the top bit is repeated.
+/// Right-shift for 128-bit integers AKA [right-shift for `i128`][shr].
 ///
 /// # Behavior
 ///
-/// BEFORE: `_ arg3 arg2 arg1 arg0 shamt`
-///
-/// AFTER: `_ res3 res2 res1 res0`
+/// ```text
+/// BEFORE: _ arg3 arg2 arg1 arg0 shamt
+/// AFTER:  _ res3 res2 res1 res0
+/// ```
 ///
 /// where `res == arg >> shamt` as `i128`s.
 ///
@@ -34,6 +30,8 @@ use crate::prelude::BasicSnippet;
 /// # Panics
 ///
 ///  - If preconditions are not met.
+///
+/// [shr]: core::ops::Shr
 pub struct ShiftRight;
 
 impl ShiftRight {
@@ -47,17 +45,17 @@ impl ShiftRight {
 impl BasicSnippet for ShiftRight {
     fn inputs(&self) -> Vec<(DataType, String)> {
         vec![
-            (DataType::U128, "arg".to_string()),
+            (DataType::I128, "arg".to_string()),
             (DataType::U32, "shamt".to_string()),
         ]
     }
 
     fn outputs(&self) -> Vec<(DataType, String)> {
-        vec![(DataType::U128, "res".to_string())]
+        vec![(DataType::I128, "res".to_string())]
     }
 
     fn entrypoint(&self) -> String {
-        "tasmlib_arithmetic_u128_shift_right_i128".to_string()
+        "tasmlib_arithmetic_i128_shift_right".to_string()
     }
 
     fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
@@ -248,25 +246,18 @@ impl BasicSnippet for ShiftRight {
 #[cfg(test)]
 mod test {
     use itertools::Itertools;
-    use num::PrimInt;
     use proptest_arbitrary_interop::arb;
-    use rand::rngs::StdRng;
-    use rand::Rng;
-    use rand::SeedableRng;
+    use rand::prelude::*;
     use test_strategy::proptest;
-    use triton_vm::prelude::BFieldElement;
-    use triton_vm::vm::NonDeterminism;
 
+    use super::*;
     use crate::pop_encodable;
-    use crate::prelude::BasicSnippet;
     use crate::push_encodable;
     use crate::snippet_bencher::BenchmarkCase;
     use crate::test_helpers::test_rust_equivalence_given_complete_state;
     use crate::traits::closure::Closure;
     use crate::traits::closure::ShadowedClosure;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::ShiftRight;
 
     impl ShiftRight {
         pub(crate) fn prepare_stack(&self, arg: i128, shamt: u32) -> Vec<BFieldElement> {
@@ -297,8 +288,8 @@ mod test {
     impl Closure for ShiftRight {
         fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
             let shamt = pop_encodable::<u32>(stack);
-            let arg = pop_encodable::<u128>(stack);
-            push_encodable(stack, &arg.signed_shr(shamt));
+            let arg = pop_encodable::<i128>(stack);
+            push_encodable(stack, &(arg >> shamt));
         }
 
         fn pseudorandom_initial_state(
@@ -307,9 +298,8 @@ mod test {
             _: Option<BenchmarkCase>,
         ) -> Vec<BFieldElement> {
             let mut rng = StdRng::from_seed(seed);
-            let arg: i128 = rng.gen();
-            let shamt: u32 = rng.gen_range(0..128);
-            self.prepare_stack(arg, shamt)
+
+            self.prepare_stack(rng.gen(), rng.gen_range(0..128))
         }
     }
 
@@ -325,22 +315,21 @@ mod test {
 
     #[test]
     fn test_edge_cases() {
-        [0, 1, u32::MAX]
+        // all i128s from all combinations of {-1, 0, 1} as their limbs
+        let arguments = (0..4)
+            .map(|_| [-1, 0, 1])
+            .multi_cartesian_product()
+            .map(|limbs| <[i128; 4]>::try_from(limbs).unwrap())
+            .map(|[l0, l1, l2, l3]| l0 + (l1 << 32) + (l2 << 64) + (l3 << 96));
+
+        let shift_amounts = [0, 1, 16, 31]
             .into_iter()
-            .map(u128::from)
-            .combinations_with_replacement(4)
-            .flat_map(TryInto::<[u128; 4]>::try_into)
-            .map(|[l0, l1, l2, l3]| l0 + (l1 << 32) + (l2 << 64) + (l3 << 96))
-            .map(|u| u as i128)
-            .cartesian_product(
-                [0, 1, 16, 31]
-                    .into_iter()
-                    .cartesian_product(0..4)
-                    .map(|(l, r)| l + 32 * r),
-            )
-            .for_each(|(arg, shamt)| {
-                ShiftRight.assert_expected_shift_behavior(arg, shamt);
-            });
+            .cartesian_product(0..4)
+            .map(|(l, r)| l + 32 * r);
+
+        arguments
+            .cartesian_product(shift_amounts)
+            .for_each(|(arg, shamt)| ShiftRight.assert_expected_shift_behavior(arg, shamt));
     }
 }
 
@@ -351,7 +340,7 @@ mod benches {
     use crate::traits::rust_shadow::RustShadow;
 
     #[test]
-    fn shift_right_i128_benchmark() {
+    fn benchmark() {
         ShadowedClosure::new(ShiftRight).bench()
     }
 }
