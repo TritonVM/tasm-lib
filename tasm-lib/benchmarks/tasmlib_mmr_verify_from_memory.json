@@ -13,10 +13,10 @@
   {
     "name": "tasmlib_mmr_verify_from_memory",
     "benchmark_result": {
-      "clock_cycle_count": 2854,
+      "clock_cycle_count": 2855,
       "hash_table_height": 606,
-      "u32_table_height": 1525,
-      "op_stack_table_height": 2240,
+      "u32_table_height": 1558,
+      "op_stack_table_height": 2238,
       "ram_table_height": 315
     },
     "case": "WorstCase"

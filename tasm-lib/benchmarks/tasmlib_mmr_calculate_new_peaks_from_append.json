@@ -13,10 +13,10 @@
   {
     "name": "tasmlib_mmr_calculate_new_peaks_from_append",
     "benchmark_result": {
-      "clock_cycle_count": 7037,
+      "clock_cycle_count": 7038,
       "hash_table_height": 582,
-      "u32_table_height": 164,
-      "op_stack_table_height": 6814,
+      "u32_table_height": 165,
+      "op_stack_table_height": 6812,
       "ram_table_height": 1872
     },
     "case": "WorstCase"

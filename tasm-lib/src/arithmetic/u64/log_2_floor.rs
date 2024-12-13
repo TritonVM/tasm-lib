@@ -1,84 +1,114 @@
+use std::collections::HashMap;
+
 use triton_vm::prelude::*;
 
 use crate::data_type::DataType;
 use crate::library::Library;
 use crate::traits::basic_snippet::BasicSnippet;
+use crate::traits::basic_snippet::Reviewer;
+use crate::traits::basic_snippet::SignOffFingerprint;
 
-#[derive(Clone, Debug, Copy)]
+/// The base 2 logarithm of the input, rounded down. See also: [u64::ilog2].
+///
+/// ### Behavior
+///
+/// ```text
+/// BEFORE: _ [x: u64]
+/// AFTER:  _ [y: u32]
+/// ```
+///
+/// ### Preconditions
+///
+/// - the input `x` is properly [`BFieldCodec`] encoded
+/// - the input `x` is not 0
+///
+/// ### Postconditions
+///
+/// - `y` is the [base-2 integer logarithm](u64::ilog2) of `x`
+/// - `y` is properly [`BFieldCodec`] encoded
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct Log2Floor;
 
 impl BasicSnippet for Log2Floor {
     fn inputs(&self) -> Vec<(DataType, String)> {
-        vec![(DataType::U64, "x".to_owned())]
+        vec![(DataType::U64, "x".to_string())]
     }
 
     fn outputs(&self) -> Vec<(DataType, String)> {
-        vec![(DataType::U32, "log_2_floor(x)".to_owned())]
+        vec![(DataType::U32, "log_2_floor(x)".to_string())]
     }
 
     fn entrypoint(&self) -> String {
         "tasmlib_arithmetic_u64_log_2_floor".to_string()
     }
 
-    fn code(&self, _library: &mut Library) -> Vec<LabelledInstruction> {
+    fn code(&self, _: &mut Library) -> Vec<LabelledInstruction> {
         let entrypoint = self.entrypoint();
 
-        // assumes that top of stack is a valid u32s<2>
-        let hi_not_zero = format!("{entrypoint}_hi_not_zero");
-        let hi_is_zero = format!("{entrypoint}_hi_is_zero");
+        let hi_neq_zero = format!("{entrypoint}_hi_neq_zero");
+        let hi_eq_zero = format!("{entrypoint}_hi_eq_zero");
         triton_asm!(
-                // BEFORE: _ value_hi value_lo
-                // AFTER:  _ log2_floor(value)
-                {entrypoint}:
-                    push 1
-                    dup 2
-                    // _ value_hi value_lo 1 value_hi
+            // BEFORE: _ x_hi x_lo
+            // AFTER:  _ log2_floor(x)
+            {entrypoint}:
+                push 1
+                dup 2
+                // _ x_hi x_lo 1 x_hi
 
-                    skiz call {hi_not_zero}
-                    skiz call {hi_is_zero}
-                    // stack: _ log2_floor(value)
+                skiz call {hi_neq_zero}
+                skiz call {hi_eq_zero}
+                // _ log2_floor(x)
 
-                    return
+                return
 
-                {hi_not_zero}:
-                    // value_hi != 0
-                    // stack: // stack: _ value_hi value_lo 1
+            {hi_neq_zero}:
+                // x_hi != 0
+                // _ x_hi x_lo 1
 
-                    pop 2
-                    // stack: _ value_hi
+                pop 1
+                // _ x_hi x_lo
 
-                    log_2_floor
-                    push 32
-                    add
-                    // stack: _ (log2_floor(value_hi) + 32)
+                /* assert valid encoding */
+                pop_count
+                pop 1
+                // _ x_hi
 
-                    push 0
-                    // stack: _ (log2_floor(value_hi) + 32) 0
+                log_2_floor
+                addi 32
+                // _ (log2_floor(x_hi) + 32)
 
-                    return
+                push 0
+                // _ (log2_floor(x_hi) + 32) 0
 
-                {hi_is_zero}:
-                    // value_hi == 0
-                    // stack: _ 0 value_lo
-                    swap 1
-                    pop 1
-                    log_2_floor
-                    // stack: _ log_2_floor(value_lo)
+                return
 
-                    return
+            {hi_eq_zero}:
+                // x_hi == 0
+                // _ 0 x_lo
+                pick 1
+                pop 1
+                log_2_floor
+                // _ log_2_floor(x_lo)
+
+                return
         )
+    }
+
+    fn sign_offs(&self) -> HashMap<Reviewer, SignOffFingerprint> {
+        let mut sign_offs = HashMap::new();
+        sign_offs.insert(Reviewer("ferdinand"), 0x549a2ff4d3b45eda.into());
+        sign_offs
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use num::Zero;
-    use rand::rngs::StdRng;
-    use rand::RngCore;
-    use rand::SeedableRng;
+    use rand::prelude::*;
+    use test_strategy::proptest;
 
     use super::*;
-    use crate::empty_stack;
+    use crate::pop_encodable;
+    use crate::push_encodable;
     use crate::snippet_bencher::BenchmarkCase;
     use crate::test_helpers::negative_test;
     use crate::test_helpers::test_rust_equivalence_given_complete_state;
@@ -88,187 +118,129 @@ mod tests {
     use crate::InitVmState;
 
     impl Log2Floor {
-        fn init_state(&self, x: u64) -> Vec<BFieldElement> {
-            [
-                self.init_stack_for_isolated_run(),
-                vec![bfe!(x >> 32), bfe!(x & u32::MAX as u64)],
-            ]
-            .concat()
+        fn set_up_initial_stack(&self, x: u64) -> Vec<BFieldElement> {
+            let mut stack = self.init_stack_for_isolated_run();
+            push_encodable(&mut stack, &x);
+
+            stack
         }
     }
 
     impl Closure for Log2Floor {
         fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
-            // Get input value as a u64
-            let lo: u32 = stack.pop().unwrap().try_into().unwrap();
-            let hi: u32 = stack.pop().unwrap().try_into().unwrap();
-            let value = u64::from(lo) + (1 << 32) * u64::from(hi);
-
-            let log_2_floor = value.ilog2();
-            stack.push(bfe!(log_2_floor));
+            let x = pop_encodable::<u64>(stack);
+            push_encodable(stack, &x.ilog2());
         }
 
         fn pseudorandom_initial_state(
             &self,
             seed: [u8; 32],
-            bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
+            bench_case: Option<BenchmarkCase>,
         ) -> Vec<BFieldElement> {
-            match bench_case {
-                Some(BenchmarkCase::CommonCase) => self.init_state(u64::from(u32::MAX)),
-                Some(BenchmarkCase::WorstCase) => self.init_state(u64::MAX),
-                None => {
-                    let mut rng = StdRng::from_seed(seed);
-                    self.init_state(rng.next_u64())
-                }
-            }
+            let x = match bench_case {
+                Some(BenchmarkCase::CommonCase) => u64::from(u32::MAX),
+                Some(BenchmarkCase::WorstCase) => u64::MAX,
+                None => StdRng::from_seed(seed).gen(),
+            };
+
+            self.set_up_initial_stack(x)
         }
 
         fn corner_case_initial_states(&self) -> Vec<Vec<BFieldElement>> {
-            let mut all_powers_of_two = vec![];
-            for i in 0..63 {
-                all_powers_of_two.push(self.init_state(1 << i));
-            }
-
-            all_powers_of_two
+            (0..63)
+                .map(|pow| 1_u64 << pow)
+                .flat_map(|x| [x.checked_sub(1), Some(x), x.checked_add(1)])
+                .flatten()
+                .filter(|&x| x != 0)
+                .map(|x| self.set_up_initial_stack(x))
+                .collect()
         }
     }
 
     #[test]
-    fn log_2_floor_u64_test() {
+    fn rust_shadow_test() {
         ShadowedClosure::new(Log2Floor).test();
     }
 
-    #[test]
-    fn lo_is_not_u32_hi_is_zero() {
-        let not_u32 = bfe!(u64::from(u32::MAX) + 1);
+    #[proptest]
+    fn hi_is_u32_but_lo_is_not(
+        #[strategy(0_u32..)]
+        #[map(BFieldElement::from)]
+        x_hi: BFieldElement,
+        #[strategy(1_u64 << 32..)]
+        #[map(BFieldElement::new)]
+        x_lo: BFieldElement,
+    ) {
         let mut init_stack = Log2Floor.init_stack_for_isolated_run();
-        init_stack.push(bfe!(0));
-        init_stack.push(not_u32);
+        init_stack.push(x_hi);
+        init_stack.push(x_lo);
 
-        let init_state = InitVmState::with_stack(init_stack);
-        let expected_err =
-            InstructionError::OpStackError(OpStackError::FailedU32Conversion(not_u32));
+        let expected_err = InstructionError::OpStackError(OpStackError::FailedU32Conversion(x_lo));
         negative_test(
             &ShadowedClosure::new(Log2Floor),
-            init_state,
+            InitVmState::with_stack(init_stack),
             &[expected_err],
         );
     }
 
-    #[test]
-    fn hi_is_not_u32() {
-        let not_u32 = bfe!(u64::from(u32::MAX) + 1);
+    #[proptest]
+    fn hi_is_not_u32_but_lo_is(
+        #[strategy(1_u64 << 32..)]
+        #[map(BFieldElement::new)]
+        x_hi: BFieldElement,
+        #[strategy(0_u32..)]
+        #[map(BFieldElement::from)]
+        x_lo: BFieldElement,
+    ) {
         let mut init_stack = Log2Floor.init_stack_for_isolated_run();
-        init_stack.push(not_u32);
-        init_stack.push(bfe!(16));
+        init_stack.push(x_hi);
+        init_stack.push(x_lo);
 
-        let init_state = InitVmState::with_stack(init_stack);
-        let expected_err =
-            InstructionError::OpStackError(OpStackError::FailedU32Conversion(not_u32));
+        let expected_err = InstructionError::OpStackError(OpStackError::FailedU32Conversion(x_hi));
         negative_test(
             &ShadowedClosure::new(Log2Floor),
-            init_state,
-            &[expected_err],
-        );
-    }
-
-    #[test]
-    fn hi_is_not_u32_alt() {
-        let n = u64::from(rand::thread_rng().next_u32());
-        let not_u32 = bfe!(u64::from(u32::MAX) + 1 + n);
-        let mut init_stack = Log2Floor.init_stack_for_isolated_run();
-        init_stack.push(not_u32);
-        init_stack.push(bfe!(16));
-
-        let init_state = InitVmState::with_stack(init_stack);
-        let expected_err =
-            InstructionError::OpStackError(OpStackError::FailedU32Conversion(not_u32));
-        negative_test(
-            &ShadowedClosure::new(Log2Floor),
-            init_state,
+            InitVmState::with_stack(init_stack),
             &[expected_err],
         );
     }
 
     #[test]
     fn crash_on_zero() {
-        let init_stack = [
-            Log2Floor.init_stack_for_isolated_run(),
-            vec![BFieldElement::zero(), BFieldElement::zero()],
-        ]
-        .concat();
-        let init_state = InitVmState::with_stack(init_stack);
         negative_test(
             &ShadowedClosure::new(Log2Floor),
-            init_state,
+            InitVmState::with_stack(Log2Floor.set_up_initial_stack(0)),
             &[InstructionError::LogarithmOfZero],
         );
     }
 
     #[test]
-    fn u32s_2_log2_floor() {
-        let mut expected = Log2Floor.init_stack_for_isolated_run();
-        expected.push(BFieldElement::new(0));
-        prop_log2_floor_u32s_2(1, &expected);
+    fn unit_test() {
+        fn assert_terminal_stack_is_as_expected(x: u64, expected: u32) {
+            let mut expected_stack = Log2Floor.init_stack_for_isolated_run();
+            push_encodable(&mut expected_stack, &expected);
 
-        expected = Log2Floor.init_stack_for_isolated_run();
-        expected.push(BFieldElement::new(1));
-        prop_log2_floor_u32s_2(2, &expected);
-        prop_log2_floor_u32s_2(3, &expected);
-
-        expected = Log2Floor.init_stack_for_isolated_run();
-        expected.push(BFieldElement::new(2));
-        prop_log2_floor_u32s_2(4, &expected);
-        prop_log2_floor_u32s_2(5, &expected);
-        prop_log2_floor_u32s_2(6, &expected);
-        prop_log2_floor_u32s_2(7, &expected);
-
-        expected = Log2Floor.init_stack_for_isolated_run();
-        expected.push(BFieldElement::new(31));
-        prop_log2_floor_u32s_2(u32::MAX as u64 - 20000, &expected);
-        prop_log2_floor_u32s_2(u32::MAX as u64 - 1, &expected);
-        prop_log2_floor_u32s_2(u32::MAX as u64, &expected);
-
-        expected = Log2Floor.init_stack_for_isolated_run();
-        expected.push(BFieldElement::new(32));
-        prop_log2_floor_u32s_2(u32::MAX as u64 + 1, &expected);
-        prop_log2_floor_u32s_2(u32::MAX as u64 + 2, &expected);
-        prop_log2_floor_u32s_2(u32::MAX as u64 + 800, &expected);
-        prop_log2_floor_u32s_2(u32::MAX as u64 + u32::MAX as u64, &expected);
-        prop_log2_floor_u32s_2(u32::MAX as u64 + u32::MAX as u64 + 1, &expected);
-
-        for i in 0..64 {
-            expected = Log2Floor.init_stack_for_isolated_run();
-            expected.push(BFieldElement::new(i));
-            prop_log2_floor_u32s_2(1 << i, &expected);
-            if i > 0 {
-                prop_log2_floor_u32s_2((1 << i) + 1, &expected);
-            }
-            if i > 1 {
-                prop_log2_floor_u32s_2((1 << i) + 2, &expected);
-                prop_log2_floor_u32s_2((1 << i) + 3, &expected);
-
-                expected = empty_stack();
-                expected.push(BFieldElement::new(i - 1));
-                prop_log2_floor_u32s_2((1 << i) - 1, &expected);
-            }
-        }
-    }
-
-    fn prop_log2_floor_u32s_2(value: u64, expected: &[BFieldElement]) {
-        let mut init_stack = empty_stack();
-        for elem in value.encode().into_iter().rev() {
-            init_stack.push(elem);
+            test_rust_equivalence_given_complete_state(
+                &ShadowedClosure::new(Log2Floor),
+                &Log2Floor.set_up_initial_stack(x),
+                &[],
+                &NonDeterminism::default(),
+                &None,
+                Some(&expected_stack),
+            );
         }
 
-        test_rust_equivalence_given_complete_state(
-            &ShadowedClosure::new(Log2Floor),
-            &init_stack,
-            &[],
-            &NonDeterminism::default(),
-            &None,
-            Some(expected),
-        );
+        // many of the following are already covered by the edge cases declared in
+        // “corner_case_initial_states” but repeated here as a sanity check
+        assert_terminal_stack_is_as_expected(1, 0);
+        assert_terminal_stack_is_as_expected(2, 1);
+        assert_terminal_stack_is_as_expected(3, 1);
+        assert_terminal_stack_is_as_expected(4, 2);
+        assert_terminal_stack_is_as_expected(5, 2);
+        assert_terminal_stack_is_as_expected(6, 2);
+        assert_terminal_stack_is_as_expected(7, 2);
+        assert_terminal_stack_is_as_expected(8, 3);
+        assert_terminal_stack_is_as_expected((1 << 32) - 20_000, 31);
+        assert_terminal_stack_is_as_expected((1 << 32) + 800, 32);
     }
 }
 
