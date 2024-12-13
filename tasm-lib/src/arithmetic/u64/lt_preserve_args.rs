@@ -2,19 +2,23 @@ use std::collections::HashMap;
 
 use triton_vm::prelude::*;
 
+use crate::arithmetic::u64::lt::Lt;
 use crate::data_type::DataType;
 use crate::library::Library;
 use crate::traits::basic_snippet::BasicSnippet;
 use crate::traits::basic_snippet::Reviewer;
 use crate::traits::basic_snippet::SignOffFingerprint;
 
-/// Perform the “[less than](u64::lt)” operation.
+/// Perform the “[less than](u64::lt)” operation without consuming the
+/// arguments.
+///
+/// See also [`Lt`].
 ///
 /// ### Behavior
 ///
 /// ```text
 /// BEFORE: _ [rhs: u64] [lhs: u64]
-/// AFTER:  _ [lhs < rhs: bool]
+/// AFTER:  _ [rhs: u64] [lhs: u64] [lhs < rhs: bool]
 /// ```
 ///
 /// ### Preconditions
@@ -23,25 +27,25 @@ use crate::traits::basic_snippet::SignOffFingerprint;
 ///
 /// ### Postconditions
 ///
+/// - the output `lhs` is equal to the input argument `lhs`
+/// - the output `rhs` is equal to the input argument `rhs`
 /// - the output is `true` if and only if the input argument `lhs` is less than
 ///   the input argument `rhs`
-/// - the output is properly [`BFieldCodec`] encoded
+/// - all output is properly [`BFieldCodec`] encoded
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
-pub struct Lt;
+pub struct LtPreserveArgs;
 
-impl BasicSnippet for Lt {
+impl BasicSnippet for LtPreserveArgs {
     fn inputs(&self) -> Vec<(DataType, String)> {
-        ["rhs", "lhs"]
-            .map(|s| (DataType::U64, s.to_owned()))
-            .to_vec()
+        Lt.inputs()
     }
 
     fn outputs(&self) -> Vec<(DataType, String)> {
-        vec![(DataType::Bool, "lhs < rhs".to_owned())]
+        [self.inputs(), Lt.outputs()].concat()
     }
 
     fn entrypoint(&self) -> String {
-        "tasmlib_arithmetic_u64_lt".to_owned()
+        "tasmlib_arithmetic_u64_lt_preserve_args".to_string()
     }
 
     fn code(&self, _: &mut Library) -> Vec<LabelledInstruction> {
@@ -61,21 +65,21 @@ impl BasicSnippet for Lt {
                 lt
                 // _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs_hi < rhs_hi)
 
-                pick 4
-                pick 3
+                dup 4
+                dup 3
                 eq
-                // _ rhs_lo lhs_lo (lhs_hi < rhs_hi) (rhs_hi == lhs_hi)
+                // _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs_hi < rhs_hi) (rhs_hi == lhs_hi)
 
-                pick 3
-                pick 3
-                // _ (lhs_hi < rhs_hi) (rhs_hi == lhs_hi) rhs_lo lhs_lo
+                dup 4
+                dup 3
+                // _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs_hi < rhs_hi) (rhs_hi == lhs_hi) rhs_lo lhs_lo
 
                 lt
-                // _ (lhs_hi < rhs_hi) (rhs_hi == lhs_hi) (lhs_lo < rhs_lo)
+                // _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs_hi < rhs_hi) (rhs_hi == lhs_hi) (lhs_lo < rhs_lo)
 
                 mul
                 add
-                // _ (lhs < rhs)
+                // _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs < rhs)
 
                 return
         )
@@ -83,15 +87,13 @@ impl BasicSnippet for Lt {
 
     fn sign_offs(&self) -> HashMap<Reviewer, SignOffFingerprint> {
         let mut sign_offs = HashMap::new();
-        sign_offs.insert(Reviewer("ferdinand"), 0x1e4d56adb16e1520.into());
+        sign_offs.insert(Reviewer("ferdinand"), 0x858f91bcf192c41a.into());
         sign_offs
     }
 }
 
 #[cfg(test)]
-pub(crate) mod tests {
-    use itertools::Itertools;
-    use rand::prelude::*;
+mod tests {
     use test_strategy::proptest;
 
     use super::*;
@@ -103,17 +105,13 @@ pub(crate) mod tests {
     use crate::traits::closure::ShadowedClosure;
     use crate::traits::rust_shadow::RustShadow;
 
-    impl Lt {
+    impl LtPreserveArgs {
         pub fn set_up_initial_stack(&self, lhs: u64, rhs: u64) -> Vec<BFieldElement> {
-            let mut stack = self.init_stack_for_isolated_run();
-            push_encodable(&mut stack, &rhs);
-            push_encodable(&mut stack, &lhs);
-
-            stack
+            Lt.set_up_initial_stack(lhs, rhs)
         }
 
         pub fn assert_expected_lt_behavior(&self, lhs: u64, rhs: u64) {
-            let mut expected_stack = self.init_stack_for_isolated_run();
+            let mut expected_stack = self.set_up_initial_stack(lhs, rhs);
             push_encodable(&mut expected_stack, &(lhs < rhs));
 
             test_rust_equivalence_given_complete_state(
@@ -127,10 +125,12 @@ pub(crate) mod tests {
         }
     }
 
-    impl Closure for Lt {
+    impl Closure for LtPreserveArgs {
         fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
             let left = pop_encodable::<u64>(stack);
             let right = pop_encodable::<u64>(stack);
+            push_encodable(stack, &right);
+            push_encodable(stack, &left);
             push_encodable(stack, &(left < right));
         }
 
@@ -139,43 +139,27 @@ pub(crate) mod tests {
             seed: [u8; 32],
             bench_case: Option<BenchmarkCase>,
         ) -> Vec<BFieldElement> {
-            let (left, right) = match bench_case {
-                Some(BenchmarkCase::CommonCase) => (0x100_ffff_ffff, 0x100_ffff_fffe),
-                Some(BenchmarkCase::WorstCase) => (u64::MAX - 1, u64::MAX),
-                None => StdRng::from_seed(seed).gen(),
-            };
-
-            self.set_up_initial_stack(left, right)
+            Lt.pseudorandom_initial_state(seed, bench_case)
         }
 
         fn corner_case_initial_states(&self) -> Vec<Vec<BFieldElement>> {
-            let edge_case_points = [0, 1 << 29, 1 << 31, 1 << 32, u64::MAX]
-                .into_iter()
-                .flat_map(|p| [p.checked_sub(1), Some(p), p.checked_add(1)])
-                .flatten()
-                .collect_vec();
-
-            edge_case_points
-                .iter()
-                .cartesian_product(&edge_case_points)
-                .map(|(&left, &right)| self.set_up_initial_stack(left, right))
-                .collect()
+            Lt.corner_case_initial_states()
         }
     }
 
     #[test]
     fn rust_shadow_test() {
-        ShadowedClosure::new(Lt).test()
+        ShadowedClosure::new(LtPreserveArgs).test()
     }
 
     #[test]
     fn unit_test() {
-        Lt.assert_expected_lt_behavior(11 * (1 << 32), 15 * (1 << 32));
+        LtPreserveArgs.assert_expected_lt_behavior(11 * (1 << 32), 15 * (1 << 32));
     }
 
     #[proptest]
     fn property_test(left: u64, right: u64) {
-        Lt.assert_expected_lt_behavior(left, right);
+        LtPreserveArgs.assert_expected_lt_behavior(left, right);
     }
 }
 
@@ -187,6 +171,6 @@ mod benches {
 
     #[test]
     fn benchmark() {
-        ShadowedClosure::new(Lt).bench();
+        ShadowedClosure::new(LtPreserveArgs).bench();
     }
 }

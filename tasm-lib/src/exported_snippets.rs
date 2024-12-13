@@ -94,7 +94,7 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn BasicSnippet> {
         "tasmlib_arithmetic_u64_leading_zeros" => Box::new(u64::leading_zeros::LeadingZeros),
         "tasmlib_arithmetic_u64_log_2_floor" => Box::new(u64::log_2_floor::Log2Floor),
         "tasmlib_arithmetic_u64_lt" => Box::new(u64::lt::Lt),
-        "tasmlib_arithmetic_u64_lt_preserve_args" => Box::new(u64::lt::LtU64PreserveArgs),
+        "tasmlib_arithmetic_u64_lt_preserve_args" => Box::new(u64::lt_preserve_args::LtPreserveArgs),
         "tasmlib_arithmetic_u64_mul_two_u64s_to_u128_u64" => Box::new(u64::mul_two_u64s_to_u128::MulTwoU64sToU128),
         "tasmlib_arithmetic_u64_or_u64" => Box::new(u64::or::Or),
         "tasmlib_arithmetic_u64_overflowing_sub" => Box::new(u64::overflowing_sub::OverflowingSub),

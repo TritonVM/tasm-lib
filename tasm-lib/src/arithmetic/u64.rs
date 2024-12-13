@@ -10,6 +10,7 @@ pub mod index_of_last_nonzero_bit;
 pub mod leading_zeros;
 pub mod log_2_floor;
 pub mod lt;
+pub mod lt_preserve_args;
 pub mod mul_two_u64s_to_u128;
 pub mod or;
 pub mod overflowing_add;
