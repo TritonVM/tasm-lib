@@ -1,177 +1,107 @@
-use rand::prelude::*;
+use std::collections::HashMap;
+
 use triton_vm::prelude::*;
 
+use crate::arithmetic::u64::overflowing_sub::OverflowingSub;
 use crate::data_type::DataType;
-use crate::empty_stack;
-use crate::traits::basic_snippet::BasicSnippet;
-use crate::traits::closure::Closure;
+use crate::prelude::*;
+use crate::traits::basic_snippet::Reviewer;
+use crate::traits::basic_snippet::SignOffFingerprint;
 
+/// [Wrapping subtraction][sub] for unsigned 64-bit integers.
+///
+/// # Behavior
+///
+/// ```text
+/// BEFORE: _ [subtrahend: u64] [minuend: u64]
+/// AFTER:  _ [wrapped_difference: u64]
+/// ```
+///
+/// # Preconditions
+///
+/// - all input arguments are properly [`BFieldCodec`] encoded
+///
+/// # Postconditions
+///
+/// - the output `difference` is the `minuend` minus the `subtrahend`, wrapping
+///   around if the minuend is greater than the subtrahend
+/// - the output is properly [`BFieldCodec`] encoded
+///
+/// [sub]: u64::wrapping_sub
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub struct WrappingSub;
 
 impl BasicSnippet for WrappingSub {
     fn inputs(&self) -> Vec<(DataType, String)> {
-        vec![
-            (DataType::U64, "lhs".to_owned()),
-            (DataType::U64, "rhs".to_string()),
-        ]
+        OverflowingSub.inputs()
     }
 
     fn outputs(&self) -> Vec<(DataType, String)> {
-        vec![(DataType::U64, "wrapped_diff".to_string())]
+        vec![(DataType::U64, "wrapped_difference".to_string())]
     }
 
     fn entrypoint(&self) -> String {
         "tasmlib_arithmetic_u64_wrapping_sub".to_string()
     }
 
-    fn code(&self, _library: &mut crate::library::Library) -> Vec<LabelledInstruction> {
-        let entrypoint = self.entrypoint();
-        const TWO_POW_32: u64 = 1 << 32;
+    fn code(&self, _: &mut Library) -> Vec<LabelledInstruction> {
+        triton_asm! {
+            {self.entrypoint()}:
+                {&OverflowingSub::common_subtraction_code()}
+                // _ difference_lo (minuend_hi - subtrahend_hi - carry)
 
-        triton_asm!(
-            {entrypoint}:
-                // _ lhs_hi lhs_lo rhs_hi rhs_lo
-
-                push -1
-                mul
-                // _ lhs_hi lhs_lo rhs_hi (-rhs_lo)
-
-                swap 1 swap 2
-                // _ lhs_hi rhs_hi (-rhs_lo) lhs_lo
-
-                add
-                // _ lhs_hi rhs_hi (lhs_lo-rhs_lo)
-
-                push {TWO_POW_32}
-                add
-
+                addi {1_u64 << 32}
                 split
-                // _ lhs_hi rhs_hi !carry diff_lo
+                // _ difference_lo !is_overflow difference_hi
 
-                swap 2 swap 1
-                // _ lhs_hi diff_lo rhs_hi !carry
-
-                push 0
-                eq
-                // _ lhs_hi diff_lo rhs_hi carry
-
-                add
-                // _ lhs_hi diff_lo rhs_hi'
-
-                push -1
-                mul
-                // _ lhs_hi diff_lo (-rhs_hi')
-
-                swap 1 swap 2
-                // _ diff_lo (-rhs_hi') lhs_hi
-
-                add
-                // _ diff_lo (lhs_hi-rhs_hi')
-
-                push {TWO_POW_32}
-                add
-
-                split
-                // _ diff_lo !carry diff_hi
-
-                swap 1
+                place 2
                 pop 1
-                swap 1
+                // _ difference_hi difference_lo
 
                 return
-        )
-    }
-}
-
-impl Closure for WrappingSub {
-    fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
-        let rhs_lo: u32 = stack.pop().unwrap().try_into().unwrap();
-        let rhs_hi: u32 = stack.pop().unwrap().try_into().unwrap();
-        let lhs_lo: u32 = stack.pop().unwrap().try_into().unwrap();
-        let lhs_hi: u32 = stack.pop().unwrap().try_into().unwrap();
-        let rhs: u64 = rhs_lo as u64 + ((rhs_hi as u64) << 32);
-        let lhs: u64 = lhs_lo as u64 + ((lhs_hi as u64) << 32);
-
-        let wrapped_diff = lhs.wrapping_sub(rhs);
-        stack.push(BFieldElement::new(wrapped_diff >> 32));
-        stack.push(BFieldElement::new(wrapped_diff & (u32::MAX as u64)));
+        }
     }
 
-    fn pseudorandom_initial_state(
-        &self,
-        seed: [u8; 32],
-        bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
-    ) -> Vec<BFieldElement> {
-        let (lhs, rhs) = match bench_case {
-            Some(crate::snippet_bencher::BenchmarkCase::CommonCase) => {
-                (1u64 << 63, (1u64 << 63) - 1)
-            }
-            Some(crate::snippet_bencher::BenchmarkCase::WorstCase) => (1u64 << 63, 1u64 << 50),
-            None => {
-                let mut rng = StdRng::from_seed(seed);
-                (rng.next_u64(), rng.next_u64())
-            }
-        };
-
-        [empty_stack(), lhs.encode(), rhs.encode()].concat()
+    fn sign_offs(&self) -> HashMap<Reviewer, SignOffFingerprint> {
+        let mut sign_offs = HashMap::new();
+        sign_offs.insert(Reviewer("ferdinand"), 0xe6d83d5f88c389e3.into());
+        sign_offs
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_helpers::test_rust_equivalence_given_complete_state;
+    use crate::pop_encodable;
+    use crate::push_encodable;
+    use crate::traits::closure::Closure;
     use crate::traits::closure::ShadowedClosure;
     use crate::traits::rust_shadow::RustShadow;
 
-    #[test]
-    fn u64_wrapping_sub_pbt() {
-        ShadowedClosure::new(WrappingSub).test()
+    impl Closure for WrappingSub {
+        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
+            let minuend = pop_encodable::<u64>(stack);
+            let subtrahend = pop_encodable::<u64>(stack);
+            let difference = minuend.wrapping_sub(subtrahend);
+            push_encodable(stack, &difference);
+        }
+
+        fn pseudorandom_initial_state(
+            &self,
+            seed: [u8; 32],
+            bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
+        ) -> Vec<BFieldElement> {
+            OverflowingSub.pseudorandom_initial_state(seed, bench_case)
+        }
+
+        fn corner_case_initial_states(&self) -> Vec<Vec<BFieldElement>> {
+            OverflowingSub.corner_case_initial_states()
+        }
     }
 
     #[test]
-    fn u64_wrapped_sub_unit_test() {
-        for (lhs, rhs) in [
-            (0u64, 0u64),
-            (0, 1),
-            (1, 0),
-            (1, 1),
-            (1 << 32, 1 << 32),
-            (1 << 63, 1 << 63),
-            (u64::MAX, u64::MAX),
-            (u64::MAX, 0),
-            (0, u64::MAX),
-            (100, 101),
-            (101, 100),
-            (1 << 40, (1 << 40) + 1),
-            ((1 << 40) + 1, 1 << 40),
-        ] {
-            let init_stack = [
-                empty_stack(),
-                vec![
-                    BFieldElement::new(lhs >> 32),
-                    BFieldElement::new(lhs & u32::MAX as u64),
-                    BFieldElement::new(rhs >> 32),
-                    BFieldElement::new(rhs & u32::MAX as u64),
-                ],
-            ]
-            .concat();
-            let expected = lhs.wrapping_sub(rhs);
-            let expected_final_stack = [
-                empty_stack(),
-                vec![(expected >> 32).into(), (expected & u32::MAX as u64).into()],
-            ]
-            .concat();
-            let _vm_output_state = test_rust_equivalence_given_complete_state(
-                &ShadowedClosure::new(WrappingSub),
-                &init_stack,
-                &[],
-                &NonDeterminism::default(),
-                &None,
-                Some(&expected_final_stack),
-            );
-        }
+    fn rust_shadow() {
+        ShadowedClosure::new(WrappingSub).test()
     }
 }
 
@@ -182,7 +112,7 @@ mod benches {
     use crate::traits::rust_shadow::RustShadow;
 
     #[test]
-    fn u64_wrapping_sub_bench() {
+    fn benchmark() {
         ShadowedClosure::new(WrappingSub).bench()
     }
 }

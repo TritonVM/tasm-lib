@@ -43,3 +43,4 @@ often.
 |  310..320 | [`u64::Add`](arithmetic/u64/add.rs)                                                         |
 |  320..330 | [`i128::ShiftRight`](arithmetic/i128/shift_right.rs)                                        |
 |  330..340 | [`u64::ShiftRight`](arithmetic/u64/shift_right.rs)                                          |
+|  340..350 | [`u64::Sub`](arithmetic/u64/sub.rs)                                                         |

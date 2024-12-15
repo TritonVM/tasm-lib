@@ -1,342 +1,181 @@
 use std::collections::HashMap;
 
-use num::One;
-use num::Zero;
-use rand::prelude::*;
 use triton_vm::prelude::*;
-use triton_vm::twenty_first::prelude::U32s;
 
+use crate::arithmetic::u64::overflowing_sub::OverflowingSub;
 use crate::data_type::DataType;
-use crate::empty_stack;
-use crate::library::Library;
-use crate::push_encodable;
-use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::InitVmState;
+use crate::prelude::*;
+use crate::traits::basic_snippet::Reviewer;
+use crate::traits::basic_snippet::SignOffFingerprint;
 
-#[derive(Clone, Debug)]
+/// [Subtraction][sub] for unsigned 64-bit integers.
+///
+/// # Behavior
+///
+/// ```text
+/// BEFORE: _ [subtrahend: u64] [minuend: u64]
+/// AFTER:  _ [difference: u64]
+/// ```
+///
+/// # Preconditions
+///
+/// - the `minuend` is greater than or equal to the `subtrahend`
+/// - all input arguments are properly [`BFieldCodec`] encoded
+///
+/// # Postconditions
+///
+/// - the output is the `minuend` minus the `subtrahend`
+/// - the output is properly [`BFieldCodec`] encoded
+///
+/// [sub]: core::ops::Sub
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct Sub;
 
-impl DeprecatedSnippet for Sub {
-    fn entrypoint_name(&self) -> String {
+impl Sub {
+    pub const OVERFLOW_ERROR_ID: i128 = 340;
+}
+
+impl BasicSnippet for Sub {
+    fn inputs(&self) -> Vec<(DataType, String)> {
+        OverflowingSub.inputs()
+    }
+
+    fn outputs(&self) -> Vec<(DataType, String)> {
+        vec![(DataType::U64, "difference".to_string())]
+    }
+
+    fn entrypoint(&self) -> String {
         "tasmlib_arithmetic_u64_sub".to_string()
     }
 
-    fn input_field_names(&self) -> Vec<String> {
-        vec![
-            "rhs_hi".to_string(),
-            "rhs_lo".to_string(),
-            "lhs_hi".to_string(),
-            "lhs_lo".to_string(),
-        ]
-    }
-
-    fn input_types(&self) -> Vec<DataType> {
-        vec![DataType::U64, DataType::U64]
-    }
-
-    fn output_field_names(&self) -> Vec<String> {
-        vec!["(lhs - rhs)_hi".to_string(), "(lhs - rhs)_lo".to_string()]
-    }
-
-    fn output_types(&self) -> Vec<DataType> {
-        vec![DataType::U64]
-    }
-
-    fn stack_diff(&self) -> isize {
-        -2
-    }
-
-    /// Four top elements of stack are assumed to be valid u32s. So to have
-    /// a value that's less than 2^32.
-    fn function_code(&self, _library: &mut Library) -> String {
-        let entrypoint = self.entrypoint_name();
-        const TWO_POW_32: u64 = 1 << 32;
-
-        format!(
-            "
-            // BEFORE: _ rhs_hi rhs_lo lhs_hi lhs_lo
-            // AFTER:  _ hi_diff lo_diff
-            {entrypoint}:
-                swap 1 swap 2
-                // _ rhs_hi lhs_hi lhs_lo rhs_lo
-
-                push -1
-                mul
-                add
-                // _ rhs_hi lhs_hi (lhs_lo - rhs_lo)
-
-                push {TWO_POW_32}
-                add
+    fn code(&self, _: &mut Library) -> Vec<LabelledInstruction> {
+        triton_asm!(
+            // BEFORE: _ subtrahend_hi subtrahend_lo minuend_hi minuend_lo
+            // AFTER:  _ difference_hi difference_lo
+            {self.entrypoint()}:
+                {&OverflowingSub::common_subtraction_code()}
+                // _ difference_lo (minuend_hi - subtrahend_hi - carry)
 
                 split
-                // _ rhs_hi lhs_hi !carry diff_lo
-
-                swap 3 swap 1
-                // _ diff_lo lhs_hi rhs_hi !carry
+                place 2
+                // _ difference_hi difference_lo only_0_if_no_overflow
 
                 push 0
                 eq
-                // _ diff_lo lhs_hi rhs_hi carry
-
-                add
-                // _ diff_lo lhs_hi rhs_hi'
-
-                push -1
-                mul
-                add
-                // _ diff_lo (lhs_hi - rhs_hi')
-
-                split
-                // _ diff_lo overflow diff_hi
-
-                swap 1
-                push 0
-                eq
-                assert
-                // _ diff_lo diff_hi
-
-                swap 1
+                assert error_id {Self::OVERFLOW_ERROR_ID}
+                // _ difference_hi difference_lo
 
                 return
-            "
         )
     }
 
-    fn crash_conditions(&self) -> Vec<String> {
-        vec!["if (lhs - rhs) overflows u64".to_string()]
-    }
-
-    fn gen_input_states(&self) -> Vec<InitVmState> {
-        let mut rng = rand::thread_rng();
-
-        let mut ret = vec![];
-        for _ in 0..30 {
-            // no overflow, no carry: small_a - smaller_b
-            // small_a is 0..2^32, smaller_b < small_a
-            let (small_a, smaller_b): (U32s<2>, U32s<2>) = {
-                let a: u32 = rng.gen();
-                let b: u32 = rng.gen_range(0..=a);
-
-                (a.into(), b.into())
-            };
-
-            let mut stack_1 = empty_stack();
-            push_encodable(&mut stack_1, &smaller_b);
-            push_encodable(&mut stack_1, &small_a);
-            ret.push(InitVmState::with_stack(stack_1));
-
-            // no overflow, carry: large_c - smaller_carry_d
-            // large_c is 2^32..2^64, smaller_carry_d < large_c
-            let (large_c, smaller_carry_d) = {
-                let c: u64 = rng.gen::<u32>() as u64 + (1 << 32);
-                let d: u64 = rng.gen_range(0..=c);
-                (
-                    U32s::<2>::try_from(c).unwrap(),
-                    U32s::<2>::try_from(d).unwrap(),
-                )
-            };
-
-            let mut stack_2 = empty_stack();
-            push_encodable(&mut stack_2, &smaller_carry_d);
-            push_encodable(&mut stack_2, &large_c);
-            ret.push(InitVmState::with_stack(stack_2));
-
-            // no overflow, no carry: large_e - smaller_f
-            // large_e is 0..2^64, smaller_f < large_e
-            let (large_e, smaller_f) = {
-                let e: u64 = rng.gen_range((1 << 32)..u64::MAX);
-                let f: u64 = rng.gen_range(0..(e & 0xffff_ffff));
-                (
-                    U32s::<2>::try_from(e).unwrap(),
-                    U32s::<2>::try_from(f).unwrap(),
-                )
-            };
-
-            let mut stack_3 = empty_stack();
-            push_encodable(&mut stack_3, &smaller_f);
-            push_encodable(&mut stack_3, &large_e);
-            ret.push(InitVmState::with_stack(stack_3));
-        }
-
-        ret
-    }
-
-    fn common_case_input_state(&self) -> InitVmState {
-        // no carry
-        InitVmState::with_stack(
-            [
-                empty_stack(),
-                vec![BFieldElement::zero(), BFieldElement::new((1 << 10) - 1)],
-                vec![BFieldElement::zero(), BFieldElement::new((1 << 31) - 1)],
-            ]
-            .concat(),
-        )
-    }
-
-    fn worst_case_input_state(&self) -> InitVmState {
-        // with carry
-        InitVmState::with_stack(
-            [
-                empty_stack(),
-                vec![BFieldElement::one(), BFieldElement::new((1 << 31) - 1)],
-                vec![BFieldElement::new(100), BFieldElement::new((1 << 10) - 1)],
-            ]
-            .concat(),
-        )
-    }
-
-    fn rust_shadowing(
-        &self,
-        stack: &mut Vec<BFieldElement>,
-        _std_in: Vec<BFieldElement>,
-        _secret_in: Vec<BFieldElement>,
-        _init_memory: &mut HashMap<BFieldElement, BFieldElement>,
-    ) {
-        // top element on stack
-        let a0: u32 = stack.pop().unwrap().try_into().unwrap();
-        let b0: u32 = stack.pop().unwrap().try_into().unwrap();
-        let ab0 = U32s::<2>::new([a0, b0]);
-
-        // second element on stack
-        let a1: u32 = stack.pop().unwrap().try_into().unwrap();
-        let b1: u32 = stack.pop().unwrap().try_into().unwrap();
-        let ab1 = U32s::<2>::new([a1, b1]);
-        let ab0_minus_ab1 = ab0 - ab1;
-        let mut res = ab0_minus_ab1.encode();
-        for _ in 0..res.len() {
-            stack.push(res.pop().unwrap());
-        }
+    fn sign_offs(&self) -> HashMap<Reviewer, SignOffFingerprint> {
+        let mut sign_offs = HashMap::new();
+        sign_offs.insert(Reviewer("ferdinand"), 0x7d887e69af21cab6.into());
+        sign_offs
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use num::BigUint;
-    use num::Zero;
+    use itertools::Itertools;
     use rand::prelude::*;
-    use BFieldElement;
+    use test_strategy::proptest;
 
     use super::*;
-    use crate::empty_stack;
-    use crate::test_helpers::test_rust_equivalence_given_input_values_deprecated;
-    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
+    use crate::pop_encodable;
+    use crate::push_encodable;
+    use crate::snippet_bencher::BenchmarkCase;
+    use crate::test_helpers::test_assertion_failure;
+    use crate::test_helpers::test_rust_equivalence_given_complete_state;
+    use crate::traits::closure::Closure;
+    use crate::traits::closure::ShadowedClosure;
+    use crate::traits::rust_shadow::RustShadow;
+    use crate::InitVmState;
 
-    #[test]
-    fn sub_u64_test() {
-        test_rust_equivalence_multiple_deprecated(&Sub, true);
-    }
+    impl Sub {
+        pub fn set_up_initial_stack(&self, subtrahend: u64, minuend: u64) -> Vec<BFieldElement> {
+            OverflowingSub.set_up_initial_stack(subtrahend, minuend)
+        }
 
-    #[test]
-    fn subtraction_involving_zeros() {
-        // 0 - 0 = 0
-        let mut expected_end_stack = [
-            empty_stack(),
-            vec![BFieldElement::zero(), BFieldElement::zero()],
-        ]
-        .concat();
-        prop_sub(U32s::from(0), U32s::from(0), Some(&expected_end_stack));
+        pub fn assert_expected_behavior(&self, subtrahend: u64, minuend: u64) {
+            let mut expected_stack = self.set_up_initial_stack(subtrahend, minuend);
+            self.rust_shadow(&mut expected_stack);
 
-        // 1 - 0 = 1
-        expected_end_stack = [
-            empty_stack(),
-            vec![BFieldElement::zero(), BFieldElement::one()],
-        ]
-        .concat();
-        prop_sub(U32s::from(1), U32s::from(0), Some(&expected_end_stack));
-
-        // 1 - 1 = 0
-        expected_end_stack = [
-            empty_stack(),
-            vec![BFieldElement::zero(), BFieldElement::zero()],
-        ]
-        .concat();
-        prop_sub(U32s::from(1), U32s::from(1), Some(&expected_end_stack));
-
-        // u64::MAX - u64::MAX = 0
-        expected_end_stack = [
-            empty_stack(),
-            vec![BFieldElement::new(0), BFieldElement::new(0)],
-        ]
-        .concat();
-        prop_sub(
-            U32s::try_from(u64::MAX).unwrap(),
-            U32s::try_from(u64::MAX).unwrap(),
-            Some(&expected_end_stack),
-        );
-    }
-
-    #[test]
-    fn u32s_2_sub_no_overflow() {
-        // 256 - 129 = 127
-        let expected_end_stack = [
-            empty_stack(),
-            vec![BFieldElement::zero(), BFieldElement::new(127)],
-        ]
-        .concat();
-        prop_sub(U32s::from(256), U32s::from(129), Some(&expected_end_stack));
-    }
-
-    #[test]
-    fn u32s_2_sub_carry() {
-        // 2^32 - 1 = ...
-        let expected_end_stack = [
-            empty_stack(),
-            vec![BFieldElement::zero(), BFieldElement::new(u32::MAX as u64)],
-        ]
-        .concat();
-        prop_sub(
-            U32s::from(BigUint::from(1u64 << 32)),
-            U32s::from(1),
-            Some(&expected_end_stack),
-        );
-    }
-
-    #[test]
-    fn u32s_2_sub_pbt() {
-        let mut rng = rand::thread_rng();
-        for _ in 0..100 {
-            let lhs: u64 = rng.gen();
-            let rhs: u64 = rng.gen_range(0..=lhs);
-
-            prop_sub(
-                U32s::from(BigUint::from(lhs)),
-                U32s::from(BigUint::from(rhs)),
-                None,
+            test_rust_equivalence_given_complete_state(
+                &ShadowedClosure::new(Self),
+                &self.set_up_initial_stack(subtrahend, minuend),
+                &[],
+                &NonDeterminism::default(),
+                &None,
+                Some(&expected_stack),
             );
         }
     }
 
-    #[should_panic]
-    #[test]
-    fn overflow_test() {
-        let lhs: U32s<2> = U32s::from(BigUint::from(1u64 << 33));
-        let rhs: U32s<2> = U32s::from(BigUint::from((1u64 << 33) + 1));
-        let mut init_stack = empty_stack();
-        for elem in rhs.encode().into_iter().rev() {
-            init_stack.push(elem);
-        }
-        for elem in lhs.encode().into_iter().rev() {
-            init_stack.push(elem);
+    impl Closure for Sub {
+        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
+            let minuend = pop_encodable::<u64>(stack);
+            let subtrahend = pop_encodable::<u64>(stack);
+            push_encodable(stack, &(minuend - subtrahend));
         }
 
-        Sub.link_and_run_tasm_from_state_for_test(&mut InitVmState::with_stack(init_stack));
+        fn pseudorandom_initial_state(
+            &self,
+            seed: [u8; 32],
+            bench_case: Option<BenchmarkCase>,
+        ) -> Vec<BFieldElement> {
+            let (subtrahend, minuend) = match bench_case {
+                Some(BenchmarkCase::CommonCase) => (0x3ff, 0x7fff_ffff),
+                Some(BenchmarkCase::WorstCase) => (0x1_7fff_ffff, 0x64_0000_03ff),
+                None => {
+                    let mut rng = StdRng::from_seed(seed);
+                    let subtrahend = rng.gen();
+                    let minuend = rng.gen_range(subtrahend..=u64::MAX);
+                    (subtrahend, minuend)
+                }
+            };
+
+            self.set_up_initial_stack(subtrahend, minuend)
+        }
+
+        fn corner_case_initial_states(&self) -> Vec<Vec<BFieldElement>> {
+            let edge_case_values = OverflowingSub::edge_case_values();
+
+            edge_case_values
+                .iter()
+                .cartesian_product(&edge_case_values)
+                .filter(|(&subtrahend, &minuend)| minuend.checked_sub(subtrahend).is_some())
+                .map(|(&subtrahend, &minuend)| self.set_up_initial_stack(subtrahend, minuend))
+                .collect()
+        }
     }
 
-    fn prop_sub(lhs: U32s<2>, rhs: U32s<2>, expected: Option<&[BFieldElement]>) {
-        let mut init_stack = empty_stack();
-        for elem in rhs.encode().into_iter().rev() {
-            init_stack.push(elem);
-        }
-        for elem in lhs.encode().into_iter().rev() {
-            init_stack.push(elem);
-        }
+    #[test]
+    fn rust_shadow() {
+        ShadowedClosure::new(Sub).test();
+    }
 
-        test_rust_equivalence_given_input_values_deprecated(
-            &Sub,
-            &init_stack,
-            &[],
-            HashMap::default(),
-            expected,
+    #[test]
+    fn unit_test() {
+        Sub.assert_expected_behavior(129, 256);
+        Sub.assert_expected_behavior(1, 1 << 32);
+    }
+
+    #[proptest]
+    fn property_test(subtrahend: u64, #[strategy(#subtrahend..)] minuend: u64) {
+        Sub.assert_expected_behavior(subtrahend, minuend);
+    }
+
+    #[proptest]
+    fn negative_property_test(
+        #[strategy(1_u64..)] subtrahend: u64,
+        #[strategy(..#subtrahend)] minuend: u64,
+    ) {
+        test_assertion_failure(
+            &ShadowedClosure::new(Sub),
+            InitVmState::with_stack(Sub.set_up_initial_stack(subtrahend, minuend)),
+            &[Sub::OVERFLOW_ERROR_ID],
         );
     }
 }
@@ -344,10 +183,11 @@ mod tests {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::snippet_bencher::bench_and_write;
+    use crate::traits::closure::ShadowedClosure;
+    use crate::traits::rust_shadow::RustShadow;
 
     #[test]
-    fn sub_u64_benchmark() {
-        bench_and_write(Sub);
+    fn benchmark() {
+        ShadowedClosure::new(Sub).bench();
     }
 }
