@@ -1,44 +1,42 @@
 use std::collections::HashMap;
 
-use itertools::Itertools;
-use rand::prelude::*;
 use triton_vm::prelude::*;
-use twenty_first::math::other::random_elements;
 use twenty_first::util_types::shared::bag_peaks;
 
 use crate::data_type::DataType;
-use crate::list::LIST_METADATA_SIZE;
 use crate::mmr::MAX_MMR_HEIGHT;
-use crate::rust_shadowing_helper_functions;
-use crate::snippet_bencher::BenchmarkCase;
-use crate::traits::basic_snippet::BasicSnippet;
-use crate::traits::function::Function;
-use crate::traits::function::FunctionInitialState;
+use crate::prelude::*;
+use crate::traits::basic_snippet::Reviewer;
+use crate::traits::basic_snippet::SignOffFingerprint;
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+/// [Bag peaks](bag_peaks) into a single [`Digest`].
+///
+/// # Behavior
+///
+/// ```text
+/// BEFORE: _ *peaks
+/// AFTER:  _ [bagged_peaks: Digest]
+/// ```
+///
+/// # Preconditions
+///
+/// - the input argument points to a properly [`BFieldCodec`]-encoded list of
+///   [`Digest`]s in memory
+/// - the pointed-to list contains fewer than [`MAX_MMR_HEIGHT`] elements
+///
+/// # Postconditions
+///
+/// - the output is a single [`Digest`] computed like in [`bag_peaks`]
+/// - the output is properly [`BFieldCodec`] encoded
+///
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct BagPeaks;
-
-impl BagPeaks {
-    fn input_state(&self, num_peaks: usize) -> FunctionInitialState {
-        let peaks: Vec<Digest> = random_elements(num_peaks);
-        let address: BFieldElement = random();
-        let mut stack = self.init_stack_for_isolated_run();
-        stack.push(address);
-        let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::new();
-
-        // Insert list into memory
-        rust_shadowing_helper_functions::list::list_insert(address, peaks, &mut memory);
-
-        FunctionInitialState { stack, memory }
-    }
-}
 
 impl BasicSnippet for BagPeaks {
     fn inputs(&self) -> Vec<(DataType, String)> {
-        vec![(
-            DataType::List(Box::new(DataType::Digest)),
-            "*peaks".to_string(),
-        )]
+        let list_of_digests = DataType::List(Box::new(DataType::Digest));
+
+        vec![(list_of_digests, "*peaks".to_string())]
     }
 
     fn outputs(&self) -> Vec<(DataType, String)> {
@@ -49,66 +47,70 @@ impl BasicSnippet for BagPeaks {
         "tasmlib_mmr_bag_peaks".to_string()
     }
 
-    fn code(&self, _library: &mut crate::library::Library) -> Vec<LabelledInstruction> {
+    fn code(&self, _: &mut Library) -> Vec<LabelledInstruction> {
         let entrypoint = self.entrypoint();
 
-        let length_is_zero_label = format!("{entrypoint}_length_is_zero");
-        let length_is_not_zero_label = format!("{entrypoint}_length_is_not_zero");
-        let length_is_one_label = format!("{entrypoint}_length_is_one");
-        let length_is_not_zero_or_one = format!("{entrypoint}_length_is_not_zero_or_one");
-        let loop_label = format!("{entrypoint}_loop");
+        let length_is_zero = format!("{entrypoint}_length_is_zero");
+        let length_is_not_zero = format!("{entrypoint}_length_is_not_zero");
+        let length_is_one = format!("{entrypoint}_length_is_one");
+        let length_is_gt_one = format!("{entrypoint}_length_is_gt_one");
+        let bagging_loop = format!("{entrypoint}_loop");
+
+        let Digest(zero_digest) = bag_peaks(&[]);
 
         triton_asm!(
         // BEFORE: _ *peaks
-        // AFTER:  _ d4 d3 d2 d1 d0
+        // AFTER:  _ [bagged_peaks: Digest]
         {entrypoint}:
             dup 0 read_mem 1 pop 1
             // _ *peaks length
 
-            /* Verify that number of peaks does not exceed 63 */
             push {MAX_MMR_HEIGHT}
             dup 1
             lt
             assert
 
-            // special case 0
-            push 1 dup 1 push 0 eq // _ *peaks length 1 (length==0)
-            skiz call {length_is_zero_label}
-            skiz call {length_is_not_zero_label}
+            /* special case: length is 0 */
+            push 1
+            dup 1 push 0 eq
+            // _ *peaks length 1 (length==0)
 
-            // _ [digest_elements]
+            skiz call {length_is_zero}
+            skiz call {length_is_not_zero}
+
+            // _ [bagged_peaks: Digest]
             return
 
         // BEFORE: _ *peaks length 1
-        // AFTER:  _ d4 d3 d2 d1 d0 0
-        {length_is_zero_label}:
+        // AFTER:  _ [bagged_peaks: Digest] 0
+        {length_is_zero}:
             pop 3
-            push 0 push 0 push 0 push 0 push 0
-            push 1 push 0 push 0 push 0 push 0
-            // 0 0 0 0 0 1 0 0 0 0
-            sponge_init
-            sponge_absorb
-            sponge_squeeze
-            swap 5 pop 1
-            swap 5 pop 1
-            swap 5 pop 1
-            swap 5 pop 1
-            swap 5 pop 1
+
+            push {zero_digest[4]}
+            push {zero_digest[3]}
+            push {zero_digest[2]}
+            push {zero_digest[1]}
+            push {zero_digest[0]}
+            hint bag_of_no_peaks: Digest = stack[0..5]
+
             push 0
             return
 
         // BEFORE: _ *peaks length
-        // AFTER:  _ d4 d3 d2 d1 d0
-        {length_is_not_zero_label}:
-            // special case 1
-            push 1 dup 1 push 1 eq // _ *peaks length 1 length==1
-            skiz call {length_is_one_label}
-            skiz call {length_is_not_zero_or_one}
+        // AFTER:  _ [bagged_peaks: Digest]
+        {length_is_not_zero}:
+            /* special case: length is 1 */
+            push 1
+            dup 1 push 1 eq
+            // _ *peaks length 1 (length==1)
+
+            skiz call {length_is_one}
+            skiz call {length_is_gt_one}
             return
 
         // BEFORE: _ *peaks length 1
-        // AFTER:  _ d4 d3 d2 d1 d0 0
-        {length_is_one_label}:
+        // AFTER:  _ [bagged_peaks: Digest] 0
+        {length_is_one}:
             pop 2
 
             push {Digest::LEN} add
@@ -121,128 +123,120 @@ impl BasicSnippet for BagPeaks {
             return
 
         // BEFORE: _ *peaks length
-        // AFTER:  _ d4 d3 d2 d1 d0
-        {length_is_not_zero_or_one}:
-
+        // AFTER:  _ [bagged_peaks: Digest]
+        {length_is_gt_one}:
             /* Get pointer to last word of peaks list */
             push {Digest::LEN}
             mul
             // _ *peaks offset
 
-            push 0
-            swap 1
-            dup 2
+            dup 1
             add
-            // _ *peaks 0 *peaks[last]_lw
+            // _ *peaks *peaks[last]_lw
 
             read_mem {Digest::LEN}
-            // _ *peaks 0 [peaks[last]] *peaks[last-1]_lw
+            // _ *peaks [peaks[last]: Digest] *peaks[last-1]_lw
 
-            swap 6
-            pop 1
-            // _ *peaks *peaks[last-2]_lw [peaks[last]]
-            // _ *peaks *peaks[last-2]_lw [acc]
+            place 5
+            // _ *peaks *peaks[last-1]_lw [peaks[last]: Digest]
+            // _ *peaks *peaks[last-1]_lw [acc: Digest]
 
-            call {loop_label}
-            // *peaks *peaks [acc]
-            // *peaks *peaks d4 d3 d2 d1 d0
+            call {bagging_loop}
+            // *peaks *peaks [acc: Digest]
+            // *peaks *peaks [bagged_peaks: Digest]
 
-            swap 2 // *peaks *peaks d4 d3 d0 d1 d2
-            swap 4 // *peaks *peaks d2 d3 d0 d1 d4
-            swap 6 // d4 *peaks d2 d3 d0 d1 *peaks
-            pop 1  // d4 *peaks d2 d3 d0 d1
-            swap 2 // d4 *peaks d2 d1 d0 d3
-            swap 4 // d4 d3 d2 d1 d0 *peaks
-            pop 1  // d4 d3 d2 d1 d0
+            pick 6
+            pick 6
+            pop 2
 
             return
 
-        // INVARIANT: _ *peaks *peaks[i]_lw [acc]
-        {loop_label}:
-            // evaluate termination condition
-            // _ *peaks *peaks[i]_lw [acc]
-
-            dup 5
+        // INVARIANT: _ *peaks *peaks[i]_lw [acc: Digest]
+        {bagging_loop}:
+            pick 5
             read_mem {Digest::LEN}
-            swap 11
-            pop 1
-            // _*peaks *peaks[i-1] [acc] [peaks[i - 1]]
+            place 10
+            // _*peaks *peaks[i-1]_lw [acc: Digest] [peaks[i - 1]: Digest]
 
             hash
-            // _*peaks *peaks[i-1] [acc']
+            // _*peaks *peaks[i-1]_lw [acc': Digest]
 
             recurse_or_return
         )
     }
-}
 
-impl Function for BagPeaks {
-    fn rust_shadow(
-        &self,
-        stack: &mut Vec<BFieldElement>,
-        memory: &mut HashMap<BFieldElement, BFieldElement>,
-    ) {
-        let address = stack.pop().unwrap();
-        let length = memory.get(&address).unwrap().value() as usize;
-        let safety_offset = BFieldElement::new(LIST_METADATA_SIZE as u64);
-
-        let mut bfes: Vec<BFieldElement> = Vec::with_capacity(length * tip5::Digest::LEN);
-
-        for i in 0..length * tip5::Digest::LEN {
-            let element_index = address + safety_offset + BFieldElement::new(i as u64);
-            bfes.push(*memory.get(&(element_index)).unwrap());
-        }
-
-        let peaks = bfes
-            .chunks(5)
-            .map(|ch| Digest::new(ch.try_into().unwrap()))
-            .collect_vec();
-
-        let bag = bag_peaks(&peaks);
-
-        let mut bag_bfes = bag.values().to_vec();
-
-        while let Some(element) = bag_bfes.pop() {
-            stack.push(element);
-        }
-    }
-
-    fn pseudorandom_initial_state(
-        &self,
-        seed: [u8; 32],
-        bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
-    ) -> FunctionInitialState {
-        match bench_case {
-            Some(BenchmarkCase::CommonCase) => self.input_state(30),
-            Some(BenchmarkCase::WorstCase) => self.input_state(60),
-            None => {
-                let mut rng = StdRng::from_seed(seed);
-                self.input_state(rng.gen_range(0..=63))
-            }
-        }
-    }
-
-    fn corner_case_initial_states(&self) -> Vec<FunctionInitialState> {
-        vec![
-            self.input_state(0),
-            self.input_state(1),
-            self.input_state(2),
-            self.input_state(3),
-            self.input_state(4),
-            self.input_state(5),
-            self.input_state(63),
-        ]
+    fn sign_offs(&self) -> HashMap<Reviewer, SignOffFingerprint> {
+        let mut sign_offs = HashMap::new();
+        sign_offs.insert(Reviewer("ferdinand"), 0xaf79abb21cb46bf.into());
+        sign_offs
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::BagPeaks;
+    use std::collections::HashMap;
+
+    use rand::prelude::*;
+    use twenty_first::math::other::random_elements;
+
+    use super::*;
+    use crate::memory::encode_to_memory;
+    use crate::pop_encodable;
+    use crate::push_encodable;
+    use crate::snippet_bencher::BenchmarkCase;
+    use crate::traits::function::Function;
+    use crate::traits::function::FunctionInitialState;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
 
+    impl BagPeaks {
+        fn set_up_initial_state(&self, num_peaks: usize) -> FunctionInitialState {
+            let address = random();
+            let mut stack = self.init_stack_for_isolated_run();
+            push_encodable(&mut stack, &address);
+
+            let mut memory = HashMap::new();
+            encode_to_memory(&mut memory, address, &random_elements::<Digest>(num_peaks));
+
+            FunctionInitialState { stack, memory }
+        }
+    }
+
+    impl Function for BagPeaks {
+        fn rust_shadow(
+            &self,
+            stack: &mut Vec<BFieldElement>,
+            memory: &mut HashMap<BFieldElement, BFieldElement>,
+        ) {
+            let address = pop_encodable(stack);
+            let peaks = *Vec::<Digest>::decode_from_memory(memory, address).unwrap();
+            push_encodable(stack, &bag_peaks(&peaks));
+        }
+
+        fn pseudorandom_initial_state(
+            &self,
+            seed: [u8; 32],
+            bench_case: Option<BenchmarkCase>,
+        ) -> FunctionInitialState {
+            let num_peaks = match bench_case {
+                Some(BenchmarkCase::CommonCase) => 30,
+                Some(BenchmarkCase::WorstCase) => 60,
+                None => StdRng::from_seed(seed).gen_range(0..=63),
+            };
+
+            self.set_up_initial_state(num_peaks)
+        }
+
+        fn corner_case_initial_states(&self) -> Vec<FunctionInitialState> {
+            (0..=5)
+                .chain([63])
+                .map(|num_peaks| self.set_up_initial_state(num_peaks))
+                .collect()
+        }
+    }
+
     #[test]
-    fn prop() {
+    fn rust_shadow() {
         ShadowedFunction::new(BagPeaks).test()
     }
 }
@@ -254,7 +248,7 @@ mod benches {
     use crate::traits::rust_shadow::RustShadow;
 
     #[test]
-    fn bag_peaks_benchmark() {
+    fn benchmark() {
         ShadowedFunction::new(BagPeaks).bench();
     }
 }

@@ -2,10 +2,10 @@
   {
     "name": "tasmlib_mmr_bag_peaks",
     "benchmark_result": {
-      "clock_cycle_count": 217,
-      "hash_table_height": 264,
+      "clock_cycle_count": 181,
+      "hash_table_height": 234,
       "u32_table_height": 8,
-      "op_stack_table_height": 380,
+      "op_stack_table_height": 320,
       "ram_table_height": 151
     },
     "case": "CommonCase"
@@ -13,10 +13,10 @@
   {
     "name": "tasmlib_mmr_bag_peaks",
     "benchmark_result": {
-      "clock_cycle_count": 397,
-      "hash_table_height": 444,
+      "clock_cycle_count": 331,
+      "hash_table_height": 414,
       "u32_table_height": 8,
-      "op_stack_table_height": 740,
+      "op_stack_table_height": 620,
       "ram_table_height": 301
     },
     "case": "WorstCase"
