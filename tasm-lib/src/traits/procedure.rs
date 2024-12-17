@@ -1,6 +1,4 @@
-use std::cell::RefCell;
 use std::collections::HashMap;
-use std::rc::Rc;
 
 use rand::prelude::*;
 use triton_vm::prelude::*;
@@ -82,20 +80,18 @@ impl From<ProcedureInitialState> for InitVmState {
 }
 
 pub struct ShadowedProcedure<P: Procedure + 'static> {
-    procedure: Rc<RefCell<P>>,
+    procedure: P,
 }
 
 impl<P: Procedure + 'static> ShadowedProcedure<P> {
     pub fn new(procedure: P) -> Self {
-        Self {
-            procedure: Rc::new(RefCell::new(procedure)),
-        }
+        Self { procedure }
     }
 }
 
 impl<P: Procedure + 'static> RustShadow for ShadowedProcedure<P> {
-    fn inner(&self) -> Rc<RefCell<dyn BasicSnippet>> {
-        self.procedure.clone()
+    fn inner(&self) -> &dyn BasicSnippet {
+        &self.procedure
     }
 
     fn rust_shadow_wrapper(
@@ -107,7 +103,6 @@ impl<P: Procedure + 'static> RustShadow for ShadowedProcedure<P> {
         sponge: &mut Option<Tip5>,
     ) -> Vec<BFieldElement> {
         self.procedure
-            .borrow()
             .rust_shadow(stack, memory, nondeterminism, stdin, sponge)
     }
 
@@ -115,7 +110,7 @@ impl<P: Procedure + 'static> RustShadow for ShadowedProcedure<P> {
         let num_states = 5;
         let seed: [u8; 32] = thread_rng().gen();
         let mut rng = StdRng::from_seed(seed);
-        let procedure = &self.procedure.borrow();
+        let procedure = &self.procedure;
 
         for corner_case in procedure.corner_case_initial_states().into_iter() {
             self.test_initial_state(corner_case);
@@ -146,12 +141,11 @@ impl<P: Procedure + 'static> RustShadow for ShadowedProcedure<P> {
                 sponge,
             } = self
                 .procedure
-                .borrow()
                 .pseudorandom_initial_state(rng.gen(), Some(bench_case));
-            let program = link_for_isolated_run(self.procedure.clone());
+            let program = link_for_isolated_run(&self.procedure);
             let benchmark = execute_bench(&program, &stack, public_input, nondeterminism, sponge);
             let benchmark = NamedBenchmarkResult {
-                name: self.procedure.borrow().entrypoint(),
+                name: self.procedure.entrypoint(),
                 benchmark_result: benchmark,
                 case: bench_case,
             };

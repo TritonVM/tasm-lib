@@ -143,8 +143,7 @@ mod test {
         let shadow = ShadowedProcedure::new(SqueezeRepeatedly);
         let num_states = 15;
         let mut rng = thread_rng();
-        let procedure = &shadow.inner();
-        let entrypoint = procedure.borrow().entrypoint();
+        let entrypoint = shadow.inner().entrypoint();
 
         for _ in 0..num_states {
             let seed: [u8; 32] = rng.gen();

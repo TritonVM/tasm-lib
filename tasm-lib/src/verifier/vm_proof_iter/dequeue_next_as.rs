@@ -371,9 +371,7 @@ impl BasicSnippet for DequeueNextAs {
 
 #[cfg(test)]
 mod test {
-    use std::cell::RefCell;
     use std::collections::HashMap;
-    use std::rc::Rc;
 
     use arbitrary::Arbitrary;
     use arbitrary::Unstructured;
@@ -670,7 +668,7 @@ mod test {
     fn disallow_too_big_dynamically_sized_proof_item() {
         let dequeue_next_as = DequeueNextAs::new(ProofItemVariant::MasterMainTableRows);
         let initial_state = initial_state_with_too_big_master_table_rows();
-        let code = link_for_isolated_run(Rc::new(RefCell::new(dequeue_next_as)));
+        let code = link_for_isolated_run(&dequeue_next_as);
         let tvm_result = execute_with_terminal_state(
             Program::new(&code),
             &[],
@@ -713,7 +711,7 @@ mod test {
     fn disallow_trailing_zeros_in_xfe_poly_encoding() {
         let dequeue_next_as = DequeueNextAs::new(ProofItemVariant::FriPolynomial);
         let initial_state = initial_state_with_trailing_zeros_in_xfe_poly_encoding();
-        let code = link_for_isolated_run(Rc::new(RefCell::new(dequeue_next_as)));
+        let code = link_for_isolated_run(&dequeue_next_as);
         let tvm_result = execute_with_terminal_state(
             Program::new(&code),
             &[],

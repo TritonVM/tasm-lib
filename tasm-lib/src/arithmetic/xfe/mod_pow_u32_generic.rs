@@ -145,9 +145,6 @@ impl BasicSnippet for XfeModPowU32Generic {
 
 #[cfg(test)]
 pub mod tests {
-    use std::cell::RefCell;
-    use std::rc::Rc;
-
     use itertools::Itertools;
     use rand::prelude::*;
     use triton_vm::prelude::*;
@@ -225,7 +222,7 @@ pub mod tests {
         let bfe_14 = BFieldElement::new(14);
         let xfe_14 = XFieldElement::new([bfe_14, bfe_14, bfe_14]);
         let xfe_14: Vec<_> = xfe_14.coefficients.into_iter().rev().collect();
-        let code = link_for_isolated_run(Rc::new(RefCell::new(XfeModPowU32Generic)));
+        let code = link_for_isolated_run(&XfeModPowU32Generic);
 
         for exponent in [
             1u64 << 32,

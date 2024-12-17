@@ -4,6 +4,7 @@ use std::fmt::Formatter;
 use std::hash::Hash;
 use std::hash::Hasher;
 
+use num_traits::ConstZero;
 use num_traits::Zero;
 use triton_vm::isa::instruction::AnInstruction;
 use triton_vm::isa::op_stack::NUM_OP_STACK_REGISTERS;
@@ -11,6 +12,7 @@ use triton_vm::prelude::*;
 
 use crate::data_type::DataType;
 use crate::library::Library;
+use crate::push_encodable;
 
 /// ### Dyn-Compatibility
 ///
@@ -116,23 +118,21 @@ pub trait BasicSnippet {
     fn init_stack_for_isolated_run(&self) -> Vec<BFieldElement> {
         let code = self.link_for_isolated_run();
         let program = Program::new(&code);
-        let program_digest = program.hash();
-        [
-            program_digest.reversed().values().to_vec(),
-            vec![BFieldElement::zero(); NUM_OP_STACK_REGISTERS - Digest::LEN],
-        ]
-        .concat()
+
+        let mut stack = vec![];
+        push_encodable(&mut stack, &program.hash());
+        stack.resize(NUM_OP_STACK_REGISTERS, BFieldElement::ZERO);
+
+        stack
     }
 
     fn stack_diff(&self) -> isize {
-        let mut diff = 0isize;
-        for (dt, _name) in self.inputs() {
-            diff -= dt.stack_size() as isize;
-        }
-        for (dt, _name) in self.outputs() {
-            diff += dt.stack_size() as isize;
-        }
-        diff
+        let io_size = |io: Vec<(DataType, _)>| -> isize {
+            let size = io.into_iter().map(|(ty, _)| ty.stack_size()).sum::<usize>();
+            size.try_into().unwrap()
+        };
+
+        io_size(self.outputs()) - io_size(self.inputs())
     }
 
     /// Contains an entry for every sign off.

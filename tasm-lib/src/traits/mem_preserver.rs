@@ -1,7 +1,5 @@
-use std::cell::RefCell;
 use std::collections::HashMap;
 use std::collections::VecDeque;
-use std::rc::Rc;
 
 use rand::prelude::*;
 use triton_vm::prelude::*;
@@ -72,14 +70,12 @@ impl From<MemPreserverInitialState> for InitVmState {
 }
 
 pub struct ShadowedMemPreserver<T: MemPreserver + 'static> {
-    mem_preserver: Rc<RefCell<T>>,
+    mem_preserver: T,
 }
 
 impl<T: MemPreserver + 'static> ShadowedMemPreserver<T> {
-    pub fn new(algorithm: T) -> Self {
-        Self {
-            mem_preserver: Rc::new(RefCell::new(algorithm)),
-        }
+    pub fn new(mem_preserver: T) -> Self {
+        Self { mem_preserver }
     }
 }
 
@@ -87,8 +83,8 @@ impl<T> RustShadow for ShadowedMemPreserver<T>
 where
     T: MemPreserver + 'static,
 {
-    fn inner(&self) -> Rc<RefCell<dyn BasicSnippet>> {
-        self.mem_preserver.clone()
+    fn inner(&self) -> &dyn BasicSnippet {
+        &self.mem_preserver
     }
 
     fn rust_shadow_wrapper(
@@ -99,7 +95,7 @@ where
         memory: &mut HashMap<BFieldElement, BFieldElement>,
         sponge: &mut Option<Tip5>,
     ) -> Vec<BFieldElement> {
-        self.mem_preserver.borrow().rust_shadow(
+        self.mem_preserver.rust_shadow(
             stack,
             memory,
             nondeterminism.individual_tokens.to_owned().into(),
@@ -110,7 +106,7 @@ where
     }
 
     fn test(&self) {
-        for corner_case in self.mem_preserver.borrow().corner_case_initial_states() {
+        for corner_case in self.mem_preserver.corner_case_initial_states() {
             let stdin: Vec<_> = corner_case.public_input.into();
 
             test_rust_equivalence_given_complete_state(
@@ -133,7 +129,6 @@ where
                 nondeterminism: non_determinism,
             } = self
                 .mem_preserver
-                .borrow()
                 .pseudorandom_initial_state(rng.gen(), None);
 
             let stdin: Vec<_> = public_input.into();
@@ -165,9 +160,8 @@ where
                 nondeterminism: non_determinism,
             } = self
                 .mem_preserver
-                .borrow()
                 .pseudorandom_initial_state(rng.gen(), Some(bench_case));
-            let program = link_for_isolated_run(self.mem_preserver.clone());
+            let program = link_for_isolated_run(&self.mem_preserver);
             let benchmark = execute_bench(
                 &program,
                 &stack,
@@ -176,7 +170,7 @@ where
                 sponge_state,
             );
             let benchmark = NamedBenchmarkResult {
-                name: self.mem_preserver.borrow().entrypoint(),
+                name: self.mem_preserver.entrypoint(),
                 benchmark_result: benchmark,
                 case: bench_case,
             };

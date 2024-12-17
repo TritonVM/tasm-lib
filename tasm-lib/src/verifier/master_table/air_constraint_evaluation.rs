@@ -295,9 +295,7 @@ pub struct AirConstraintSnippetInputs {
 
 #[cfg(test)]
 mod tests {
-    use std::cell::RefCell;
     use std::collections::HashMap;
-    use std::rc::Rc;
 
     use arbitrary::Arbitrary;
     use arbitrary::Unstructured;
@@ -627,7 +625,7 @@ mod tests {
         ) -> (Vec<XFieldElement>, BFieldElement) {
             let (init_memory, stack) = self.prepare_tvm_memory_and_stack(input_values);
 
-            let code = link_for_isolated_run(Rc::new(RefCell::new(self.to_owned())));
+            let code = link_for_isolated_run(self);
             let final_state = execute_test(
                 &code,
                 &mut stack.clone(),

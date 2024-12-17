@@ -389,7 +389,7 @@ pub fn verify_stack_growth<T: RustShadow>(
     final_stack: &[BFieldElement],
 ) {
     let observed_stack_growth: isize = final_stack.len() as isize - initial_stack.len() as isize;
-    let expected_stack_growth: isize = shadowed_snippet.inner().borrow().stack_diff();
+    let expected_stack_growth: isize = shadowed_snippet.inner().stack_diff();
     assert_eq!(
         expected_stack_growth,
         observed_stack_growth,
@@ -417,7 +417,6 @@ pub fn test_rust_equivalence_given_complete_state<T: RustShadow>(
 ) -> VMState {
     shadowed_snippet
         .inner()
-        .borrow()
         .assert_all_sign_offs_are_up_to_date();
 
     let init_stack = stack.to_vec();
@@ -460,12 +459,12 @@ pub fn link_and_run_tasm_for_test<T: RustShadow>(
     nondeterminism: NonDeterminism,
     maybe_sponge: Option<Tip5>,
 ) -> VMState {
-    let code = snippet_struct.inner().borrow().link_for_isolated_run();
+    let code = snippet_struct.inner().link_for_isolated_run();
 
     execute_test(
         &code,
         stack,
-        snippet_struct.inner().borrow().stack_diff(),
+        snippet_struct.inner().stack_diff(),
         std_in,
         nondeterminism,
         maybe_sponge,
@@ -546,7 +545,7 @@ fn instruction_error_from_failing_code<S: RustShadow>(
         "Failed to fail: Rust-shadowing must panic in negative test case"
     );
 
-    let code = snippet.inner().borrow().link_for_isolated_run();
+    let code = snippet.inner().link_for_isolated_run();
     let tvm_result = execute_with_terminal_state(
         Program::new(&code),
         &init_state.public_input,

@@ -1198,7 +1198,6 @@ impl BasicSnippet for StarkVerify {
 
 #[cfg(test)]
 pub mod tests {
-
     use std::collections::HashMap;
 
     use num_traits::ConstZero;
@@ -1602,9 +1601,6 @@ pub mod tests {
 
 #[cfg(test)]
 mod benches {
-    use std::cell::RefCell;
-    use std::rc::Rc;
-
     use benches::tests::factorial_program_with_io;
     use benches::tests::prove_and_get_non_determinism_and_claim;
     use num_traits::ConstZero;
@@ -1774,7 +1770,7 @@ mod benches {
             vec![claim_pointer, default_proof_pointer],
         ]
         .concat();
-        let code = link_for_isolated_run(Rc::new(RefCell::new(snippet.clone())));
+        let code = link_for_isolated_run(&snippet);
         let benchmark = execute_bench(&code, &init_stack, vec![], non_determinism.clone(), None);
         let benchmark = NamedBenchmarkResult {
             name: format!(

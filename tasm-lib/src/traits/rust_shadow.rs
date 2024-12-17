@@ -1,6 +1,4 @@
-use std::cell::RefCell;
 use std::collections::HashMap;
-use std::rc::Rc;
 
 use triton_vm::prelude::*;
 
@@ -8,7 +6,7 @@ use super::basic_snippet::BasicSnippet;
 use crate::prelude::Tip5;
 
 pub trait RustShadow {
-    fn inner(&self) -> Rc<RefCell<dyn BasicSnippet>>;
+    fn inner(&self) -> &dyn BasicSnippet;
 
     fn rust_shadow_wrapper(
         &self,

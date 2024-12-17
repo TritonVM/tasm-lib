@@ -1,6 +1,4 @@
-use std::cell::RefCell;
 use std::collections::HashMap;
-use std::rc::Rc;
 
 use rand::prelude::*;
 use triton_vm::prelude::*;
@@ -88,14 +86,12 @@ impl From<AlgorithmInitialState> for InitVmState {
 }
 
 pub struct ShadowedAlgorithm<T: Algorithm + 'static> {
-    algorithm: Rc<RefCell<T>>,
+    algorithm: T,
 }
 
 impl<T: Algorithm + 'static> ShadowedAlgorithm<T> {
     pub fn new(algorithm: T) -> Self {
-        Self {
-            algorithm: Rc::new(RefCell::new(algorithm)),
-        }
+        Self { algorithm }
     }
 }
 
@@ -103,8 +99,8 @@ impl<T> RustShadow for ShadowedAlgorithm<T>
 where
     T: Algorithm + 'static,
 {
-    fn inner(&self) -> Rc<RefCell<dyn BasicSnippet>> {
-        self.algorithm.clone()
+    fn inner(&self) -> &dyn BasicSnippet {
+        &self.algorithm
     }
 
     fn rust_shadow_wrapper(
@@ -115,14 +111,12 @@ where
         memory: &mut HashMap<BFieldElement, BFieldElement>,
         _sponge: &mut Option<Tip5>,
     ) -> Vec<BFieldElement> {
-        self.algorithm
-            .borrow()
-            .rust_shadow(stack, memory, nondeterminism);
+        self.algorithm.rust_shadow(stack, memory, nondeterminism);
         vec![]
     }
 
     fn test(&self) {
-        for corner_case in self.algorithm.borrow().corner_case_initial_states() {
+        for corner_case in self.algorithm.corner_case_initial_states() {
             let stdin = vec![];
             test_rust_equivalence_given_complete_state(
                 self,
@@ -142,10 +136,7 @@ where
             let AlgorithmInitialState {
                 stack,
                 nondeterminism,
-            } = self
-                .algorithm
-                .borrow()
-                .pseudorandom_initial_state(seed, None);
+            } = self.algorithm.pseudorandom_initial_state(seed, None);
 
             let stdin = vec![];
             test_rust_equivalence_given_complete_state(
@@ -174,12 +165,11 @@ where
                 nondeterminism,
             } = self
                 .algorithm
-                .borrow()
                 .pseudorandom_initial_state(rng.gen(), Some(bench_case));
-            let program = link_for_isolated_run(self.algorithm.clone());
+            let program = link_for_isolated_run(&self.algorithm);
             let benchmark = execute_bench(&program, &stack, vec![], nondeterminism, None);
             let benchmark = NamedBenchmarkResult {
-                name: self.algorithm.borrow().entrypoint(),
+                name: self.algorithm.entrypoint(),
                 benchmark_result: benchmark,
                 case: bench_case,
             };

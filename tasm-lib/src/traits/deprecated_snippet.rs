@@ -241,8 +241,6 @@ impl<S: DeprecatedSnippet> BasicSnippet for S {
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use std::cell::RefCell;
-    use std::rc::Rc;
     use std::str::FromStr;
 
     use itertools::Itertools;
@@ -264,8 +262,8 @@ pub(crate) mod tests {
     }
 
     impl<S: DeprecatedSnippet + Clone + 'static> RustShadow for DeprecatedSnippetWrapper<S> {
-        fn inner(&self) -> Rc<RefCell<dyn BasicSnippet>> {
-            Rc::new(RefCell::new(self.deprecated_snippet.clone()))
+        fn inner(&self) -> &dyn BasicSnippet {
+            &self.deprecated_snippet
         }
 
         fn rust_shadow_wrapper(

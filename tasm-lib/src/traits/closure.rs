@@ -1,5 +1,3 @@
-use std::cell::RefCell;
-use std::rc::Rc;
 
 use rand::prelude::*;
 use triton_vm::prelude::*;
@@ -43,20 +41,18 @@ pub trait Closure: BasicSnippet {
 }
 
 pub struct ShadowedClosure<C: Closure + 'static> {
-    pub closure: Rc<RefCell<C>>,
+    closure: C,
 }
 
 impl<C: Closure + 'static> ShadowedClosure<C> {
     pub fn new(closure: C) -> Self {
-        Self {
-            closure: Rc::new(RefCell::new(closure)),
-        }
+        Self { closure }
     }
 }
 
 impl<C: Closure + 'static> RustShadow for ShadowedClosure<C> {
-    fn inner(&self) -> Rc<RefCell<dyn BasicSnippet>> {
-        self.closure.clone()
+    fn inner(&self) -> &dyn BasicSnippet {
+        &self.closure
     }
 
     fn rust_shadow_wrapper(
@@ -67,7 +63,7 @@ impl<C: Closure + 'static> RustShadow for ShadowedClosure<C> {
         _memory: &mut std::collections::HashMap<BFieldElement, BFieldElement>,
         _sponge: &mut Option<Tip5>,
     ) -> Vec<BFieldElement> {
-        self.closure.borrow().rust_shadow(stack);
+        self.closure.rust_shadow(stack);
         vec![]
     }
 
@@ -76,7 +72,7 @@ impl<C: Closure + 'static> RustShadow for ShadowedClosure<C> {
         let mut rng = thread_rng();
 
         // First test corner-cases as they're easier to debug on failure
-        for init_stack_corner_case in self.closure.borrow().corner_case_initial_states() {
+        for init_stack_corner_case in self.closure.corner_case_initial_states() {
             let stdin = vec![];
             test_rust_equivalence_given_complete_state(
                 self,
@@ -90,7 +86,7 @@ impl<C: Closure + 'static> RustShadow for ShadowedClosure<C> {
 
         for _ in 0..num_states {
             let seed: [u8; 32] = rng.gen();
-            let stack = self.closure.borrow().pseudorandom_initial_state(seed, None);
+            let stack = self.closure.pseudorandom_initial_state(seed, None);
 
             let stdin = vec![];
             test_rust_equivalence_given_complete_state(
@@ -116,13 +112,12 @@ impl<C: Closure + 'static> RustShadow for ShadowedClosure<C> {
         for bench_case in [BenchmarkCase::CommonCase, BenchmarkCase::WorstCase] {
             let stack = self
                 .closure
-                .borrow()
                 .pseudorandom_initial_state(rng.gen(), Some(bench_case));
-            let program = link_for_isolated_run(self.closure.clone());
+            let program = link_for_isolated_run(&self.closure);
             let benchmark =
                 execute_bench(&program, &stack, vec![], NonDeterminism::new(vec![]), None);
             let benchmark = NamedBenchmarkResult {
-                name: self.closure.borrow().entrypoint(),
+                name: self.closure.entrypoint(),
                 benchmark_result: benchmark,
                 case: bench_case,
             };

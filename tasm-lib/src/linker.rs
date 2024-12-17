@@ -1,19 +1,14 @@
-use std::cell::RefCell;
-use std::rc::Rc;
-
 use triton_vm::prelude::*;
 
-use crate::library::Library;
-use crate::prelude::Tip5;
+use crate::prelude::*;
 use crate::prove_and_verify;
 use crate::snippet_bencher::BenchmarkResult;
-use crate::traits::basic_snippet::BasicSnippet;
 
-pub fn link_for_isolated_run<T: BasicSnippet>(snippet: Rc<RefCell<T>>) -> Vec<LabelledInstruction> {
-    let mut snippet_state = Library::new();
-    let entrypoint = snippet.borrow().entrypoint();
-    let function_body = snippet.borrow().annotated_code(&mut snippet_state);
-    let library_code = snippet_state.all_imports();
+pub fn link_for_isolated_run<T: BasicSnippet>(snippet: &T) -> Vec<LabelledInstruction> {
+    let mut library = Library::new();
+    let entrypoint = snippet.entrypoint();
+    let function_body = snippet.annotated_code(&mut library);
+    let library_code = library.all_imports();
 
     // The TASM code is always run through a function call, so the 1st instruction
     // is a call to the function in question.

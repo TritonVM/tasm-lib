@@ -149,9 +149,7 @@ impl BasicSnippet for DivideOutZerofiers {
 
 #[cfg(test)]
 mod tests {
-    use std::cell::RefCell;
     use std::collections::HashMap;
-    use std::rc::Rc;
 
     use itertools::Itertools;
     use rand::prelude::*;
@@ -258,7 +256,7 @@ mod tests {
                 ],
             ]
             .concat();
-            let code = link_for_isolated_run(Rc::new(RefCell::new(self.to_owned())));
+            let code = link_for_isolated_run(self);
             let final_state = execute_test(
                 &code,
                 &mut stack.clone(),
