@@ -6,7 +6,6 @@ use triton_vm::prelude::*;
 use super::basic_snippet::BasicSnippet;
 use super::rust_shadow::RustShadow;
 use crate::linker::execute_bench;
-use crate::linker::link_for_isolated_run;
 use crate::prelude::Tip5;
 use crate::snippet_bencher::write_benchmarks;
 use crate::snippet_bencher::BenchmarkCase;
@@ -133,7 +132,7 @@ where
             let AccessorInitialState { stack, memory } = self
                 .accessor
                 .pseudorandom_initial_state(rng.gen(), Some(bench_case));
-            let program = link_for_isolated_run(&self.accessor);
+            let program = self.accessor.link_for_isolated_run();
             let nd = NonDeterminism::default().with_ram(memory);
             let benchmark = execute_bench(&program, &stack, vec![], nd, None);
             let benchmark = NamedBenchmarkResult {

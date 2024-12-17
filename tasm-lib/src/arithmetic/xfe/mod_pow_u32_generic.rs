@@ -153,7 +153,6 @@ pub mod tests {
     use super::*;
     use crate::empty_stack;
     use crate::execute_with_terminal_state;
-    use crate::linker::link_for_isolated_run;
     use crate::snippet_bencher::BenchmarkCase;
     use crate::traits::closure::Closure;
     use crate::traits::closure::ShadowedClosure;
@@ -222,7 +221,7 @@ pub mod tests {
         let bfe_14 = BFieldElement::new(14);
         let xfe_14 = XFieldElement::new([bfe_14, bfe_14, bfe_14]);
         let xfe_14: Vec<_> = xfe_14.coefficients.into_iter().rev().collect();
-        let code = link_for_isolated_run(&XfeModPowU32Generic);
+        let code = XfeModPowU32Generic.link_for_isolated_run();
 
         for exponent in [
             1u64 << 32,

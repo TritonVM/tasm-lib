@@ -310,7 +310,6 @@ mod tests {
     use super::*;
     use crate::execute_test;
     use crate::library::STATIC_MEMORY_LAST_ADDRESS;
-    use crate::linker::link_for_isolated_run;
     use crate::memory::encode_to_memory;
     use crate::rust_shadowing_helper_functions::array::array_get;
     use crate::rust_shadowing_helper_functions::array::insert_as_array;
@@ -625,9 +624,8 @@ mod tests {
         ) -> (Vec<XFieldElement>, BFieldElement) {
             let (init_memory, stack) = self.prepare_tvm_memory_and_stack(input_values);
 
-            let code = link_for_isolated_run(self);
             let final_state = execute_test(
-                &code,
+                &self.link_for_isolated_run(),
                 &mut stack.clone(),
                 self.stack_diff(),
                 vec![],

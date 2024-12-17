@@ -392,7 +392,6 @@ mod test {
     use super::*;
     use crate::empty_stack;
     use crate::execute_with_terminal_state;
-    use crate::linker::link_for_isolated_run;
     use crate::memory::encode_to_memory;
     use crate::rust_shadowing_helper_functions::dyn_malloc::dynamic_allocator;
     use crate::snippet_bencher::BenchmarkCase;
@@ -668,9 +667,8 @@ mod test {
     fn disallow_too_big_dynamically_sized_proof_item() {
         let dequeue_next_as = DequeueNextAs::new(ProofItemVariant::MasterMainTableRows);
         let initial_state = initial_state_with_too_big_master_table_rows();
-        let code = link_for_isolated_run(&dequeue_next_as);
         let tvm_result = execute_with_terminal_state(
-            Program::new(&code),
+            Program::new(&dequeue_next_as.link_for_isolated_run()),
             &[],
             &initial_state.stack,
             &initial_state.nondeterminism,
@@ -711,7 +709,7 @@ mod test {
     fn disallow_trailing_zeros_in_xfe_poly_encoding() {
         let dequeue_next_as = DequeueNextAs::new(ProofItemVariant::FriPolynomial);
         let initial_state = initial_state_with_trailing_zeros_in_xfe_poly_encoding();
-        let code = link_for_isolated_run(&dequeue_next_as);
+        let code = dequeue_next_as.link_for_isolated_run();
         let tvm_result = execute_with_terminal_state(
             Program::new(&code),
             &[],

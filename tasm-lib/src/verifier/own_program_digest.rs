@@ -44,7 +44,6 @@ impl BasicSnippet for OwnProgramDigest {
 mod tests {
     use super::*;
     use crate::execute_with_terminal_state;
-    use crate::linker::link_for_isolated_run;
 
     #[derive(Debug, Clone, Eq, PartialEq)]
     struct ProgramSetup {
@@ -55,7 +54,7 @@ mod tests {
 
     fn test_program() -> ProgramSetup {
         let snippet = OwnProgramDigest;
-        let program = Program::new(&link_for_isolated_run(&snippet));
+        let program = Program::new(&snippet.link_for_isolated_run());
         let program_digest = program.hash();
         let init_stack = snippet.init_stack_for_isolated_run();
 

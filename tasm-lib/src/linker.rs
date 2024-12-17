@@ -4,23 +4,9 @@ use crate::prelude::*;
 use crate::prove_and_verify;
 use crate::snippet_bencher::BenchmarkResult;
 
+#[deprecated(since = "0.44.0", note = "Use `snippet.link_for_isolated_run` instead")]
 pub fn link_for_isolated_run<T: BasicSnippet>(snippet: &T) -> Vec<LabelledInstruction> {
-    let mut library = Library::new();
-    let entrypoint = snippet.entrypoint();
-    let function_body = snippet.annotated_code(&mut library);
-    let library_code = library.all_imports();
-
-    // The TASM code is always run through a function call, so the 1st instruction
-    // is a call to the function in question.
-    let code = triton_asm!(
-        call {entrypoint}
-        halt
-
-        {&function_body}
-        {&library_code}
-    );
-
-    code
+    snippet.link_for_isolated_run()
 }
 
 /// Execute a Triton-VM program and return its output and execution trace length

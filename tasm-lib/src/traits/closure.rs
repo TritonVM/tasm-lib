@@ -1,11 +1,9 @@
-
 use rand::prelude::*;
 use triton_vm::prelude::*;
 
 use super::basic_snippet::BasicSnippet;
 use super::rust_shadow::RustShadow;
 use crate::linker::execute_bench;
-use crate::linker::link_for_isolated_run;
 use crate::prelude::Tip5;
 use crate::snippet_bencher::write_benchmarks;
 use crate::snippet_bencher::BenchmarkCase;
@@ -113,7 +111,7 @@ impl<C: Closure + 'static> RustShadow for ShadowedClosure<C> {
             let stack = self
                 .closure
                 .pseudorandom_initial_state(rng.gen(), Some(bench_case));
-            let program = link_for_isolated_run(&self.closure);
+            let program = self.closure.link_for_isolated_run();
             let benchmark =
                 execute_bench(&program, &stack, vec![], NonDeterminism::new(vec![]), None);
             let benchmark = NamedBenchmarkResult {

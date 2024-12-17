@@ -7,7 +7,6 @@ use triton_vm::prelude::*;
 use super::basic_snippet::BasicSnippet;
 use super::rust_shadow::RustShadow;
 use crate::linker::execute_bench;
-use crate::linker::link_for_isolated_run;
 use crate::snippet_bencher::write_benchmarks;
 use crate::snippet_bencher::BenchmarkCase;
 use crate::snippet_bencher::NamedBenchmarkResult;
@@ -161,7 +160,7 @@ where
             } = self
                 .mem_preserver
                 .pseudorandom_initial_state(rng.gen(), Some(bench_case));
-            let program = link_for_isolated_run(&self.mem_preserver);
+            let program = self.mem_preserver.link_for_isolated_run();
             let benchmark = execute_bench(
                 &program,
                 &stack,

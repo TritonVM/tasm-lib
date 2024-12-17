@@ -1608,7 +1608,6 @@ mod benches {
     use super::*;
     use crate::generate_full_profile;
     use crate::linker::execute_bench;
-    use crate::linker::link_for_isolated_run;
     use crate::memory::encode_to_memory;
     use crate::snippet_bencher::write_benchmarks;
     use crate::snippet_bencher::BenchmarkCase;
@@ -1770,7 +1769,7 @@ mod benches {
             vec![claim_pointer, default_proof_pointer],
         ]
         .concat();
-        let code = link_for_isolated_run(&snippet);
+        let code = snippet.link_for_isolated_run();
         let benchmark = execute_bench(&code, &init_stack, vec![], non_determinism.clone(), None);
         let benchmark = NamedBenchmarkResult {
             name: format!(

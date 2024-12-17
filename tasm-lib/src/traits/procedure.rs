@@ -4,7 +4,6 @@ use rand::prelude::*;
 use triton_vm::prelude::*;
 
 use crate::linker::execute_bench;
-use crate::linker::link_for_isolated_run;
 use crate::prelude::Tip5;
 use crate::snippet_bencher::write_benchmarks;
 use crate::snippet_bencher::BenchmarkCase;
@@ -142,7 +141,7 @@ impl<P: Procedure + 'static> RustShadow for ShadowedProcedure<P> {
             } = self
                 .procedure
                 .pseudorandom_initial_state(rng.gen(), Some(bench_case));
-            let program = link_for_isolated_run(&self.procedure);
+            let program = self.procedure.link_for_isolated_run();
             let benchmark = execute_bench(&program, &stack, public_input, nondeterminism, sponge);
             let benchmark = NamedBenchmarkResult {
                 name: self.procedure.entrypoint(),

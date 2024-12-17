@@ -160,7 +160,6 @@ mod tests {
     use super::*;
     use crate::empty_stack;
     use crate::execute_test;
-    use crate::linker::link_for_isolated_run;
 
     #[test]
     fn divide_out_zerofiers_test() {
@@ -256,9 +255,8 @@ mod tests {
                 ],
             ]
             .concat();
-            let code = link_for_isolated_run(self);
             let final_state = execute_test(
-                &code,
+                &self.link_for_isolated_run(),
                 &mut stack.clone(),
                 self.stack_diff(),
                 vec![],
