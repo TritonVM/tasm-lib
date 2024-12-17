@@ -1,27 +1,16 @@
-use rand::prelude::*;
 use triton_vm::prelude::*;
-use twenty_first::math::polynomial::Polynomial;
-use twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
 use crate::data_type::DataType;
-use crate::empty_stack;
-use crate::library::Library;
-use crate::snippet_bencher::BenchmarkCase;
-use crate::traits::basic_snippet::BasicSnippet;
-use crate::traits::closure::Closure;
+use crate::prelude::*;
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct CollinearYXfe;
 
 impl BasicSnippet for CollinearYXfe {
     fn inputs(&self) -> Vec<(DataType, String)> {
-        vec![
-            (DataType::Xfe, "p_2_x".to_owned()),
-            (DataType::Xfe, "p_1_y".to_owned()),
-            (DataType::Xfe, "p_1_x".to_owned()),
-            (DataType::Xfe, "p_0_y".to_owned()),
-            (DataType::Xfe, "p_0_x".to_owned()),
-        ]
+        ["p_2_x", "p_1_y", "p_1_x", "p_0_y", "p_0_x"]
+            .map(|s| (DataType::Xfe, s.to_string()))
+            .to_vec()
     }
 
     fn outputs(&self) -> Vec<(DataType, String)> {
@@ -125,48 +114,38 @@ impl BasicSnippet for CollinearYXfe {
     }
 }
 
-impl Closure for CollinearYXfe {
-    fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
-        let mut pop_xfe = || {
-            let c_0 = stack.pop().unwrap();
-            let c_1 = stack.pop().unwrap();
-            let c_2 = stack.pop().unwrap();
-            XFieldElement::new([c_0, c_1, c_2])
-        };
-
-        let p0 = (pop_xfe(), pop_xfe());
-        let p1 = (pop_xfe(), pop_xfe());
-        let p2x = pop_xfe();
-        let p2y = Polynomial::get_colinear_y(p0, p1, p2x);
-
-        let [c_0, c_1, c_2] = p2y.coefficients;
-        stack.push(c_2);
-        stack.push(c_1);
-        stack.push(c_0);
-    }
-
-    fn pseudorandom_initial_state(
-        &self,
-        seed: [u8; 32],
-        _bench_case: Option<BenchmarkCase>,
-    ) -> Vec<BFieldElement> {
-        const NUM_POINTS: usize = 2;
-        const NUM_COORDINATES: usize = 2 * NUM_POINTS + 1;
-        const NUM_ELEMENTS_PER_COORDINATE: usize = EXTENSION_DEGREE;
-        const NUM_ELEMENTS: usize = NUM_ELEMENTS_PER_COORDINATE * NUM_COORDINATES;
-
-        let mut rng = StdRng::from_seed(seed);
-        let elements: [BFieldElement; NUM_ELEMENTS] = rng.gen();
-
-        [empty_stack(), elements.to_vec()].concat()
-    }
-}
-
 #[cfg(test)]
 mod test {
-    use super::CollinearYXfe;
+    use rand::prelude::*;
+    use twenty_first::math::polynomial::Polynomial;
+
+    use super::*;
+    use crate::pop_encodable;
+    use crate::push_encodable;
+    use crate::snippet_bencher::BenchmarkCase;
+    use crate::traits::closure::Closure;
     use crate::traits::closure::ShadowedClosure;
     use crate::traits::rust_shadow::RustShadow;
+
+    impl Closure for CollinearYXfe {
+        type Args = (
+            XFieldElement,
+            XFieldElement,
+            XFieldElement,
+            XFieldElement,
+            XFieldElement,
+        );
+
+        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
+            let (p2x, p1y, p1x, p0y, p0x) = pop_encodable::<Self::Args>(stack);
+            let p2y = Polynomial::get_colinear_y((p0x, p0y), (p1x, p1y), p2x);
+            push_encodable(stack, &p2y);
+        }
+
+        fn pseudorandom_args(&self, seed: [u8; 32], _: Option<BenchmarkCase>) -> Self::Args {
+            StdRng::from_seed(seed).gen()
+        }
+    }
 
     #[test]
     fn test() {

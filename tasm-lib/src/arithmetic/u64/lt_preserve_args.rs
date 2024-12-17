@@ -106,17 +106,15 @@ mod tests {
     use crate::traits::rust_shadow::RustShadow;
 
     impl LtPreserveArgs {
-        pub fn set_up_initial_stack(&self, lhs: u64, rhs: u64) -> Vec<BFieldElement> {
-            Lt.set_up_initial_stack(lhs, rhs)
-        }
+        pub fn assert_expected_lt_behavior(&self, left: u64, right: u64) {
+            let initial_stack = self.set_up_test_stack((left, right));
 
-        pub fn assert_expected_lt_behavior(&self, lhs: u64, rhs: u64) {
-            let mut expected_stack = self.set_up_initial_stack(lhs, rhs);
-            push_encodable(&mut expected_stack, &(lhs < rhs));
+            let mut expected_stack = initial_stack.clone();
+            self.rust_shadow(&mut expected_stack);
 
             test_rust_equivalence_given_complete_state(
                 &ShadowedClosure::new(Self),
-                &self.set_up_initial_stack(lhs, rhs),
+                &initial_stack,
                 &[],
                 &NonDeterminism::default(),
                 &None,
@@ -126,24 +124,24 @@ mod tests {
     }
 
     impl Closure for LtPreserveArgs {
+        type Args = <Lt as Closure>::Args;
+
         fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
-            let left = pop_encodable::<u64>(stack);
-            let right = pop_encodable::<u64>(stack);
-            push_encodable(stack, &right);
-            push_encodable(stack, &left);
+            let (right, left) = pop_encodable::<Self::Args>(stack);
+            push_encodable(stack, &(right, left));
             push_encodable(stack, &(left < right));
         }
 
-        fn pseudorandom_initial_state(
+        fn pseudorandom_args(
             &self,
             seed: [u8; 32],
             bench_case: Option<BenchmarkCase>,
-        ) -> Vec<BFieldElement> {
-            Lt.pseudorandom_initial_state(seed, bench_case)
+        ) -> Self::Args {
+            Lt.pseudorandom_args(seed, bench_case)
         }
 
-        fn corner_case_initial_states(&self) -> Vec<Vec<BFieldElement>> {
-            Lt.corner_case_initial_states()
+        fn corner_case_args(&self) -> Vec<Self::Args> {
+            Lt.corner_case_args()
         }
     }
 

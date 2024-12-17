@@ -144,13 +144,6 @@ pub(crate) mod tests {
     use crate::traits::rust_shadow::RustShadow;
 
     impl OverflowingSub {
-        pub fn set_up_initial_stack(&self, subtrahend: u64, minuend: u64) -> Vec<BFieldElement> {
-            let mut stack = self.init_stack_for_isolated_run();
-            push_encodable(&mut stack, &subtrahend);
-            push_encodable(&mut stack, &minuend);
-            stack
-        }
-
         pub fn edge_case_values() -> Vec<u64> {
             let wiggle_edge_case_point = |p: u64| {
                 [
@@ -173,35 +166,32 @@ pub(crate) mod tests {
     }
 
     impl Closure for OverflowingSub {
+        type Args = (u64, u64);
+
         fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
-            let minuend = pop_encodable::<u64>(stack);
-            let subtrahend = pop_encodable(stack);
-            let (difference, is_overflow) = minuend.overflowing_sub(subtrahend);
-            push_encodable(stack, &difference);
-            push_encodable(stack, &is_overflow);
+            let (subtrahend, minuend) = pop_encodable::<Self::Args>(stack);
+            push_encodable(stack, &minuend.overflowing_sub(subtrahend));
         }
 
-        fn pseudorandom_initial_state(
+        fn pseudorandom_args(
             &self,
             seed: [u8; 32],
             bench_case: Option<BenchmarkCase>,
-        ) -> Vec<BFieldElement> {
-            let (subtrahend, minuend) = match bench_case {
+        ) -> Self::Args {
+            match bench_case {
                 Some(BenchmarkCase::CommonCase) => ((1 << 63) - 1, 1 << 63),
                 Some(BenchmarkCase::WorstCase) => (1 << 50, 1 << 63),
                 None => StdRng::from_seed(seed).gen(),
-            };
-
-            self.set_up_initial_stack(subtrahend, minuend)
+            }
         }
 
-        fn corner_case_initial_states(&self) -> Vec<Vec<BFieldElement>> {
+        fn corner_case_args(&self) -> Vec<Self::Args> {
             let edge_case_values = Self::edge_case_values();
 
             edge_case_values
                 .iter()
                 .cartesian_product(&edge_case_values)
-                .map(|(&subtrahend, &minuend)| self.set_up_initial_stack(subtrahend, minuend))
+                .map(|(&subtrahend, &minuend)| (subtrahend, minuend))
                 .collect()
         }
     }

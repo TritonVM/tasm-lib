@@ -92,64 +92,36 @@ impl BasicSnippet for ComputeTerminalFromDigestInitialIsOne {
 
 #[cfg(test)]
 mod tests {
-    use itertools::Itertools;
-    use num::One;
     use rand::prelude::*;
     use triton_vm::air::cross_table_argument::CrossTableArg;
     use triton_vm::air::cross_table_argument::EvalArg;
 
     use super::*;
+    use crate::pop_encodable;
+    use crate::push_encodable;
     use crate::snippet_bencher::BenchmarkCase;
     use crate::traits::closure::Closure;
     use crate::traits::closure::ShadowedClosure;
     use crate::traits::rust_shadow::RustShadow;
 
-    #[test]
-    fn compute_terminal_from_digest_pbt() {
-        ShadowedClosure::new(ComputeTerminalFromDigestInitialIsOne).test();
-    }
-
     impl Closure for ComputeTerminalFromDigestInitialIsOne {
+        type Args = (XFieldElement, Digest);
+
         fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
-            let digest = Digest::new([
-                stack.pop().unwrap(),
-                stack.pop().unwrap(),
-                stack.pop().unwrap(),
-                stack.pop().unwrap(),
-                stack.pop().unwrap(),
-            ]);
-
-            let challenge = XFieldElement::new([
-                stack.pop().unwrap(),
-                stack.pop().unwrap(),
-                stack.pop().unwrap(),
-            ]);
-
-            let result = EvalArg::compute_terminal(&digest.0, XFieldElement::one(), challenge);
-
-            for elem in result.coefficients.into_iter().rev() {
-                stack.push(elem);
-            }
+            let (challenge, digest) = pop_encodable::<Self::Args>(stack);
+            let terminal =
+                EvalArg::compute_terminal(&digest.0, EvalArg::default_initial(), challenge);
+            push_encodable(stack, &terminal);
         }
 
-        fn pseudorandom_initial_state(
-            &self,
-            seed: [u8; 32],
-            _bench_case: Option<BenchmarkCase>,
-        ) -> Vec<BFieldElement> {
-            let mut rng = StdRng::from_seed(seed);
-            let challenge = rng.gen();
-            let digest = rng.gen();
-            self.prepare_state(challenge, digest)
+        fn pseudorandom_args(&self, seed: [u8; 32], _: Option<BenchmarkCase>) -> Self::Args {
+            StdRng::from_seed(seed).gen()
         }
     }
 
-    impl ComputeTerminalFromDigestInitialIsOne {
-        fn prepare_state(&self, challenge: XFieldElement, digest: Digest) -> Vec<BFieldElement> {
-            let challenge = challenge.coefficients.into_iter().rev().collect_vec();
-            let digest = digest.values().into_iter().rev().collect_vec();
-            [self.init_stack_for_isolated_run(), challenge, digest].concat()
-        }
+    #[test]
+    fn rust_shadow() {
+        ShadowedClosure::new(ComputeTerminalFromDigestInitialIsOne).test();
     }
 }
 
@@ -160,7 +132,7 @@ mod benches {
     use crate::traits::rust_shadow::RustShadow;
 
     #[test]
-    fn compute_terminal_from_digest_bench() {
+    fn benchmark() {
         ShadowedClosure::new(ComputeTerminalFromDigestInitialIsOne).bench()
     }
 }

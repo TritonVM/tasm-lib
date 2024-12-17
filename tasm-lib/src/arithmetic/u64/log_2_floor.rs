@@ -117,42 +117,32 @@ mod tests {
     use crate::traits::rust_shadow::RustShadow;
     use crate::InitVmState;
 
-    impl Log2Floor {
-        fn set_up_initial_stack(&self, x: u64) -> Vec<BFieldElement> {
-            let mut stack = self.init_stack_for_isolated_run();
-            push_encodable(&mut stack, &x);
-
-            stack
-        }
-    }
-
     impl Closure for Log2Floor {
+        type Args = u64;
+
         fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
-            let x = pop_encodable::<u64>(stack);
+            let x = pop_encodable::<Self::Args>(stack);
             push_encodable(stack, &x.ilog2());
         }
 
-        fn pseudorandom_initial_state(
+        fn pseudorandom_args(
             &self,
             seed: [u8; 32],
             bench_case: Option<BenchmarkCase>,
-        ) -> Vec<BFieldElement> {
-            let x = match bench_case {
+        ) -> Self::Args {
+            match bench_case {
                 Some(BenchmarkCase::CommonCase) => u64::from(u32::MAX),
                 Some(BenchmarkCase::WorstCase) => u64::MAX,
                 None => StdRng::from_seed(seed).gen(),
-            };
-
-            self.set_up_initial_stack(x)
+            }
         }
 
-        fn corner_case_initial_states(&self) -> Vec<Vec<BFieldElement>> {
+        fn corner_case_args(&self) -> Vec<Self::Args> {
             (0..63)
                 .map(|pow| 1_u64 << pow)
                 .flat_map(|x| [x.checked_sub(1), Some(x), x.checked_add(1)])
                 .flatten()
                 .filter(|&x| x != 0)
-                .map(|x| self.set_up_initial_stack(x))
                 .collect()
         }
     }
@@ -208,7 +198,7 @@ mod tests {
     fn crash_on_zero() {
         negative_test(
             &ShadowedClosure::new(Log2Floor),
-            InitVmState::with_stack(Log2Floor.set_up_initial_stack(0)),
+            InitVmState::with_stack(Log2Floor.set_up_test_stack(0)),
             &[InstructionError::LogarithmOfZero],
         );
     }
@@ -221,7 +211,7 @@ mod tests {
 
             test_rust_equivalence_given_complete_state(
                 &ShadowedClosure::new(Log2Floor),
-                &Log2Floor.set_up_initial_stack(x),
+                &Log2Floor.set_up_test_stack(x),
                 &[],
                 &NonDeterminism::default(),
                 &None,

@@ -3,8 +3,7 @@ use triton_vm::prelude::*;
 
 use crate::data_type::DataType;
 use crate::data_type::Literal;
-use crate::library::Library;
-use crate::traits::basic_snippet::BasicSnippet;
+use crate::prelude::*;
 
 /// Compute a terminal-value for an evaluation argument.
 ///
@@ -84,7 +83,7 @@ impl<const N: usize> BasicSnippet for ComputeTerminalConstSizedStaticSymbols<N> 
                 // _ [challenge]
 
                 {&push_initial}
-                // _ [challenge] [intial]
+                // _ [challenge] [initial]
 
                 {&iterations}
                 // _ [result]
@@ -98,7 +97,6 @@ impl<const N: usize> BasicSnippet for ComputeTerminalConstSizedStaticSymbols<N> 
 mod tests {
     use std::collections::HashMap;
 
-    use itertools::Itertools;
     use num::One;
     use num::Zero;
     use proptest_arbitrary_interop::arb;
@@ -108,6 +106,8 @@ mod tests {
     use triton_vm::air::cross_table_argument::EvalArg;
 
     use super::*;
+    use crate::pop_encodable;
+    use crate::push_encodable;
     use crate::rust_shadowing_helper_functions::array::insert_as_array;
     use crate::rust_shadowing_helper_functions::list::list_insert;
     use crate::snippet_bencher::BenchmarkCase;
@@ -121,35 +121,20 @@ mod tests {
     use crate::verifier::eval_arg::compute_terminal_from_digest::ComputeTerminalFromDigestInitialIsOne;
 
     impl<const N: usize> Closure for ComputeTerminalConstSizedStaticSymbols<N> {
+        type Args = XFieldElement;
+
         fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
-            let challenge = XFieldElement::new([
-                stack.pop().unwrap(),
-                stack.pop().unwrap(),
-                stack.pop().unwrap(),
-            ]);
-
-            let result = EvalArg::compute_terminal(&self.symbols, self.initial, challenge);
-
-            for elem in result.coefficients.into_iter().rev() {
-                stack.push(elem);
-            }
+            let challenge = pop_encodable::<Self::Args>(stack);
+            let terminal = EvalArg::compute_terminal(&self.symbols, self.initial, challenge);
+            push_encodable(stack, &terminal);
         }
 
-        fn pseudorandom_initial_state(
+        fn pseudorandom_args(
             &self,
             seed: [u8; 32],
             _bench_case: Option<BenchmarkCase>,
-        ) -> Vec<BFieldElement> {
-            let mut rng = StdRng::from_seed(seed);
-            let challenge = rng.gen();
-            self.prepare_state(challenge)
-        }
-    }
-
-    impl<const N: usize> ComputeTerminalConstSizedStaticSymbols<N> {
-        fn prepare_state(&self, challenge: XFieldElement) -> Vec<BFieldElement> {
-            let challenge = challenge.coefficients.into_iter().rev().collect_vec();
-            [self.init_stack_for_isolated_run(), challenge].concat()
+        ) -> Self::Args {
+            StdRng::from_seed(seed).gen()
         }
     }
 

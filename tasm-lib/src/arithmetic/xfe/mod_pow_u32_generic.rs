@@ -145,7 +145,6 @@ impl BasicSnippet for XfeModPowU32Generic {
 
 #[cfg(test)]
 pub mod tests {
-    use itertools::Itertools;
     use rand::prelude::*;
     use triton_vm::prelude::*;
     use triton_vm::twenty_first::math::traits::ModPowU32;
@@ -153,31 +152,27 @@ pub mod tests {
     use super::*;
     use crate::empty_stack;
     use crate::execute_with_terminal_state;
+    use crate::pop_encodable;
+    use crate::push_encodable;
     use crate::snippet_bencher::BenchmarkCase;
     use crate::traits::closure::Closure;
     use crate::traits::closure::ShadowedClosure;
     use crate::traits::rust_shadow::RustShadow;
 
     impl Closure for XfeModPowU32Generic {
-        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
-            let base = XFieldElement::new([
-                stack.pop().unwrap(),
-                stack.pop().unwrap(),
-                stack.pop().unwrap(),
-            ]);
-            let exponent: u32 = stack.pop().unwrap().try_into().unwrap();
-            let result = base.mod_pow_u32(exponent);
+        type Args = (u32, XFieldElement);
 
-            for elem in result.coefficients.into_iter().rev() {
-                stack.push(elem);
-            }
+        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
+            let (exponent, base) = pop_encodable::<Self::Args>(stack);
+            let result = base.mod_pow_u32(exponent);
+            push_encodable(stack, &result);
         }
 
-        fn pseudorandom_initial_state(
+        fn pseudorandom_args(
             &self,
             seed: [u8; 32],
-            bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
-        ) -> Vec<BFieldElement> {
+            bench_case: Option<BenchmarkCase>,
+        ) -> Self::Args {
             let mut rng = StdRng::from_seed(seed);
             let exponent = match bench_case {
                 Some(BenchmarkCase::CommonCase) => 1 << 25,
@@ -185,29 +180,16 @@ pub mod tests {
                 None => rng.gen(),
             };
 
-            let base: XFieldElement = rng.gen();
-            self.prepare_state(base, exponent)
+            (exponent, rng.gen())
         }
 
-        fn corner_case_initial_states(&self) -> Vec<Vec<BFieldElement>> {
-            let bfe_14 = BFieldElement::new(14);
-            let an_xfe = XFieldElement::new([bfe_14, bfe_14, bfe_14]);
+        fn corner_case_args(&self) -> Vec<Self::Args> {
+            let an_xfe = xfe!([14; 3]);
+
             (0..=5)
                 .chain([u32::MAX - 1, u32::MAX])
-                .map(|exp| self.prepare_state(an_xfe, exp))
-                .collect_vec()
-        }
-    }
-
-    impl XfeModPowU32Generic {
-        pub fn prepare_state(&self, base: XFieldElement, exponent: u32) -> Vec<BFieldElement> {
-            let base = base.coefficients.into_iter().rev().collect();
-            [
-                self.init_stack_for_isolated_run(),
-                vec![BFieldElement::new(exponent as u64)],
-                base,
-            ]
-            .concat()
+                .map(|exp| (exp, an_xfe))
+                .collect()
         }
     }
 
@@ -224,19 +206,14 @@ pub mod tests {
         let code = XfeModPowU32Generic.link_for_isolated_run();
 
         for exponent in [
-            1u64 << 32,
-            1u64 << 33,
-            (1u64 << 32),
-            1u64 << 63,
+            1 << 32,
+            1 << 33,
+            1 << 32,
+            1 << 63,
             BFieldElement::MAX - 1,
             BFieldElement::MAX,
         ] {
-            let init_stack = [
-                empty_stack(),
-                vec![BFieldElement::new(exponent)],
-                xfe_14.clone(),
-            ]
-            .concat();
+            let init_stack = [empty_stack(), bfe_vec![exponent], xfe_14.clone()].concat();
             let tvm_result = execute_with_terminal_state(
                 Program::new(&code),
                 &[],

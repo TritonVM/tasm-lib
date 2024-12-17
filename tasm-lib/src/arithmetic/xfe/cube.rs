@@ -19,10 +19,9 @@ impl BasicSnippet for Cube {
         "tasmlib_arithmetic_xfe_cube".to_owned()
     }
 
-    fn code(&self, _library: &mut Library) -> Vec<LabelledInstruction> {
-        let entrypoint = self.entrypoint();
+    fn code(&self, _: &mut Library) -> Vec<LabelledInstruction> {
         triton_asm!(
-            {entrypoint}:
+            {self.entrypoint()}:
                 dup 2
                 dup 2
                 dup 2
@@ -39,114 +38,70 @@ impl BasicSnippet for Cube {
 
 #[cfg(test)]
 mod tests {
-    use itertools::Itertools;
-    use num::One;
-    use num::Zero;
+    use proptest::prelude::*;
+    use proptest_arbitrary_interop::arb;
     use rand::prelude::*;
+    use test_strategy::proptest;
     use triton_vm::twenty_first::math::traits::ModPowU32;
-    use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
     use super::*;
     use crate::arithmetic::xfe::mod_pow_u32_generic::XfeModPowU32Generic;
+    use crate::pop_encodable;
+    use crate::push_encodable;
     use crate::snippet_bencher::BenchmarkCase;
     use crate::test_helpers::test_rust_equivalence_given_complete_state;
     use crate::traits::closure::Closure;
     use crate::traits::closure::ShadowedClosure;
     use crate::traits::rust_shadow::RustShadow;
 
-    impl Cube {
-        fn setup_init_stack(&self, input_value: XFieldElement) -> Vec<BFieldElement> {
-            [
-                self.init_stack_for_isolated_run(),
-                input_value.encode().into_iter().rev().collect_vec(),
-            ]
-            .concat()
-        }
-    }
-
     impl Closure for Cube {
+        type Args = XFieldElement;
+
         fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
-            let input = XFieldElement::new([
-                stack.pop().unwrap(),
-                stack.pop().unwrap(),
-                stack.pop().unwrap(),
-            ]);
-            let result = input.mod_pow_u32(3);
-            for word in result.encode().into_iter().rev() {
-                stack.push(word)
-            }
+            let input = pop_encodable::<Self::Args>(stack);
+            push_encodable(stack, &input.mod_pow_u32(3));
         }
 
-        fn pseudorandom_initial_state(
-            &self,
-            seed: [u8; 32],
-            _bench_case: Option<BenchmarkCase>,
-        ) -> Vec<BFieldElement> {
-            let mut rng = StdRng::from_seed(seed);
-            let random_input: XFieldElement = rng.gen();
-
-            self.setup_init_stack(random_input)
+        fn pseudorandom_args(&self, seed: [u8; 32], _: Option<BenchmarkCase>) -> Self::Args {
+            StdRng::from_seed(seed).gen()
         }
 
-        fn corner_case_initial_states(&self) -> Vec<Vec<BFieldElement>> {
-            let zero = self.setup_init_stack(XFieldElement::zero());
-            let one = self.setup_init_stack(XFieldElement::one());
-
-            let max_bfe = BFieldElement::new(BFieldElement::MAX);
-            let max_max_max =
-                self.setup_init_stack(XFieldElement::new([max_bfe; EXTENSION_DEGREE]));
-
-            vec![zero, one, max_max_max]
+        fn corner_case_args(&self) -> Vec<Self::Args> {
+            let max = xfe!([-1; 3]);
+            xfe_vec![0, 1, max]
         }
     }
 
     #[test]
-    fn cube_xfe_pbt() {
+    fn rust_shadow() {
         ShadowedClosure::new(Cube).test()
     }
 
-    #[test]
-    fn compare_to_generic_pow_u32() {
-        // Run `cube` snippet
-        let input: XFieldElement = random();
-        let init_stack_to_fourth = [
-            Cube.init_stack_for_isolated_run(),
-            input.coefficients.into_iter().rev().collect_vec(),
-        ]
-        .concat();
-        let final_state_from_to_fourth = test_rust_equivalence_given_complete_state(
+    #[proptest]
+    fn compare_to_generic_pow_u32(#[strategy(arb())] input: XFieldElement) {
+        let final_state_cubed = test_rust_equivalence_given_complete_state(
             &ShadowedClosure::new(Cube),
-            &init_stack_to_fourth,
+            &Cube.set_up_test_stack(input),
             &[],
             &NonDeterminism::default(),
             &None,
             None,
         );
 
-        // Run snippet for generic pow
-        let init_stack_to_generic = [
-            XfeModPowU32Generic.init_stack_for_isolated_run(),
-            vec![BFieldElement::new(3)],
-            input.coefficients.into_iter().rev().collect_vec(),
-        ]
-        .concat();
-        let final_state_from_generic = test_rust_equivalence_given_complete_state(
+        let final_state_generic = test_rust_equivalence_given_complete_state(
             &ShadowedClosure::new(XfeModPowU32Generic),
-            &init_stack_to_generic,
+            &XfeModPowU32Generic.set_up_test_stack((3, input)),
             &[],
             &NonDeterminism::default(),
             &None,
             None,
         );
 
-        // Assert that height agrees, and the top-3 elements agree
-        assert_eq!(
-            final_state_from_generic.op_stack.stack.len(),
-            final_state_from_to_fourth.op_stack.stack.len()
-        );
-        assert_eq!(
-            final_state_from_generic.op_stack.stack[16..=18],
-            final_state_from_to_fourth.op_stack.stack[16..=18],
+        prop_assert_eq!(19, final_state_generic.op_stack.stack.len());
+        prop_assert_eq!(19, final_state_cubed.op_stack.stack.len());
+        prop_assert_eq!(
+            &final_state_generic.op_stack.stack[16..=18],
+            &final_state_cubed.op_stack.stack[16..=18]
         );
     }
 }

@@ -103,14 +103,6 @@ pub mod tests {
     use crate::traits::rust_shadow::RustShadow;
 
     impl OverflowingAdd {
-        pub fn set_up_initial_stack(&self, left: u64, right: u64) -> Vec<BFieldElement> {
-            let mut stack = self.init_stack_for_isolated_run();
-            push_encodable(&mut stack, &right);
-            push_encodable(&mut stack, &left);
-
-            stack
-        }
-
         pub fn corner_case_points() -> Vec<u64> {
             [0, 1 << 32, u64::MAX]
                 .into_iter()
@@ -121,6 +113,8 @@ pub mod tests {
     }
 
     impl Closure for OverflowingAdd {
+        type Args = (u64, u64);
+
         fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
             let right = pop_encodable::<u64>(stack);
             let left = pop_encodable::<u64>(stack);
@@ -129,27 +123,25 @@ pub mod tests {
             push_encodable(stack, &is_overflow);
         }
 
-        fn pseudorandom_initial_state(
+        fn pseudorandom_args(
             &self,
             seed: [u8; 32],
             bench_case: Option<BenchmarkCase>,
-        ) -> Vec<BFieldElement> {
-            let (left, right) = match bench_case {
+        ) -> Self::Args {
+            match bench_case {
                 Some(BenchmarkCase::CommonCase) => (1 << 63, (1 << 63) - 1),
                 Some(BenchmarkCase::WorstCase) => (1 << 63, 1 << 50),
                 None => StdRng::from_seed(seed).gen(),
-            };
-
-            self.set_up_initial_stack(left, right)
+            }
         }
 
-        fn corner_case_initial_states(&self) -> Vec<Vec<BFieldElement>> {
+        fn corner_case_args(&self) -> Vec<Self::Args> {
             let corner_case_points = Self::corner_case_points();
 
             corner_case_points
                 .iter()
                 .cartesian_product(&corner_case_points)
-                .map(|(&l, &r)| self.set_up_initial_stack(l, r))
+                .map(|(&l, &r)| (l, r))
                 .collect()
         }
     }

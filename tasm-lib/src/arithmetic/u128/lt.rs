@@ -1,7 +1,7 @@
-use triton_vm::isa::triton_asm;
+use triton_vm::prelude::*;
 
 use crate::data_type::DataType;
-use crate::prelude::BasicSnippet;
+use crate::prelude::*;
 
 /// Test Less-Than for `U128`s.
 ///
@@ -29,10 +29,7 @@ impl BasicSnippet for Lt {
         "tasmlib_arithmetic_u128_lt".to_string()
     }
 
-    fn code(
-        &self,
-        library: &mut crate::prelude::Library,
-    ) -> Vec<triton_vm::prelude::LabelledInstruction> {
+    fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
         let entrypoint = self.entrypoint();
 
         let compare_u64 = DataType::U64.compare();
@@ -76,54 +73,29 @@ impl BasicSnippet for Lt {
 #[cfg(test)]
 mod test {
     use itertools::Itertools;
-    use rand::rngs::StdRng;
-    use rand::Rng;
-    use rand::SeedableRng;
+    use rand::prelude::*;
     use test_strategy::proptest;
-    use triton_vm::prelude::bfe;
-    use triton_vm::prelude::BFieldElement;
 
+    use super::*;
+    use crate::pop_encodable;
+    use crate::push_encodable;
+    use crate::snippet_bencher::BenchmarkCase;
     use crate::test_helpers::test_rust_equivalence_given_execution_state;
     use crate::traits::closure::Closure;
     use crate::traits::closure::ShadowedClosure;
     use crate::traits::rust_shadow::RustShadow;
-    use crate::twenty_first::prelude::BFieldCodec;
     use crate::InitVmState;
 
-    use super::*;
-
-    impl Lt {
-        fn prepare_stack(&self, left: u128, right: u128) -> Vec<BFieldElement> {
-            let u128_for_stack = |v: u128| v.encode().into_iter().rev();
-
-            let mut stack = self.init_stack_for_isolated_run();
-            stack.extend(u128_for_stack(right));
-            stack.extend(u128_for_stack(left));
-
-            stack
-        }
-    }
-
     impl Closure for Lt {
-        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
-            fn pop_u128(stack: &mut Vec<BFieldElement>) -> u128 {
-                let num_limbs = u128::static_length().unwrap();
-                let limbs = (0..num_limbs).map(|_| stack.pop().unwrap()).collect_vec();
-                *BFieldCodec::decode(&limbs).unwrap()
-            }
+        type Args = (u128, u128);
 
-            let left = pop_u128(stack);
-            let right = pop_u128(stack);
-            stack.push(bfe!((left < right) as u64));
+        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
+            let (right, left) = pop_encodable::<Self::Args>(stack);
+            push_encodable(stack, &(left < right));
         }
 
-        fn pseudorandom_initial_state(
-            &self,
-            seed: [u8; 32],
-            _bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
-        ) -> Vec<BFieldElement> {
-            let mut rng = StdRng::from_seed(seed);
-            self.prepare_stack(rng.gen(), rng.gen())
+        fn pseudorandom_args(&self, seed: [u8; 32], _: Option<BenchmarkCase>) -> Self::Args {
+            StdRng::from_seed(seed).gen()
         }
     }
 
@@ -133,7 +105,7 @@ mod test {
     }
 
     fn test_rust_tasm_equivalence(left: u128, right: u128) {
-        let initial_state = InitVmState::with_stack(Lt.prepare_stack(left, right));
+        let initial_state = InitVmState::with_stack(Lt.set_up_test_stack((left, right)));
         test_rust_equivalence_given_execution_state(&ShadowedClosure::new(Lt), initial_state);
     }
 

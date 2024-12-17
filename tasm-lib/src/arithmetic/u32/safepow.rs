@@ -1,11 +1,7 @@
-use rand::prelude::*;
 use triton_vm::prelude::*;
 
 use crate::data_type::DataType;
-use crate::empty_stack;
-use crate::snippet_bencher::BenchmarkCase;
-use crate::traits::basic_snippet::BasicSnippet;
-use crate::traits::closure::Closure;
+use crate::prelude::*;
 
 /// A u32 `pow` that behaves like Rustc's `pow` method on `u32`, crashing in case of overflow.
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
@@ -27,7 +23,7 @@ impl BasicSnippet for Safepow {
         "tasmlib_arithmetic_u32_safepow".to_string()
     }
 
-    fn code(&self, _library: &mut crate::library::Library) -> Vec<LabelledInstruction> {
+    fn code(&self, _: &mut Library) -> Vec<LabelledInstruction> {
         // This algorithm is implemented below. `bpow2` has type
         // `u64` because it would otherwise erroneously overflow
         // in the last iteration of the loop when e.g. calculating
@@ -145,71 +141,61 @@ impl BasicSnippet for Safepow {
     }
 }
 
-impl Closure for Safepow {
-    fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
-        let exp: u32 = stack.pop().unwrap().try_into().unwrap();
-        let base: u32 = stack.pop().unwrap().try_into().unwrap();
-        stack.push(BFieldElement::new(base.pow(exp) as u64));
-    }
-
-    fn pseudorandom_initial_state(
-        &self,
-        seed: [u8; 32],
-        bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
-    ) -> Vec<BFieldElement> {
-        let (base, exponent): (u32, u32) = match bench_case {
-            Some(BenchmarkCase::CommonCase) => (10, 5),
-            Some(BenchmarkCase::WorstCase) => (2, 31),
-            None => {
-                let mut seeded_rng = StdRng::from_seed(seed);
-                let base: u32 = seeded_rng.gen_range(0..0x10);
-                let exponent: u32 = seeded_rng.gen_range(0..0x8);
-                (base, exponent)
-            }
-        };
-
-        [
-            empty_stack(),
-            vec![
-                BFieldElement::new(base as u64),
-                BFieldElement::new(exponent as u64),
-            ],
-        ]
-        .concat()
-    }
-
-    fn corner_case_initial_states(&self) -> Vec<Vec<BFieldElement>> {
-        let zero_pow_zero = [
-            empty_stack(),
-            vec![BFieldElement::new(0), BFieldElement::new(0)],
-        ]
-        .concat();
-
-        vec![zero_pow_zero]
-    }
-}
-
 #[cfg(test)]
 mod tests {
+    use rand::prelude::*;
+
     use super::*;
+    use crate::pop_encodable;
+    use crate::push_encodable;
+    use crate::snippet_bencher::BenchmarkCase;
     use crate::test_helpers::test_assertion_failure;
     use crate::test_helpers::test_rust_equivalence_given_complete_state;
+    use crate::traits::closure::Closure;
     use crate::traits::closure::ShadowedClosure;
     use crate::traits::rust_shadow::RustShadow;
     use crate::InitVmState;
 
+    impl Closure for Safepow {
+        type Args = (u32, u32);
+
+        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
+            let (base, exponent) = pop_encodable::<Self::Args>(stack);
+            push_encodable(stack, &(base.pow(exponent)));
+        }
+
+        fn pseudorandom_args(
+            &self,
+            seed: [u8; 32],
+            bench_case: Option<BenchmarkCase>,
+        ) -> Self::Args {
+            let Some(bench_case) = bench_case else {
+                let mut seeded_rng = StdRng::from_seed(seed);
+                let base = seeded_rng.gen_range(0..0x10);
+                let exponent = seeded_rng.gen_range(0..0x8);
+                return (base, exponent);
+            };
+
+            match bench_case {
+                BenchmarkCase::CommonCase => (10, 5),
+                BenchmarkCase::WorstCase => (2, 31),
+            }
+        }
+
+        fn corner_case_args(&self) -> Vec<Self::Args> {
+            vec![(0, 0)]
+        }
+    }
+
     #[test]
-    fn u32_pow_pbt() {
+    fn ruts_shadow() {
         ShadowedClosure::new(Safepow).test()
     }
 
     #[test]
     fn u32_pow_unit_test() {
-        let safe_pow = Safepow;
-        let closure = ShadowedClosure::new(safe_pow);
-
         for (base, exp) in [
-            (0u32, 0u32),
+            (0, 0),
             (0, 1),
             (1, 0),
             (1, 1),
@@ -236,11 +222,13 @@ mod tests {
             (1, u32::MAX - 3),
             (0, u32::MAX - 3),
         ] {
-            let init_stack = [empty_stack(), bfe_vec![base, exp,]].concat();
-            let expected_final_stack = [empty_stack(), bfe_vec![base.pow(exp)]].concat();
+            let initial_stack = Safepow.set_up_test_stack((base, exp));
+            let mut expected_final_stack = initial_stack.clone();
+            Safepow.rust_shadow(&mut expected_final_stack);
+
             let _vm_output_state = test_rust_equivalence_given_complete_state(
-                &closure,
-                &init_stack,
+                &ShadowedClosure::new(Safepow),
+                &initial_stack,
                 &[],
                 &NonDeterminism::default(),
                 &None,
@@ -251,8 +239,6 @@ mod tests {
 
     #[test]
     fn u32_pow_negative_test() {
-        let safe_pow = Safepow;
-
         for (base, exp) in [
             (2, 32),
             (3, 21),
@@ -285,11 +271,9 @@ mod tests {
             (1 << 8, 16),
             (1 << 8, 32),
         ] {
-            let init_stack = [safe_pow.init_stack_for_isolated_run(), bfe_vec![base, exp]].concat();
-
             test_assertion_failure(
-                &ShadowedClosure::new(safe_pow),
-                InitVmState::with_stack(init_stack),
+                &ShadowedClosure::new(Safepow),
+                InitVmState::with_stack(Safepow.set_up_test_stack((base, exp))),
                 &[120, 121],
             );
         }

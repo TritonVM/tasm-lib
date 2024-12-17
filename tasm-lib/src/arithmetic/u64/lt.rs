@@ -104,21 +104,15 @@ pub(crate) mod tests {
     use crate::traits::rust_shadow::RustShadow;
 
     impl Lt {
-        pub fn set_up_initial_stack(&self, lhs: u64, rhs: u64) -> Vec<BFieldElement> {
-            let mut stack = self.init_stack_for_isolated_run();
-            push_encodable(&mut stack, &rhs);
-            push_encodable(&mut stack, &lhs);
-
-            stack
-        }
-
         pub fn assert_expected_lt_behavior(&self, lhs: u64, rhs: u64) {
-            let mut expected_stack = self.init_stack_for_isolated_run();
-            push_encodable(&mut expected_stack, &(lhs < rhs));
+            let initial_stack = self.set_up_test_stack((lhs, rhs));
+
+            let mut expected_stack = initial_stack.clone();
+            self.rust_shadow(&mut expected_stack);
 
             test_rust_equivalence_given_complete_state(
                 &ShadowedClosure::new(Self),
-                &self.set_up_initial_stack(lhs, rhs),
+                &initial_stack,
                 &[],
                 &NonDeterminism::default(),
                 &None,
@@ -128,27 +122,26 @@ pub(crate) mod tests {
     }
 
     impl Closure for Lt {
+        type Args = (u64, u64);
+
         fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
-            let left = pop_encodable::<u64>(stack);
-            let right = pop_encodable::<u64>(stack);
+            let (right, left) = pop_encodable::<Self::Args>(stack);
             push_encodable(stack, &(left < right));
         }
 
-        fn pseudorandom_initial_state(
+        fn pseudorandom_args(
             &self,
             seed: [u8; 32],
             bench_case: Option<BenchmarkCase>,
-        ) -> Vec<BFieldElement> {
-            let (left, right) = match bench_case {
+        ) -> Self::Args {
+            match bench_case {
                 Some(BenchmarkCase::CommonCase) => (0x100_ffff_ffff, 0x100_ffff_fffe),
                 Some(BenchmarkCase::WorstCase) => (u64::MAX - 1, u64::MAX),
                 None => StdRng::from_seed(seed).gen(),
-            };
-
-            self.set_up_initial_stack(left, right)
+            }
         }
 
-        fn corner_case_initial_states(&self) -> Vec<Vec<BFieldElement>> {
+        fn corner_case_args(&self) -> Vec<Self::Args> {
             let edge_case_points = [0, 1 << 29, 1 << 31, 1 << 32, u64::MAX]
                 .into_iter()
                 .flat_map(|p| [p.checked_sub(1), Some(p), p.checked_add(1)])
@@ -158,7 +151,7 @@ pub(crate) mod tests {
             edge_case_points
                 .iter()
                 .cartesian_product(&edge_case_points)
-                .map(|(&left, &right)| self.set_up_initial_stack(left, right))
+                .map(|(&left, &right)| (left, right))
                 .collect()
         }
     }

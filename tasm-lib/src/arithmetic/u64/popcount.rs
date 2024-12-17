@@ -72,40 +72,31 @@ mod tests {
     use crate::traits::closure::ShadowedClosure;
     use crate::traits::rust_shadow::RustShadow;
 
-    impl PopCount {
-        pub fn set_up_initial_stack(&self, x: u64) -> Vec<BFieldElement> {
-            let mut stack = self.init_stack_for_isolated_run();
-            push_encodable(&mut stack, &x);
-            stack
-        }
-    }
-
     impl Closure for PopCount {
+        type Args = u64;
+
         fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
-            let x = pop_encodable::<u64>(stack);
+            let x = pop_encodable::<Self::Args>(stack);
             push_encodable(stack, &x.count_ones());
         }
 
-        fn pseudorandom_initial_state(
+        fn pseudorandom_args(
             &self,
             seed: [u8; 32],
             bench_case: Option<BenchmarkCase>,
-        ) -> Vec<BFieldElement> {
-            let x = match bench_case {
+        ) -> Self::Args {
+            match bench_case {
                 Some(BenchmarkCase::CommonCase) => 1 << 25,
                 Some(BenchmarkCase::WorstCase) => u64::MAX,
                 None => StdRng::from_seed(seed).gen(),
-            };
-
-            self.set_up_initial_stack(x)
+            }
         }
 
-        fn corner_case_initial_states(&self) -> Vec<Vec<BFieldElement>> {
+        fn corner_case_args(&self) -> Vec<Self::Args> {
             [1, 1 << 32, u64::MAX]
                 .into_iter()
                 .flat_map(|x| [x.checked_sub(1), Some(x), x.checked_add(1)])
                 .flatten()
-                .map(|x| self.set_up_initial_stack(x))
                 .collect()
         }
     }

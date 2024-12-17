@@ -36,62 +36,35 @@ impl BasicSnippet for Square {
 #[cfg(test)]
 mod tests {
     use itertools::Itertools;
-    use num::One;
-    use num::Zero;
     use rand::prelude::*;
     use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
     use super::*;
     use crate::arithmetic::xfe::mod_pow_u32_generic::XfeModPowU32Generic;
+    use crate::pop_encodable;
+    use crate::push_encodable;
     use crate::snippet_bencher::BenchmarkCase;
     use crate::test_helpers::test_rust_equivalence_given_complete_state;
     use crate::traits::closure::Closure;
     use crate::traits::closure::ShadowedClosure;
     use crate::traits::rust_shadow::RustShadow;
 
-    impl Square {
-        fn setup_init_stack(&self, input_value: XFieldElement) -> Vec<BFieldElement> {
-            [
-                self.init_stack_for_isolated_run(),
-                input_value.encode().into_iter().rev().collect_vec(),
-            ]
-            .concat()
-        }
-    }
-
     impl Closure for Square {
+        type Args = XFieldElement;
+
         fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
-            let input = XFieldElement::new([
-                stack.pop().unwrap(),
-                stack.pop().unwrap(),
-                stack.pop().unwrap(),
-            ]);
-            let result = input.square();
-            for word in result.encode().into_iter().rev() {
-                stack.push(word)
-            }
+            let input = pop_encodable::<Self::Args>(stack);
+            push_encodable(stack, &input.square());
         }
 
-        fn pseudorandom_initial_state(
-            &self,
-            seed: [u8; 32],
-            _bench_case: Option<BenchmarkCase>,
-        ) -> Vec<BFieldElement> {
-            let mut rng = StdRng::from_seed(seed);
-            let random_input: XFieldElement = rng.gen();
-
-            self.setup_init_stack(random_input)
+        fn pseudorandom_args(&self, seed: [u8; 32], _: Option<BenchmarkCase>) -> Self::Args {
+            StdRng::from_seed(seed).gen()
         }
 
-        fn corner_case_initial_states(&self) -> Vec<Vec<BFieldElement>> {
-            let zero = self.setup_init_stack(XFieldElement::zero());
-            let one = self.setup_init_stack(XFieldElement::one());
+        fn corner_case_args(&self) -> Vec<Self::Args> {
+            let max = xfe!([-1; EXTENSION_DEGREE]);
 
-            let max_bfe = BFieldElement::new(BFieldElement::MAX);
-            let max_max_max =
-                self.setup_init_stack(XFieldElement::new([max_bfe; EXTENSION_DEGREE]));
-
-            vec![zero, one, max_max_max]
+            xfe_vec![0, 1, max]
         }
     }
 

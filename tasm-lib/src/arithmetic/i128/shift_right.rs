@@ -260,23 +260,15 @@ mod test {
     use crate::traits::rust_shadow::RustShadow;
 
     impl ShiftRight {
-        pub(crate) fn prepare_stack(&self, arg: i128, shamt: u32) -> Vec<BFieldElement> {
-            let mut stack = self.init_stack_for_isolated_run();
-            push_encodable(&mut stack, &arg);
-            push_encodable(&mut stack, &shamt);
-
-            stack
-        }
-
         fn assert_expected_shift_behavior(&self, arg: i128, shamt: u32) {
-            let init_stack = self.prepare_stack(arg, shamt);
+            let initial_stack = self.set_up_test_stack((arg, shamt));
 
-            let mut expected_stack = self.init_stack_for_isolated_run();
-            push_encodable(&mut expected_stack, &(arg >> shamt));
+            let mut expected_stack = initial_stack.clone();
+            self.rust_shadow(&mut expected_stack);
 
             test_rust_equivalence_given_complete_state(
                 &ShadowedClosure::new(Self),
-                &init_stack,
+                &initial_stack,
                 &[],
                 &NonDeterminism::default(),
                 &None,
@@ -286,20 +278,16 @@ mod test {
     }
 
     impl Closure for ShiftRight {
+        type Args = (i128, u32);
+
         fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
-            let shamt = pop_encodable::<u32>(stack);
-            let arg = pop_encodable::<i128>(stack);
-            push_encodable(stack, &(arg >> shamt));
+            let (arg, shift_amount) = pop_encodable::<Self::Args>(stack);
+            push_encodable(stack, &(arg >> shift_amount));
         }
 
-        fn pseudorandom_initial_state(
-            &self,
-            seed: [u8; 32],
-            _: Option<BenchmarkCase>,
-        ) -> Vec<BFieldElement> {
+        fn pseudorandom_args(&self, seed: [u8; 32], _: Option<BenchmarkCase>) -> Self::Args {
             let mut rng = StdRng::from_seed(seed);
-
-            self.prepare_stack(rng.gen(), rng.gen_range(0..128))
+            (rng.gen(), rng.gen_range(0..128))
         }
     }
 

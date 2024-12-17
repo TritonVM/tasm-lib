@@ -88,40 +88,31 @@ mod tests {
     use crate::traits::rust_shadow::RustShadow;
     use crate::InitVmState;
 
-    impl Add {
-        fn set_up_initial_stack(&self, left: u64, right: u64) -> Vec<BFieldElement> {
-            OverflowingAdd.set_up_initial_stack(left, right)
-        }
-    }
-
     impl Closure for Add {
+        type Args = <OverflowingAdd as Closure>::Args;
+
         fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
-            let left = pop_encodable::<u64>(stack);
-            let right = pop_encodable::<u64>(stack);
+            let (left, right) = pop_encodable::<Self::Args>(stack);
             let sum = left.checked_add(right).expect("overflow occurred");
             push_encodable(stack, &sum);
         }
 
-        fn pseudorandom_initial_state(
-            &self,
-            seed: [u8; 32],
-            _: Option<BenchmarkCase>,
-        ) -> Vec<BFieldElement> {
+        fn pseudorandom_args(&self, seed: [u8; 32], _: Option<BenchmarkCase>) -> Self::Args {
             let mut rng = StdRng::from_seed(seed);
             let left = rng.gen();
             let right = rng.gen_range(0..=u64::MAX - left);
 
-            self.set_up_initial_stack(left, right)
+            (left, right)
         }
 
-        fn corner_case_initial_states(&self) -> Vec<Vec<BFieldElement>> {
+        fn corner_case_args(&self) -> Vec<Self::Args> {
             let corner_case_points = OverflowingAdd::corner_case_points();
 
             corner_case_points
                 .iter()
                 .cartesian_product(&corner_case_points)
                 .filter(|(&l, &r)| l.checked_add(r).is_some())
-                .map(|(&l, &r)| self.set_up_initial_stack(l, r))
+                .map(|(&l, &r)| (l, r))
                 .collect()
         }
     }
@@ -133,7 +124,7 @@ mod tests {
 
     #[proptest]
     fn proptest(left: u64, #[strategy(0..u64::MAX - #left)] right: u64) {
-        let initial_state = InitVmState::with_stack(Add.set_up_initial_stack(left, right));
+        let initial_state = InitVmState::with_stack(Add.set_up_test_stack((left, right)));
         test_rust_equivalence_given_execution_state(&ShadowedClosure::new(Add), initial_state);
     }
 
@@ -143,7 +134,7 @@ mod tests {
 
         test_assertion_failure(
             &ShadowedClosure::new(Add),
-            InitVmState::with_stack(Add.set_up_initial_stack(left, right)),
+            InitVmState::with_stack(Add.set_up_test_stack((left, right))),
             &[Add::OVERFLOW_ERROR_ID],
         );
     }

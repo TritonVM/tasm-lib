@@ -106,116 +106,19 @@ mod tests {
     use crate::traits::rust_shadow::RustShadow;
     use crate::InitVmState;
 
-    #[test]
-    fn i128_lt_proptest() {
-        ShadowedClosure::new(Lt).test();
-    }
-
-    #[proptest]
-    fn input_not_u32_words_negative_test(
-        #[strategy(0usize..8)] stack_index_bad_word: usize,
-        #[strategy(arb())]
-        #[filter(#bad_word.value() > u32::MAX as u64)]
-        bad_word: BFieldElement,
-    ) {
-        fn init_state_not_u32_words(
-            stack_index_bad_word: usize,
-            bad_word: BFieldElement,
-        ) -> InitVmState {
-            let mut stack = Lt.init_state(random(), random());
-            let last_elem_index = stack.len() - 1;
-            stack[last_elem_index - stack_index_bad_word] = bad_word;
-
-            InitVmState::with_stack(stack)
-        }
-
-        negative_test(
-            &ShadowedClosure::new(Lt),
-            init_state_not_u32_words(stack_index_bad_word, bad_word),
-            &[InstructionError::OpStackError(
-                OpStackError::FailedU32Conversion(bad_word),
-            )],
-        );
-    }
-
-    #[test]
-    fn i128_lt_unit_test_min_max() {
-        let init_stack = Lt.init_state(i128::MIN, i128::MAX);
-        let mut expected_end_stack = Lt.init_stack_for_isolated_run();
-        push_encodable(&mut expected_end_stack, &true);
-
-        let stdin = &[];
-        test_rust_equivalence_given_complete_state(
-            &ShadowedClosure::new(Lt),
-            &init_stack,
-            stdin,
-            &NonDeterminism::default(),
-            &None,
-            Some(&expected_end_stack),
-        );
-    }
-
-    #[test]
-    fn i128_lt_unit_test_zero_zero() {
-        let init_stack = Lt.init_state(0, 0);
-        let mut expected_end_stack = Lt.init_stack_for_isolated_run();
-        push_encodable(&mut expected_end_stack, &false);
-
-        let stdin = &[];
-        test_rust_equivalence_given_complete_state(
-            &ShadowedClosure::new(Lt),
-            &init_stack,
-            stdin,
-            &NonDeterminism::default(),
-            &None,
-            Some(&expected_end_stack),
-        );
-    }
-
-    #[proptest]
-    fn equal_elements_are_not_lt_prop(value: i128) {
-        let init_stack = Lt.init_state(value, value);
-        let mut expected_end_stack = Lt.init_stack_for_isolated_run();
-        push_encodable(&mut expected_end_stack, &false);
-
-        let stdin = &[];
-        test_rust_equivalence_given_complete_state(
-            &ShadowedClosure::new(Lt),
-            &init_stack,
-            stdin,
-            &NonDeterminism::default(),
-            &None,
-            Some(&expected_end_stack),
-        );
-    }
-
-    impl Lt {
-        fn init_state(&self, lhs: i128, rhs: i128) -> Vec<BFieldElement> {
-            let mut stack = self.init_stack_for_isolated_run();
-            push_encodable(&mut stack, &rhs);
-            push_encodable(&mut stack, &lhs);
-
-            stack
-        }
-    }
-
     impl Closure for Lt {
+        type Args = (i128, i128);
+
         fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
-            let lhs = pop_encodable::<i128>(stack);
-            let rhs = pop_encodable::<i128>(stack);
+            let (rhs, lhs) = pop_encodable::<Self::Args>(stack);
             push_encodable(stack, &(lhs < rhs));
         }
 
-        fn pseudorandom_initial_state(
-            &self,
-            seed: [u8; 32],
-            _bench_case: Option<BenchmarkCase>,
-        ) -> Vec<BFieldElement> {
-            let mut rng = StdRng::from_seed(seed);
-            self.init_state(rng.gen(), rng.gen())
+        fn pseudorandom_args(&self, seed: [u8; 32], _: Option<BenchmarkCase>) -> Self::Args {
+            StdRng::from_seed(seed).gen()
         }
 
-        fn corner_case_initial_states(&self) -> Vec<Vec<BFieldElement>> {
+        fn corner_case_args(&self) -> Vec<Self::Args> {
             let points_with_plus_minus_one = [
                 i128::MIN,
                 -(1 << 96),
@@ -239,9 +142,92 @@ mod tests {
             points_with_plus_minus_one
                 .iter()
                 .cartesian_product(&points_with_plus_minus_one)
-                .map(|(&l, &r)| self.init_state(l, r))
+                .map(|(&l, &r)| (l, r))
                 .collect()
         }
+    }
+
+    #[test]
+    fn i128_lt_proptest() {
+        ShadowedClosure::new(Lt).test();
+    }
+
+    #[proptest]
+    fn input_not_u32_words_negative_test(
+        #[strategy(0usize..8)] stack_index_bad_word: usize,
+        #[strategy(arb())]
+        #[filter(#bad_word.value() > u32::MAX as u64)]
+        bad_word: BFieldElement,
+    ) {
+        fn init_state_not_u32_words(
+            stack_index_bad_word: usize,
+            bad_word: BFieldElement,
+        ) -> InitVmState {
+            let mut stack = Lt.set_up_test_stack(random());
+            let last_elem_index = stack.len() - 1;
+            stack[last_elem_index - stack_index_bad_word] = bad_word;
+
+            InitVmState::with_stack(stack)
+        }
+
+        negative_test(
+            &ShadowedClosure::new(Lt),
+            init_state_not_u32_words(stack_index_bad_word, bad_word),
+            &[InstructionError::OpStackError(
+                OpStackError::FailedU32Conversion(bad_word),
+            )],
+        );
+    }
+
+    #[test]
+    fn i128_lt_unit_test_min_max() {
+        let init_stack = Lt.set_up_test_stack((i128::MAX, i128::MIN));
+        let mut expected_end_stack = Lt.init_stack_for_isolated_run();
+        push_encodable(&mut expected_end_stack, &true);
+
+        let stdin = &[];
+        test_rust_equivalence_given_complete_state(
+            &ShadowedClosure::new(Lt),
+            &init_stack,
+            stdin,
+            &NonDeterminism::default(),
+            &None,
+            Some(&expected_end_stack),
+        );
+    }
+
+    #[test]
+    fn i128_lt_unit_test_zero_zero() {
+        let init_stack = Lt.set_up_test_stack((0, 0));
+        let mut expected_end_stack = Lt.init_stack_for_isolated_run();
+        push_encodable(&mut expected_end_stack, &false);
+
+        let stdin = &[];
+        test_rust_equivalence_given_complete_state(
+            &ShadowedClosure::new(Lt),
+            &init_stack,
+            stdin,
+            &NonDeterminism::default(),
+            &None,
+            Some(&expected_end_stack),
+        );
+    }
+
+    #[proptest]
+    fn equal_elements_are_not_lt_prop(value: i128) {
+        let init_stack = Lt.set_up_test_stack((value, value));
+        let mut expected_end_stack = Lt.init_stack_for_isolated_run();
+        push_encodable(&mut expected_end_stack, &false);
+
+        let stdin = &[];
+        test_rust_equivalence_given_complete_state(
+            &ShadowedClosure::new(Lt),
+            &init_stack,
+            stdin,
+            &NonDeterminism::default(),
+            &None,
+            Some(&expected_end_stack),
+        );
     }
 }
 

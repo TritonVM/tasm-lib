@@ -64,7 +64,10 @@ impl BasicSnippet for ToTheFourth {
 
 #[cfg(test)]
 mod tests {
+    use proptest::prelude::*;
+    use proptest_arbitrary_interop::arb;
     use rand::prelude::*;
+    use test_strategy::proptest;
     use triton_vm::twenty_first::math::traits::ModPowU32;
 
     use super::*;
@@ -77,36 +80,22 @@ mod tests {
     use crate::traits::closure::ShadowedClosure;
     use crate::traits::rust_shadow::RustShadow;
 
-    impl ToTheFourth {
-        fn setup_init_stack(&self, arg: XFieldElement) -> Vec<BFieldElement> {
-            let mut stack = self.init_stack_for_isolated_run();
-            push_encodable(&mut stack, &arg);
-
-            stack
-        }
-    }
-
     impl Closure for ToTheFourth {
+        type Args = XFieldElement;
+
         fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
-            let arg = pop_encodable::<XFieldElement>(stack);
+            let arg = pop_encodable::<Self::Args>(stack);
             push_encodable(stack, &arg.mod_pow_u32(4));
         }
 
-        fn pseudorandom_initial_state(
-            &self,
-            seed: [u8; 32],
-            _: Option<BenchmarkCase>,
-        ) -> Vec<BFieldElement> {
-            self.setup_init_stack(StdRng::from_seed(seed).gen())
+        fn pseudorandom_args(&self, seed: [u8; 32], _: Option<BenchmarkCase>) -> Self::Args {
+            StdRng::from_seed(seed).gen()
         }
 
-        fn corner_case_initial_states(&self) -> Vec<Vec<BFieldElement>> {
-            let bfe_max = BFieldElement::MAX;
-            let xfe_max = xfe!([bfe_max, bfe_max, bfe_max]);
+        fn corner_case_args(&self) -> Vec<Self::Args> {
+            let max = xfe!([-1, -1, -1]);
 
-            xfe_array![0, 1, xfe_max]
-                .map(|arg| self.setup_init_stack(arg))
-                .to_vec()
+            xfe_vec![0, 1, max]
         }
     }
 
@@ -115,35 +104,31 @@ mod tests {
         ShadowedClosure::new(ToTheFourth).test();
     }
 
-    #[test]
-    fn compare_to_generic_pow_u32() {
-        let input = random();
-
-        let final_state_from_to_fourth = test_rust_equivalence_given_complete_state(
+    #[proptest]
+    fn compare_to_generic_pow_u32(#[strategy(arb())] input: XFieldElement) {
+        let final_state_to_fourth = test_rust_equivalence_given_complete_state(
             &ShadowedClosure::new(ToTheFourth),
-            &ToTheFourth.setup_init_stack(input),
+            &ToTheFourth.set_up_test_stack(input),
             &[],
             &NonDeterminism::default(),
             &None,
             None,
         );
 
-        let final_state_from_generic = test_rust_equivalence_given_complete_state(
+        let final_state_generic = test_rust_equivalence_given_complete_state(
             &ShadowedClosure::new(XfeModPowU32Generic),
-            &XfeModPowU32Generic.prepare_state(input, 4),
+            &XfeModPowU32Generic.set_up_test_stack((4, input)),
             &[],
             &NonDeterminism::default(),
             &None,
             None,
         );
 
-        assert_eq!(
-            final_state_from_generic.op_stack.len(),
-            final_state_from_to_fourth.op_stack.len(),
-        );
-        assert_eq!(
-            final_state_from_generic.op_stack.stack[16..=18],
-            final_state_from_to_fourth.op_stack.stack[16..=18],
+        prop_assert_eq!(19, final_state_generic.op_stack.len());
+        prop_assert_eq!(19, final_state_to_fourth.op_stack.len());
+        prop_assert_eq!(
+            &final_state_generic.op_stack.stack[16..=18],
+            &final_state_to_fourth.op_stack.stack[16..=18]
         );
     }
 }

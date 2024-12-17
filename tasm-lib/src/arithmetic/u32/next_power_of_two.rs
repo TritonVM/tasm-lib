@@ -130,33 +130,30 @@ mod tests {
     use crate::InitVmState;
 
     impl Closure for NextPowerOfTwo {
+        type Args = u32;
+
         fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
-            let arg = pop_encodable::<u32>(stack);
+            let arg = pop_encodable::<Self::Args>(stack);
             push_encodable(stack, &arg.next_power_of_two());
         }
 
-        fn pseudorandom_initial_state(
+        fn pseudorandom_args(
             &self,
             seed: [u8; 32],
             bench_case: Option<BenchmarkCase>,
-        ) -> Vec<BFieldElement> {
-            let arg = match bench_case {
+        ) -> Self::Args {
+            match bench_case {
                 Some(BenchmarkCase::CommonCase) => (1 << 27) - 1,
                 Some(BenchmarkCase::WorstCase) => (1 << 31) - 1,
                 None => StdRng::from_seed(seed).next_u32() / 2,
-            };
-
-            self.prepare_vm_stack(arg)
+            }
         }
 
-        fn corner_case_initial_states(&self) -> Vec<Vec<BFieldElement>> {
+        fn corner_case_args(&self) -> Vec<Self::Args> {
             let small_inputs = 0..=66;
             let big_valid_inputs = (0..=5).map(|i| (1 << 31) - i);
 
-            small_inputs
-                .chain(big_valid_inputs)
-                .map(|i| self.prepare_vm_stack(i))
-                .collect()
+            small_inputs.chain(big_valid_inputs).collect()
         }
     }
 

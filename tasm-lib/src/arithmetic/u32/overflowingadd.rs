@@ -1,10 +1,7 @@
-use rand::prelude::*;
 use triton_vm::prelude::*;
 
 use crate::data_type::DataType;
-use crate::empty_stack;
-use crate::traits::basic_snippet::BasicSnippet;
-use crate::traits::closure::Closure;
+use crate::prelude::*;
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub struct Overflowingadd;
@@ -20,7 +17,7 @@ impl BasicSnippet for Overflowingadd {
     fn outputs(&self) -> Vec<(DataType, String)> {
         vec![
             (DataType::U32, "wrapped_sum".to_owned()),
-            (DataType::Bool, "overflow".to_owned()),
+            (DataType::Bool, "is_overflow".to_owned()),
         ]
     }
 
@@ -28,7 +25,7 @@ impl BasicSnippet for Overflowingadd {
         "tasmlib_arithmetic_u32_overflowingadd".to_string()
     }
 
-    fn code(&self, _library: &mut crate::library::Library) -> Vec<LabelledInstruction> {
+    fn code(&self, _: &mut Library) -> Vec<LabelledInstruction> {
         triton_asm!(
             {self.entrypoint()}:
                 add
@@ -39,42 +36,42 @@ impl BasicSnippet for Overflowingadd {
     }
 }
 
-impl Closure for Overflowingadd {
-    fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
-        let rhs: u32 = stack.pop().unwrap().try_into().unwrap();
-        let lhs: u32 = stack.pop().unwrap().try_into().unwrap();
-
-        let (wrapped_sum, overflow) = lhs.overflowing_add(rhs);
-        stack.push(BFieldElement::new(wrapped_sum as u64));
-        stack.push(BFieldElement::new(overflow as u64));
-    }
-
-    fn pseudorandom_initial_state(
-        &self,
-        seed: [u8; 32],
-        bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
-    ) -> Vec<BFieldElement> {
-        let (lhs, rhs) = match bench_case {
-            Some(crate::snippet_bencher::BenchmarkCase::CommonCase) => {
-                (1u32 << 31, (1u32 << 31) - 1)
-            }
-            Some(crate::snippet_bencher::BenchmarkCase::WorstCase) => (1u32 << 31, 1u32 << 31),
-            None => {
-                let mut rng = StdRng::from_seed(seed);
-                (rng.next_u32(), rng.next_u32())
-            }
-        };
-
-        [empty_stack(), lhs.encode(), rhs.encode()].concat()
-    }
-}
-
 #[cfg(test)]
 mod tests {
+    use rand::prelude::*;
+
     use super::*;
+    use crate::pop_encodable;
+    use crate::push_encodable;
+    use crate::snippet_bencher::BenchmarkCase;
     use crate::test_helpers::test_rust_equivalence_given_complete_state;
+    use crate::traits::closure::Closure;
     use crate::traits::closure::ShadowedClosure;
     use crate::traits::rust_shadow::RustShadow;
+
+    impl Closure for Overflowingadd {
+        type Args = (u32, u32);
+
+        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
+            let (left, right) = pop_encodable::<Self::Args>(stack);
+            let (sum, is_overflow) = left.overflowing_add(right);
+
+            push_encodable(stack, &sum);
+            push_encodable(stack, &is_overflow);
+        }
+
+        fn pseudorandom_args(
+            &self,
+            seed: [u8; 32],
+            bench_case: Option<BenchmarkCase>,
+        ) -> Self::Args {
+            match bench_case {
+                Some(BenchmarkCase::CommonCase) => (1 << 31, (1 << 31) - 1),
+                Some(BenchmarkCase::WorstCase) => (1 << 31, 1 << 31),
+                None => StdRng::from_seed(seed).gen(),
+            }
+        }
+    }
 
     #[test]
     fn u32_overflowing_add_pbt() {
@@ -84,7 +81,7 @@ mod tests {
     #[test]
     fn u32_overflowing_add_unit_test() {
         for (lhs, rhs) in [
-            (0u32, 0u32),
+            (0, 0),
             (0, 1),
             (1, 0),
             (1, 1),
@@ -92,26 +89,14 @@ mod tests {
             (1 << 31, 1 << 31),
             (u32::MAX, u32::MAX),
         ] {
-            let init_stack = [
-                empty_stack(),
-                vec![
-                    BFieldElement::new(lhs as u64),
-                    BFieldElement::new(rhs as u64),
-                ],
-            ]
-            .concat();
-            let (expected_wrapped_sum, expected_overflow) = lhs.overflowing_add(rhs);
-            let expected_final_stack = [
-                empty_stack(),
-                vec![
-                    (expected_wrapped_sum as u64).into(),
-                    (expected_overflow as u64).into(),
-                ],
-            ]
-            .concat();
+            let initial_stack = Overflowingadd.set_up_test_stack((lhs, rhs));
+
+            let mut expected_final_stack = initial_stack.clone();
+            Overflowingadd.rust_shadow(&mut expected_final_stack);
+
             let _vm_output_state = test_rust_equivalence_given_complete_state(
                 &ShadowedClosure::new(Overflowingadd),
-                &init_stack,
+                &initial_stack,
                 &[],
                 &NonDeterminism::default(),
                 &None,
