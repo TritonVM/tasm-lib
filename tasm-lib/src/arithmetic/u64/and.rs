@@ -1,204 +1,125 @@
 use std::collections::HashMap;
 
-use num::Zero;
-use rand::prelude::*;
 use triton_vm::prelude::*;
-use twenty_first::prelude::U32s;
 
-use crate::empty_stack;
 use crate::prelude::*;
-use crate::push_encodable;
-use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::InitVmState;
+use crate::traits::basic_snippet::Reviewer;
+use crate::traits::basic_snippet::SignOffFingerprint;
 
-#[derive(Clone, Debug)]
+/// [Bitwise “and”](u64::bitand) (“`&`”) for `u64`s.
+///
+/// ### Behavior
+///
+/// ```text
+/// BEFORE: _ [right: u64] [left: u64]
+/// AFTER:  _ [right & left: u64]
+/// ```
+///
+/// ### Preconditions
+///
+/// - all input arguments are properly [`BFieldCodec`] encoded
+///
+/// ### Postconditions
+///
+/// - the output is the bitwise “and” of the input
+/// - the output is properly [`BFieldCodec`] encoded
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct And;
 
-impl DeprecatedSnippet for And {
-    fn entrypoint_name(&self) -> String {
+impl BasicSnippet for And {
+    fn inputs(&self) -> Vec<(DataType, String)> {
+        ["rhs", "lhs"]
+            .map(|side| (DataType::U64, side.to_string()))
+            .to_vec()
+    }
+
+    fn outputs(&self) -> Vec<(DataType, String)> {
+        vec![(DataType::U64, "(lhs & rhs)".to_string())]
+    }
+
+    fn entrypoint(&self) -> String {
         "tasmlib_arithmetic_u64_and".to_string()
     }
 
-    fn input_field_names(&self) -> Vec<String> {
-        vec![
-            "rhs_hi".to_string(),
-            "rhs_lo".to_string(),
-            "lhs_hi".to_string(),
-            "lhs_lo".to_string(),
-        ]
-    }
-
-    fn input_types(&self) -> Vec<crate::data_type::DataType> {
-        vec![DataType::U64, DataType::U64]
-    }
-
-    fn output_field_names(&self) -> Vec<String> {
-        vec!["(lhs & rhs)_hi".to_string(), "(lhs & rhs)_lo".to_string()]
-    }
-
-    fn output_types(&self) -> Vec<crate::data_type::DataType> {
-        vec![DataType::U64]
-    }
-
-    fn stack_diff(&self) -> isize {
-        -2
-    }
-
-    fn function_code(&self, _library: &mut Library) -> String {
-        let entrypoint = self.entrypoint_name();
-        format!(
-            "
-            // BEFORE: rhs_hi rhs_lo lhs_hi lhs_lo
-            // AFTER: (rhs & lhs)_hi (rhs & lhs)_lo
-            {entrypoint}:
-                swap 3
+    fn code(&self, _: &mut Library) -> Vec<LabelledInstruction> {
+        triton_asm!(
+            // BEFORE: _ rhs_hi rhs_lo lhs_hi lhs_lo
+            // AFTER:  _ (rhs & lhs)_hi (rhs & lhs)_lo
+            {self.entrypoint()}:
+                pick 2
                 and
-                // stack: _ lhs_lo rhs_lo (lhs_hi & rhs_hi)
+                // _ rhs_hi lhs_hi (rhs_lo & lhs_lo)
 
-                swap 2
+                place 2
                 and
-                // stack: _ (lhs_hi & rhs_hi) (rhs_lo & lhs_lo)
+                pick 1
+                // _ (lhs_hi & rhs_hi) (rhs_lo & lhs_lo)
+                // _ (rhs & lhs)_hi    (lhs & rhs)_lo
 
                 return
-            "
         )
     }
 
-    fn crash_conditions(&self) -> Vec<String> {
-        vec![]
-    }
-
-    fn gen_input_states(&self) -> Vec<InitVmState> {
-        let mut rng = rand::thread_rng();
-        let lhs = U32s::<2>::try_from(rng.next_u64()).unwrap();
-        let rhs = U32s::<2>::try_from(rng.next_u64()).unwrap();
-        let mut stack = empty_stack();
-        push_encodable(&mut stack, &lhs);
-        push_encodable(&mut stack, &rhs);
-        vec![InitVmState::with_stack(stack)]
-    }
-
-    fn common_case_input_state(&self) -> InitVmState {
-        InitVmState::with_stack(
-            [
-                empty_stack(),
-                vec![BFieldElement::zero(), BFieldElement::new((1 << 31) - 1)],
-                vec![BFieldElement::zero(), BFieldElement::new((1 << 10) - 1)],
-            ]
-            .concat(),
-        )
-    }
-
-    fn worst_case_input_state(&self) -> InitVmState {
-        InitVmState::with_stack(
-            [
-                empty_stack(),
-                vec![BFieldElement::new(1 << 31), BFieldElement::new(1 << 31)],
-                vec![
-                    BFieldElement::new(1 << 30),
-                    BFieldElement::new((1 << 31) + 10),
-                ],
-            ]
-            .concat(),
-        )
-    }
-
-    fn rust_shadowing(
-        &self,
-        stack: &mut Vec<BFieldElement>,
-        _std_in: Vec<BFieldElement>,
-        _secret_in: Vec<BFieldElement>,
-        _memory: &mut HashMap<BFieldElement, BFieldElement>,
-    ) {
-        // top element on stack
-        let a_lo: u32 = stack.pop().unwrap().try_into().unwrap();
-        let a_hi: u32 = stack.pop().unwrap().try_into().unwrap();
-
-        // second element on stack
-        let b_lo: u32 = stack.pop().unwrap().try_into().unwrap();
-        let b_hi: u32 = stack.pop().unwrap().try_into().unwrap();
-
-        // Perform calculation and write the result back to the stack
-        let and_res = U32s::<2>::new([a_lo & b_lo, a_hi & b_hi]);
-        let mut res = and_res.encode();
-        for _ in 0..res.len() {
-            stack.push(res.pop().unwrap());
-        }
+    fn sign_offs(&self) -> HashMap<Reviewer, SignOffFingerprint> {
+        let mut sign_offs = HashMap::new();
+        sign_offs.insert(Reviewer("ferdinand"), 0xfd2a6e206fb3abab.into());
+        sign_offs
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use num::BigUint;
-
     use super::*;
-    use crate::empty_stack;
-    use crate::test_helpers::test_rust_equivalence_given_input_values_deprecated;
-    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
+    use crate::test_prelude::*;
 
-    #[test]
-    fn and_u64_test() {
-        test_rust_equivalence_multiple_deprecated(&And, true);
-    }
+    impl Closure for And {
+        type Args = (u64, u64);
 
-    #[test]
-    fn and_test_simple() {
-        prop_and(4, 3);
-        prop_and(4, 4);
-        prop_and(u64::MAX, u64::MAX);
-        prop_and(0, u64::MAX);
-        prop_and(u64::MAX, 0);
-    }
+        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
+            let (right, left) = pop_encodable::<Self::Args>(stack);
+            push_encodable(stack, &(left & right));
+        }
 
-    #[test]
-    fn and_test_pbt() {
-        let mut rng = thread_rng();
-        for _ in 0..100 {
-            let lhs = rng.next_u64();
-            let rhs = rng.next_u64();
-            prop_and(lhs, rhs);
+        fn pseudorandom_args(
+            &self,
+            seed: [u8; 32],
+            bench_case: Option<BenchmarkCase>,
+        ) -> Self::Args {
+            match bench_case {
+                Some(BenchmarkCase::CommonCase) => (u32::MAX.into(), 1 << 10),
+                Some(BenchmarkCase::WorstCase) => (u64::MAX, u64::MAX - 1),
+                None => StdRng::from_seed(seed).gen(),
+            }
+        }
+
+        fn corner_case_args(&self) -> Vec<Self::Args> {
+            let edge_points = [0, 1 << 32, u64::MAX]
+                .into_iter()
+                .flat_map(|p| [p.checked_sub(1), Some(p), p.checked_add(1)])
+                .flatten()
+                .collect_vec();
+
+            edge_points
+                .iter()
+                .cartesian_product(&edge_points)
+                .map(|(&l, &r)| (l, r))
+                .collect()
         }
     }
 
-    fn prop_and(lhs: u64, rhs: u64) {
-        println!("lhs = {lhs}; rhs = {rhs}");
-        let mut init_stack = empty_stack();
-
-        let rhs_u32_2 = U32s::<2>::new([(rhs & u32::MAX as u64) as u32, (rhs >> 32) as u32]);
-        for elem in rhs_u32_2.encode().into_iter().rev() {
-            init_stack.push(elem);
-        }
-
-        let lhs_u32_2 = U32s::<2>::new([(lhs & u32::MAX as u64) as u32, (lhs >> 32) as u32]);
-        for elem in lhs_u32_2.encode().into_iter().rev() {
-            init_stack.push(elem);
-        }
-
-        let expected_res: BigUint = (lhs & rhs).into();
-        println!("Expected: {expected_res}");
-        let expected_u32_2: U32s<2> = expected_res.into();
-        let mut expected_end_stack = empty_stack();
-        for elem in expected_u32_2.encode().into_iter().rev() {
-            expected_end_stack.push(elem);
-        }
-
-        test_rust_equivalence_given_input_values_deprecated(
-            &And,
-            &init_stack,
-            &[],
-            HashMap::default(),
-            Some(&expected_end_stack),
-        );
+    #[test]
+    fn rust_shadow() {
+        ShadowedClosure::new(And).test();
     }
 }
 
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::snippet_bencher::bench_and_write;
+    use crate::test_prelude::*;
 
     #[test]
-    fn and_u64_benchmark() {
-        bench_and_write(And);
+    fn benchmark() {
+        ShadowedClosure::new(And).bench();
     }
 }
