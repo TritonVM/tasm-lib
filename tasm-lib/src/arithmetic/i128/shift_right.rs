@@ -306,6 +306,30 @@ mod tests {
             .cartesian_product(shift_amounts)
             .for_each(|(arg, shamt)| ShiftRight.assert_expected_shift_behavior(arg, shamt));
     }
+
+    #[proptest(cases = 50)]
+    fn shifting_right_by_127_is_zero_or_minus_1(#[strategy(arb())] arg: i128) {
+        // Verify an assumption about this snippet used downstream in neptune-core:
+        // That shifting right by 127 produces either 0xff..f, or 0x00..0, depending
+        // on the sign of the i128-argument.
+        let mut initial_stack = ShiftRight.init_stack_for_isolated_run();
+        push_encodable(&mut initial_stack, &arg);
+        push_encodable(&mut initial_stack, &127u32);
+        let mut expected_stack = ShiftRight.init_stack_for_isolated_run();
+        let expected_result = if arg.is_positive() { 0i128 } else { -1i128 };
+        push_encodable(&mut expected_stack, &expected_result);
+        test_rust_equivalence_given_complete_state(
+            &ShadowedClosure::new(ShiftRight),
+            &initial_stack,
+            &[],
+            &NonDeterminism::default(),
+            &None,
+            Some(&expected_stack),
+        );
+
+        let set_bits = expected_result.count_ones();
+        assert!(set_bits == 0 && !arg.is_negative() || set_bits == i128::BITS && arg.is_negative());
+    }
 }
 
 #[cfg(test)]
