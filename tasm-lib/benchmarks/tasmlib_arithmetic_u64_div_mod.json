@@ -2,7 +2,7 @@
   {
     "name": "tasmlib_arithmetic_u64_div_mod",
     "benchmark_result": {
-      "clock_cycle_count": 223,
+      "clock_cycle_count": 225,
       "hash_table_height": 522,
       "u32_table_height": 218,
       "op_stack_table_height": 168,
@@ -13,7 +13,7 @@
   {
     "name": "tasmlib_arithmetic_u64_div_mod",
     "benchmark_result": {
-      "clock_cycle_count": 7953,
+      "clock_cycle_count": 8020,
       "hash_table_height": 522,
       "u32_table_height": 10526,
       "op_stack_table_height": 5390,

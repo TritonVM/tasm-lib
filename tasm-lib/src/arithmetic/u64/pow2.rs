@@ -1,148 +1,147 @@
 use std::collections::HashMap;
 
-use num::One;
 use triton_vm::prelude::*;
-use twenty_first::prelude::U32s;
 
-use crate::empty_stack;
 use crate::prelude::*;
-use crate::push_encodable;
-use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::InitVmState;
+use crate::traits::basic_snippet::Reviewer;
+use crate::traits::basic_snippet::SignOffFingerprint;
 
-/// Consumes top element which is interpreted as exponent. Pushes a
-/// U32<2> to the top of the stack. So grows the stack by 1.
-#[derive(Clone, Debug)]
+/// Raise 2 to the power of the given exponent.
+///
+/// ### Behavior
+///
+/// ```text
+/// BEFORE: _ [arg: u32]
+/// AFTER:  _ [2^arg: u64]
+/// ```
+///
+/// ### Preconditions
+///
+/// - the input `arg` is less than 64
+///
+/// ### Postconditions
+///
+/// - the output is properly [`BFieldCodec`] encoded
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub struct Pow2;
 
-impl DeprecatedSnippet for Pow2 {
-    fn entrypoint_name(&self) -> String {
+impl Pow2 {
+    pub const INPUT_TOO_LARGE_ERROR_ID: i128 = 360;
+}
+
+impl BasicSnippet for Pow2 {
+    fn inputs(&self) -> Vec<(DataType, String)> {
+        vec![(DataType::U32, "arg".to_string())]
+    }
+
+    fn outputs(&self) -> Vec<(DataType, String)> {
+        vec![(DataType::U64, "(2^arg)".to_string())]
+    }
+
+    fn entrypoint(&self) -> String {
         "tasmlib_arithmetic_u64_pow2".to_string()
     }
 
-    fn input_field_names(&self) -> Vec<String> {
-        vec!["i".to_string()]
-    }
+    fn code(&self, _: &mut Library) -> Vec<LabelledInstruction> {
+        triton_asm! {
+            {self.entrypoint()}:
+                push 64
+                dup 1
+                lt
+                assert error_id {Self::INPUT_TOO_LARGE_ERROR_ID}
 
-    fn input_types(&self) -> Vec<DataType> {
-        vec![DataType::U32]
-    }
-
-    fn output_field_names(&self) -> Vec<String> {
-        vec!["(2^i)_hi".to_string(), "(2^i)_lo".to_string()]
-    }
-
-    fn output_types(&self) -> Vec<DataType> {
-        vec![DataType::U64]
-    }
-
-    fn stack_diff(&self) -> isize {
-        1
-    }
-
-    fn function_code(&self, _library: &mut Library) -> String {
-        let entrypoint = self.entrypoint_name();
-
-        format!(
-            "{entrypoint}:
                 push 2
                 pow
                 split
                 return
-            "
-        )
-    }
-
-    fn crash_conditions(&self) -> Vec<String> {
-        vec![]
-    }
-
-    fn gen_input_states(&self) -> Vec<InitVmState> {
-        (0..64)
-            .map(|i: u32| {
-                let mut stack = empty_stack();
-                push_encodable(&mut stack, &i);
-                InitVmState::with_stack(stack)
-            })
-            .collect()
-    }
-
-    fn common_case_input_state(&self) -> InitVmState {
-        InitVmState::with_stack([empty_stack(), vec![BFieldElement::new(31)]].concat())
-    }
-
-    fn worst_case_input_state(&self) -> InitVmState {
-        InitVmState::with_stack([empty_stack(), vec![BFieldElement::new(63)]].concat())
-    }
-
-    fn rust_shadowing(
-        &self,
-        stack: &mut Vec<BFieldElement>,
-        _std_in: Vec<BFieldElement>,
-        _secret_in: Vec<BFieldElement>,
-        _memory: &mut HashMap<BFieldElement, BFieldElement>,
-    ) {
-        // Find exponent
-        let mut exponent: u32 = stack.pop().unwrap().try_into().unwrap();
-        let mut res = U32s::<2>::one();
-
-        while exponent > 0 {
-            res.mul_two();
-            exponent -= 1;
         }
+    }
 
-        let mut res = res.encode();
-        for _ in 0..res.len() {
-            stack.push(res.pop().unwrap());
-        }
+    fn sign_offs(&self) -> HashMap<Reviewer, SignOffFingerprint> {
+        let mut sign_offs = HashMap::new();
+        sign_offs.insert(Reviewer("ferdinand"), 0x3ea5807c1e92829b.into());
+        sign_offs
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::empty_stack;
-    use crate::test_helpers::test_rust_equivalence_given_input_values_deprecated;
-    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
+    use crate::test_prelude::*;
 
-    #[test]
-    fn pow2_static_test() {
-        test_rust_equivalence_multiple_deprecated(&Pow2, true);
-    }
+    impl Pow2 {
+        fn assert_expected_behavior(&self, arg: u32) {
+            let initial_stack = self.set_up_test_stack(arg);
 
-    fn prop_exp_static(exponent: u8) {
-        let mut init_stack = empty_stack();
-        init_stack.push(BFieldElement::new(exponent as u64));
+            let mut expected_stack = initial_stack.clone();
+            self.rust_shadow(&mut expected_stack);
 
-        // let expected = None;
-        let mut expected = empty_stack();
-        let res = 2u64.pow(exponent as u32);
-        expected.push(BFieldElement::new(res >> 32));
-        expected.push(BFieldElement::new(res & u32::MAX as u64));
-        test_rust_equivalence_given_input_values_deprecated(
-            &Pow2,
-            &init_stack,
-            &[],
-            HashMap::default(),
-            Some(&expected),
-        );
-    }
-
-    #[test]
-    fn all_exponents_static() {
-        for i in 0..64 {
-            prop_exp_static(i);
+            test_rust_equivalence_given_complete_state(
+                &ShadowedClosure::new(Self),
+                &initial_stack,
+                &[],
+                &NonDeterminism::default(),
+                &None,
+                Some(&expected_stack),
+            );
         }
+    }
+
+    impl Closure for Pow2 {
+        type Args = u32;
+
+        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
+            let arg = pop_encodable::<Self::Args>(stack);
+            push_encodable(stack, &2_u64.pow(arg));
+        }
+
+        fn pseudorandom_args(
+            &self,
+            seed: [u8; 32],
+            bench_case: Option<BenchmarkCase>,
+        ) -> Self::Args {
+            let Some(bench_case) = bench_case else {
+                return StdRng::from_seed(seed).gen_range(0..64);
+            };
+
+            match bench_case {
+                BenchmarkCase::CommonCase => 31,
+                BenchmarkCase::WorstCase => 63,
+            }
+        }
+    }
+
+    #[test]
+    fn rust_shadow() {
+        ShadowedClosure::new(Pow2).test();
+    }
+
+    #[test]
+    fn unit_test() {
+        for arg in 0..64 {
+            Pow2.assert_expected_behavior(arg);
+        }
+    }
+
+    #[proptest]
+    fn negative_property_test(#[strategy(64_u32..)] arg: u32) {
+        let stack = Pow2.set_up_test_stack(arg);
+
+        test_assertion_failure(
+            &ShadowedClosure::new(Pow2),
+            InitVmState::with_stack(stack),
+            &[Pow2::INPUT_TOO_LARGE_ERROR_ID],
+        );
     }
 }
 
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::snippet_bencher::bench_and_write;
+    use crate::test_prelude::*;
 
     #[test]
-    fn pow2_static_benchmark() {
-        bench_and_write(Pow2);
+    fn benchmark() {
+        ShadowedClosure::new(Pow2).bench();
     }
 }

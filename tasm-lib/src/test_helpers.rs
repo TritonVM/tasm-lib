@@ -473,12 +473,11 @@ pub fn test_rust_equivalence_given_execution_state<S: RustShadow>(
     snippet_struct: &S,
     execution_state: InitVmState,
 ) -> VMState {
-    let nondeterminism = execution_state.nondeterminism;
     test_rust_equivalence_given_complete_state::<S>(
         snippet_struct,
         &execution_state.stack,
         &execution_state.public_input,
-        &nondeterminism,
+        &execution_state.nondeterminism,
         &execution_state.sponge,
         None,
     )
