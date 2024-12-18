@@ -1,8 +1,6 @@
 use triton_vm::prelude::*;
 
-use crate::data_type::DataType;
-use crate::library::Library;
-use crate::traits::basic_snippet::BasicSnippet;
+use crate::prelude::*;
 
 pub struct ToThePowerOfPowerOf2;
 
@@ -71,39 +69,26 @@ impl BasicSnippet for ToThePowerOfPowerOf2 {
 
 #[cfg(test)]
 mod tests {
-    use itertools::Itertools;
-    use rand::prelude::*;
-    use triton_vm::prelude::*;
-    use triton_vm::twenty_first::math::traits::ModPowU32;
+    use twenty_first::math::traits::ModPowU32;
 
     use super::*;
     use crate::arithmetic::xfe::mod_pow_u32_generic::XfeModPowU32Generic;
-    use crate::snippet_bencher::BenchmarkCase;
-    use crate::test_helpers::test_rust_equivalence_given_complete_state;
-    use crate::traits::closure::Closure;
-    use crate::traits::closure::ShadowedClosure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     impl Closure for ToThePowerOfPowerOf2 {
-        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
-            let base = XFieldElement::new([
-                stack.pop().unwrap(),
-                stack.pop().unwrap(),
-                stack.pop().unwrap(),
-            ]);
-            let exponent_log_2: u32 = stack.pop().unwrap().try_into().unwrap();
-            let result = base.mod_pow_u32(2u32.pow(exponent_log_2));
+        type Args = (u32, XFieldElement);
 
-            for elem in result.coefficients.into_iter().rev() {
-                stack.push(elem);
-            }
+        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
+            let (exponent_log_2, base) = pop_encodable::<Self::Args>(stack);
+            let result = base.mod_pow_u32(2u32.pow(exponent_log_2));
+            push_encodable(stack, &result);
         }
 
-        fn pseudorandom_initial_state(
+        fn pseudorandom_args(
             &self,
             seed: [u8; 32],
-            bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
-        ) -> Vec<BFieldElement> {
+            bench_case: Option<BenchmarkCase>,
+        ) -> Self::Args {
             let mut rng = StdRng::from_seed(seed);
             let exponent = match bench_case {
                 Some(BenchmarkCase::CommonCase) => 20,
@@ -111,29 +96,14 @@ mod tests {
                 None => rng.gen_range(0..32),
             };
 
-            let base: XFieldElement = rng.gen();
-            self.prepare_state(base, exponent)
+            (exponent, rng.gen())
         }
 
-        fn corner_case_initial_states(&self) -> Vec<Vec<BFieldElement>> {
-            let bfe_14 = BFieldElement::new(14);
-            let an_xfe = XFieldElement::new([bfe_14, bfe_14, bfe_14]);
+        fn corner_case_args(&self) -> Vec<Self::Args> {
             (0..=5)
                 .chain([30, 31])
-                .map(|log_2_exp| self.prepare_state(an_xfe, log_2_exp))
-                .collect_vec()
-        }
-    }
-
-    impl ToThePowerOfPowerOf2 {
-        fn prepare_state(&self, base: XFieldElement, log_2_exp: u32) -> Vec<BFieldElement> {
-            let base = base.coefficients.into_iter().rev().collect();
-            [
-                self.init_stack_for_isolated_run(),
-                vec![BFieldElement::new(log_2_exp as u64)],
-                base,
-            ]
-            .concat()
+                .map(|log_2_exp| (log_2_exp, xfe!([14; 3])))
+                .collect()
         }
     }
 
@@ -195,11 +165,10 @@ mod tests {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::traits::closure::ShadowedClosure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
-    fn xfe_mod_pow_benchmark() {
+    fn benchmark() {
         ShadowedClosure::new(ToThePowerOfPowerOf2).bench();
     }
 }

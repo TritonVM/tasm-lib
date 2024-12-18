@@ -18,7 +18,6 @@ use std::time::SystemTime;
 
 use anyhow::bail;
 use itertools::Itertools;
-use library::Library;
 use memory::dyn_malloc;
 use num_traits::Zero;
 use snippet_bencher::BenchmarkResult;
@@ -390,4 +389,48 @@ pub fn generate_full_profile(
     let (_output, profile) =
         VM::profile(program, public_input.clone(), nondeterminism.clone()).unwrap();
     format!("{name}:\n{profile}")
+}
+
+/// Glob-import this module to reduce the number of imports in a test module.
+///
+/// Feel free to add anything you frequently `use` in a test module. It is
+/// discouraged to add deprecated types or functions – get rid of them instead.
+#[cfg(test)]
+pub mod test_prelude {
+    pub use std::collections::HashMap;
+
+    pub use itertools::Itertools;
+    pub use proptest::prelude::*;
+    pub use proptest_arbitrary_interop::arb;
+    pub use rand::prelude::*;
+    pub use test_strategy::proptest;
+
+    pub use crate::memory::encode_to_memory;
+    pub(crate) use crate::pop_encodable;
+    pub use crate::push_encodable;
+    pub use crate::snippet_bencher::BenchmarkCase;
+    pub use crate::test_helpers::test_assertion_failure;
+    pub use crate::test_helpers::test_rust_equivalence_given_complete_state;
+    pub use crate::traits::accessor::Accessor;
+    pub use crate::traits::accessor::AccessorInitialState;
+    pub use crate::traits::accessor::ShadowedAccessor;
+    pub use crate::traits::algorithm::Algorithm;
+    pub use crate::traits::algorithm::AlgorithmInitialState;
+    pub use crate::traits::algorithm::ShadowedAlgorithm;
+    pub use crate::traits::closure::Closure;
+    pub use crate::traits::closure::ShadowedClosure;
+    pub use crate::traits::function::Function;
+    pub use crate::traits::function::FunctionInitialState;
+    pub use crate::traits::function::ShadowedFunction;
+    pub use crate::traits::mem_preserver::MemPreserver;
+    pub use crate::traits::mem_preserver::MemPreserverInitialState;
+    pub use crate::traits::mem_preserver::ShadowedMemPreserver;
+    pub use crate::traits::procedure::Procedure;
+    pub use crate::traits::procedure::ProcedureInitialState;
+    pub use crate::traits::procedure::ShadowedProcedure;
+    pub use crate::traits::read_only_algorithm::ReadOnlyAlgorithm;
+    pub use crate::traits::read_only_algorithm::ReadOnlyAlgorithmInitialState;
+    pub use crate::traits::read_only_algorithm::ShadowedReadOnlyAlgorithm;
+    pub use crate::traits::rust_shadow::RustShadow;
+    pub use crate::InitVmState;
 }

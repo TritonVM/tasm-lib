@@ -1,15 +1,12 @@
 use std::collections::HashMap;
 
-use itertools::Itertools;
 use triton_vm::prelude::*;
 
-use crate::data_type::DataType;
-use crate::empty_stack;
-use crate::library::Library;
+use crate::prelude::*;
 use crate::rust_shadowing_helper_functions::list::list_new;
-use crate::traits::deprecated_snippet::DeprecatedSnippet;
+use crate::snippet_bencher::BenchmarkCase;
 use crate::traits::function::Function;
-use crate::InitVmState;
+use crate::traits::function::FunctionInitialState;
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct New {
@@ -25,131 +22,95 @@ impl New {
     }
 }
 
-impl DeprecatedSnippet for New {
-    fn entrypoint_name(&self) -> String {
-        format!(
-            "tasmlib_list_new___{}",
-            self.element_type.label_friendly_name()
-        )
-    }
-
-    fn input_field_names(&self) -> Vec<String> {
+impl BasicSnippet for New {
+    fn inputs(&self) -> Vec<(DataType, String)> {
         vec![]
     }
 
-    fn input_types(&self) -> Vec<DataType> {
-        vec![]
+    fn outputs(&self) -> Vec<(DataType, String)> {
+        let list_type = DataType::List(Box::new(self.element_type.clone()));
+        vec![(list_type, "*list".to_string())]
     }
 
-    fn output_field_names(&self) -> Vec<String> {
-        vec!["list_pointer".to_string()]
+    fn entrypoint(&self) -> String {
+        let element_type = self.element_type.label_friendly_name();
+        format!("tasmlib_list_new___{element_type}")
     }
 
-    fn output_types(&self) -> Vec<DataType> {
-        vec![DataType::List(Box::new(self.element_type.clone()))]
-    }
-
-    fn stack_diff(&self) -> isize {
-        1
-    }
-
-    fn function_code(&self, library: &mut Library) -> String {
-        let entrypoint = self.entrypoint_name();
-        let dyn_malloc = library.import(Box::new(crate::dyn_malloc::DynMalloc));
+    fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
+        let dyn_malloc = library.import(Box::new(DynMalloc));
 
         triton_asm!(
             // BEFORE: _
             // AFTER:  _ *list
-            {entrypoint}:
+            {self.entrypoint()}:
                 call {dyn_malloc}
                             // _ *list
 
-                // Write initial length = 0 to `*list`
+                /* write initial length = 0 to `*list` */
                 push 0
-                swap 1
+                pick 1
                 write_mem 1
-                push -1
-                add
+                addi -1
                             // _ *list
 
                 return
         )
-        .iter()
-        .join("\n")
-    }
-
-    fn crash_conditions(&self) -> Vec<String> {
-        vec![]
-    }
-
-    fn gen_input_states(&self) -> Vec<InitVmState> {
-        vec![
-            prepare_state(0),
-            prepare_state(1),
-            prepare_state(2),
-            prepare_state(3),
-            prepare_state(5),
-            prepare_state(102),
-        ]
-    }
-
-    fn common_case_input_state(&self) -> InitVmState {
-        prepare_state(2)
-    }
-
-    fn worst_case_input_state(&self) -> InitVmState {
-        prepare_state(1000000)
-    }
-
-    fn rust_shadowing(
-        &self,
-        stack: &mut Vec<BFieldElement>,
-        _std_in: Vec<BFieldElement>,
-        _secret_in: Vec<BFieldElement>,
-        memory: &mut HashMap<BFieldElement, BFieldElement>,
-    ) {
-        crate::dyn_malloc::DynMalloc.rust_shadow(stack, memory);
-
-        let list_pointer = stack.pop().unwrap();
-        list_new(list_pointer, memory);
-
-        stack.push(list_pointer);
     }
 }
 
-fn prepare_state(capacity: u32) -> InitVmState {
-    let mut stack = empty_stack();
-    stack.push(BFieldElement::new(capacity as u64));
-    InitVmState::with_stack(stack)
+impl Function for New {
+    fn rust_shadow(
+        &self,
+        stack: &mut Vec<BFieldElement>,
+        memory: &mut HashMap<BFieldElement, BFieldElement>,
+    ) {
+        DynMalloc.rust_shadow(stack, memory);
+
+        let &list_pointer = stack.last().unwrap();
+        list_new(list_pointer, memory);
+    }
+
+    fn pseudorandom_initial_state(
+        &self,
+        _: [u8; 32],
+        _: Option<BenchmarkCase>,
+    ) -> FunctionInitialState {
+        FunctionInitialState {
+            stack: self.init_stack_for_isolated_run(),
+            ..Default::default()
+        }
+    }
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
-    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
+    use crate::test_prelude::*;
 
     #[test]
-    fn new_snippet_test() {
-        fn test_rust_equivalence_and_export(data_type: DataType) {
-            test_rust_equivalence_multiple_deprecated(&New::new(data_type), true);
+    fn rust_shadow() {
+        for ty in [
+            DataType::Bool,
+            DataType::Bfe,
+            DataType::U32,
+            DataType::U64,
+            DataType::Xfe,
+            DataType::Digest,
+        ] {
+            dbg!(&ty);
+            ShadowedFunction::new(New::new(ty)).test();
         }
-
-        test_rust_equivalence_and_export(DataType::Bool);
-        test_rust_equivalence_and_export(DataType::Bfe);
-        test_rust_equivalence_and_export(DataType::U32);
-        test_rust_equivalence_and_export(DataType::U64);
-        test_rust_equivalence_and_export(DataType::Xfe);
-        test_rust_equivalence_and_export(DataType::Digest);
     }
 }
 
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::snippet_bencher::bench_and_write;
+    use crate::test_prelude::*;
 
     #[test]
-    fn new_benchmark() {
-        bench_and_write(New::new(DataType::Digest));
+    fn benchmark() {
+        ShadowedFunction::new(New::new(DataType::Digest)).bench();
     }
 }

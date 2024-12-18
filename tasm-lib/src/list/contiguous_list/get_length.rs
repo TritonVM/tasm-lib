@@ -5,17 +5,16 @@ use rand::prelude::*;
 use triton_vm::prelude::*;
 use twenty_first::math::other::random_elements;
 
-use crate::data_type::DataType;
 use crate::empty_stack;
-use crate::prelude::Digest;
+use crate::prelude::*;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::InitVmState;
 
 /// Returns the number of elements of a contiguous list.
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct GetLength;
 
-#[derive(Clone, Debug, BFieldCodec)]
+#[derive(Debug, Clone, BFieldCodec)]
 pub(super) struct DummyOuterDataStructure {
     a: Vec<DummyInnerDataStructure>,
     b: Vec<Digest>,
@@ -23,7 +22,7 @@ pub(super) struct DummyOuterDataStructure {
     d: BFieldElement,
 }
 
-#[derive(Clone, Debug, BFieldCodec)]
+#[derive(Debug, Clone, BFieldCodec)]
 struct DummyInnerDataStructure {
     b: Vec<Digest>,
     c: Vec<BFieldElement>,
@@ -97,7 +96,7 @@ impl DeprecatedSnippet for GetLength {
         0
     }
 
-    fn function_code(&self, _library: &mut crate::library::Library) -> String {
+    fn function_code(&self, _: &mut Library) -> String {
         let entrypoint = self.entrypoint_name();
 
         format!(

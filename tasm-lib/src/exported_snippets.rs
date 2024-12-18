@@ -12,7 +12,6 @@ use crate::array::horner_evaluation::HornerEvaluation;
 use crate::array::inner_product_of_three_rows_with_weights::InnerProductOfThreeRowsWithWeights;
 use crate::array::inner_product_of_three_rows_with_weights::MainElementType;
 use crate::array::inner_product_of_xfes::InnerProductOfXfes;
-use crate::data_type::DataType;
 use crate::hashing;
 use crate::hashing::algebraic_hasher;
 use crate::hashing::sponge_hasher;
@@ -32,7 +31,7 @@ use crate::mmr::verify_from_secret_in_secret_leaf_index::MmrVerifyFromSecretInSe
 use crate::neptune::mutator_set::commit::Commit;
 use crate::neptune::mutator_set::get_swbf_indices::GetSwbfIndices;
 use crate::other_snippets::bfe_add::BfeAdd;
-use crate::traits::basic_snippet::BasicSnippet;
+use crate::prelude::*;
 use crate::verifier::challenges;
 use crate::verifier::challenges::new_empty_input_and_output::NewEmptyInputAndOutput;
 use crate::verifier::challenges::new_generic_dyn_claim::NewGenericDynClaim;

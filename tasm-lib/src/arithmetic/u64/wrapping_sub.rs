@@ -3,7 +3,6 @@ use std::collections::HashMap;
 use triton_vm::prelude::*;
 
 use crate::arithmetic::u64::overflowing_sub::OverflowingSub;
-use crate::data_type::DataType;
 use crate::prelude::*;
 use crate::traits::basic_snippet::Reviewer;
 use crate::traits::basic_snippet::SignOffFingerprint;
@@ -28,7 +27,7 @@ use crate::traits::basic_snippet::SignOffFingerprint;
 /// - the output is properly [`BFieldCodec`] encoded
 ///
 /// [sub]: u64::wrapping_sub
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct WrappingSub;
 
 impl BasicSnippet for WrappingSub {
@@ -72,13 +71,11 @@ impl BasicSnippet for WrappingSub {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::pop_encodable;
-    use crate::push_encodable;
-    use crate::traits::closure::Closure;
-    use crate::traits::closure::ShadowedClosure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     impl Closure for WrappingSub {
+        type Args = <OverflowingSub as Closure>::Args;
+
         fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
             let minuend = pop_encodable::<u64>(stack);
             let subtrahend = pop_encodable::<u64>(stack);
@@ -86,16 +83,16 @@ mod tests {
             push_encodable(stack, &difference);
         }
 
-        fn pseudorandom_initial_state(
+        fn pseudorandom_args(
             &self,
             seed: [u8; 32],
-            bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
-        ) -> Vec<BFieldElement> {
-            OverflowingSub.pseudorandom_initial_state(seed, bench_case)
+            bench_case: Option<BenchmarkCase>,
+        ) -> Self::Args {
+            OverflowingSub.pseudorandom_args(seed, bench_case)
         }
 
-        fn corner_case_initial_states(&self) -> Vec<Vec<BFieldElement>> {
-            OverflowingSub.corner_case_initial_states()
+        fn corner_case_args(&self) -> Vec<Self::Args> {
+            OverflowingSub.corner_case_args()
         }
     }
 
@@ -108,8 +105,7 @@ mod tests {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::traits::closure::ShadowedClosure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
     fn benchmark() {

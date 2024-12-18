@@ -1,43 +1,14 @@
-use std::collections::HashMap;
-
-use rand::prelude::*;
 use triton_vm::prelude::*;
-use triton_vm::twenty_first::math::tip5::Digest;
-use triton_vm::twenty_first::util_types::sponge::Sponge;
+use twenty_first::util_types::sponge::Sponge;
 
-use crate::data_type::DataType;
 use crate::hashing::absorb_multiple::AbsorbMultiple;
-use crate::library::Library;
-use crate::prelude::Tip5;
-use crate::snippet_bencher::BenchmarkCase;
-use crate::traits::basic_snippet::BasicSnippet;
-use crate::traits::procedure::Procedure;
-use crate::traits::procedure::ProcedureInitialState;
+use crate::prelude::*;
 
 /// Calculate hash of a raw sequence of a `BFieldElement`.
 #[derive(Clone, Debug)]
 pub struct HashVarlen;
 
 impl HashVarlen {
-    fn random_memory_state_read_k(&self, k: u32) -> ProcedureInitialState {
-        let memory_start: BFieldElement = random();
-        let memory: HashMap<BFieldElement, BFieldElement> = (0..k)
-            .map(|i| (memory_start + BFieldElement::new(i as u64), random()))
-            .collect();
-
-        let nondeterminism = NonDeterminism::default().with_ram(memory);
-        ProcedureInitialState {
-            stack: [
-                self.init_stack_for_isolated_run(),
-                vec![memory_start, BFieldElement::new(k as u64)],
-            ]
-            .concat(),
-            nondeterminism,
-            public_input: vec![],
-            sponge: None,
-        }
-    }
-
     /// Mutate the sponge with the same operations as this snippet
     /// Used to facilitate rust-shadowing in downstream dependencies.
     pub fn sponge_mutation(&self, sponge: &mut Tip5, preimage: &[BFieldElement]) {
@@ -86,71 +57,83 @@ impl BasicSnippet for HashVarlen {
     }
 }
 
-impl Procedure for HashVarlen {
-    fn rust_shadow(
-        &self,
-        stack: &mut Vec<BFieldElement>,
-        memory: &mut HashMap<BFieldElement, BFieldElement>,
-        nondeterminism: &NonDeterminism,
-        public_input: &[BFieldElement],
-        sponge: &mut Option<Tip5>,
-    ) -> Vec<BFieldElement> {
-        *sponge = Some(Tip5::init());
-
-        let absorb_snippet = AbsorbMultiple;
-        absorb_snippet.rust_shadow(stack, memory, nondeterminism, public_input, sponge);
-
-        // Sponge-squeeze
-        let mut squeezed = sponge.as_mut().unwrap().squeeze();
-        squeezed.reverse();
-        stack.extend(squeezed);
-
-        // Pop returned digest
-        let digest = Digest::new([
-            stack.pop().unwrap(),
-            stack.pop().unwrap(),
-            stack.pop().unwrap(),
-            stack.pop().unwrap(),
-            stack.pop().unwrap(),
-        ]);
-
-        // Remove 5 more words:
-        for _ in 0..Digest::LEN {
-            stack.pop().unwrap();
-        }
-
-        // Put digest back on stack
-        stack.extend(digest.reversed().values().to_vec());
-
-        vec![]
-    }
-
-    fn pseudorandom_initial_state(
-        &self,
-        seed: [u8; 32],
-        bench_case: Option<BenchmarkCase>,
-    ) -> ProcedureInitialState {
-        let preimage_length: u32 = match bench_case {
-            Some(BenchmarkCase::CommonCase) => 25,
-            Some(BenchmarkCase::WorstCase) => 1000,
-            None => {
-                let mut rng = StdRng::from_seed(seed);
-                rng.gen_range(0..400)
-            }
-        };
-
-        self.random_memory_state_read_k(preimage_length)
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use rand::prelude::*;
-
     use super::*;
     use crate::test_helpers::tasm_final_state;
-    use crate::traits::procedure::ShadowedProcedure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
+
+    impl HashVarlen {
+        fn random_memory_state_read_k(&self, k: u32) -> ProcedureInitialState {
+            let memory_start: BFieldElement = random();
+            let memory: HashMap<BFieldElement, BFieldElement> = (0..k)
+                .map(|i| (memory_start + BFieldElement::new(i as u64), random()))
+                .collect();
+
+            let nondeterminism = NonDeterminism::default().with_ram(memory);
+            ProcedureInitialState {
+                stack: [
+                    self.init_stack_for_isolated_run(),
+                    vec![memory_start, BFieldElement::new(k as u64)],
+                ]
+                .concat(),
+                nondeterminism,
+                public_input: vec![],
+                sponge: None,
+            }
+        }
+    }
+
+    impl Procedure for HashVarlen {
+        fn rust_shadow(
+            &self,
+            stack: &mut Vec<BFieldElement>,
+            memory: &mut HashMap<BFieldElement, BFieldElement>,
+            nondeterminism: &NonDeterminism,
+            public_input: &[BFieldElement],
+            sponge: &mut Option<Tip5>,
+        ) -> Vec<BFieldElement> {
+            *sponge = Some(Tip5::init());
+
+            let absorb_snippet = AbsorbMultiple;
+            absorb_snippet.rust_shadow(stack, memory, nondeterminism, public_input, sponge);
+
+            // Sponge-squeeze
+            let mut squeezed = sponge.as_mut().unwrap().squeeze();
+            squeezed.reverse();
+            stack.extend(squeezed);
+
+            // Pop returned digest
+            let digest = pop_encodable::<Digest>(stack);
+
+            // Remove 5 more words:
+            for _ in 0..Digest::LEN {
+                stack.pop().unwrap();
+            }
+
+            // Put digest back on stack
+            push_encodable(stack, &digest);
+
+            vec![]
+        }
+
+        fn pseudorandom_initial_state(
+            &self,
+            seed: [u8; 32],
+            bench_case: Option<BenchmarkCase>,
+        ) -> ProcedureInitialState {
+            let preimage_length: u32 = match bench_case {
+                Some(BenchmarkCase::CommonCase) => 25,
+                Some(BenchmarkCase::WorstCase) => 1000,
+                None => {
+                    let mut rng = StdRng::from_seed(seed);
+                    rng.gen_range(0..400)
+                }
+            };
+
+            self.random_memory_state_read_k(preimage_length)
+        }
+    }
 
     #[test]
     fn test() {
@@ -194,8 +177,7 @@ mod tests {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::traits::procedure::ShadowedProcedure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
     fn benchmark() {

@@ -2,9 +2,7 @@ use std::collections::HashMap;
 
 use triton_vm::prelude::*;
 
-use crate::data_type::DataType;
-use crate::library::Library;
-use crate::traits::basic_snippet::BasicSnippet;
+use crate::prelude::*;
 use crate::traits::basic_snippet::Reviewer;
 use crate::traits::basic_snippet::SignOffFingerprint;
 
@@ -117,46 +115,34 @@ impl BasicSnippet for NextPowerOfTwo {
 
 #[cfg(test)]
 mod tests {
-    use rand::prelude::*;
-
     use super::*;
-    use crate::pop_encodable;
-    use crate::push_encodable;
-    use crate::snippet_bencher::BenchmarkCase;
-    use crate::test_helpers::test_assertion_failure;
-    use crate::traits::closure::Closure;
-    use crate::traits::closure::ShadowedClosure;
-    use crate::traits::rust_shadow::RustShadow;
-    use crate::InitVmState;
+    use crate::test_prelude::*;
 
     impl Closure for NextPowerOfTwo {
+        type Args = u32;
+
         fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
-            let arg = pop_encodable::<u32>(stack);
+            let arg = pop_encodable::<Self::Args>(stack);
             push_encodable(stack, &arg.next_power_of_two());
         }
 
-        fn pseudorandom_initial_state(
+        fn pseudorandom_args(
             &self,
             seed: [u8; 32],
             bench_case: Option<BenchmarkCase>,
-        ) -> Vec<BFieldElement> {
-            let arg = match bench_case {
+        ) -> Self::Args {
+            match bench_case {
                 Some(BenchmarkCase::CommonCase) => (1 << 27) - 1,
                 Some(BenchmarkCase::WorstCase) => (1 << 31) - 1,
                 None => StdRng::from_seed(seed).next_u32() / 2,
-            };
-
-            self.prepare_vm_stack(arg)
+            }
         }
 
-        fn corner_case_initial_states(&self) -> Vec<Vec<BFieldElement>> {
+        fn corner_case_args(&self) -> Vec<Self::Args> {
             let small_inputs = 0..=66;
             let big_valid_inputs = (0..=5).map(|i| (1 << 31) - i);
 
-            small_inputs
-                .chain(big_valid_inputs)
-                .map(|i| self.prepare_vm_stack(i))
-                .collect()
+            small_inputs.chain(big_valid_inputs).collect()
         }
     }
 
@@ -189,11 +175,10 @@ mod tests {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::traits::closure::ShadowedClosure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
-    fn npo2_u32_bench() {
+    fn benchmark() {
         ShadowedClosure::new(NextPowerOfTwo).bench()
     }
 }

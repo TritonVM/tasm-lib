@@ -1,12 +1,10 @@
 use itertools::Itertools;
 use triton_vm::prelude::*;
 
-use crate::data_type::DataType;
-use crate::library::Library;
-use crate::prelude::BasicSnippet;
+use crate::prelude::*;
 
 /// Compute the Merkle root of a slice of `Digest`s
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct MerkleRootStaticSize {
     /// Aka `height` of the Merkle tree
     pub log2_length: u8,
@@ -105,22 +103,12 @@ impl BasicSnippet for MerkleRootStaticSize {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-
-    use proptest_arbitrary_interop::arb;
-    use rand::prelude::*;
-    use test_strategy::proptest;
-    use triton_vm::twenty_first::prelude::*;
+    use twenty_first::prelude::*;
 
     use super::*;
-    use crate::memory::encode_to_memory;
     use crate::rust_shadowing_helper_functions::array::array_from_memory;
     use crate::rust_shadowing_helper_functions::array::insert_as_array;
-    use crate::snippet_bencher::BenchmarkCase;
-    use crate::traits::function::Function;
-    use crate::traits::function::FunctionInitialState;
-    use crate::traits::function::ShadowedFunction;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     impl Function for MerkleRootStaticSize {
         fn rust_shadow(
@@ -200,8 +188,7 @@ mod tests {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::traits::function::ShadowedFunction;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     fn bench_case(log2_length: u8) {
         let shadowed_function = MerkleRootStaticSize {

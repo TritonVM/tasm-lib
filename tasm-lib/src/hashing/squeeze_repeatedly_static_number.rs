@@ -1,15 +1,14 @@
 use triton_vm::prelude::*;
-use triton_vm::twenty_first::math::tip5::RATE;
+use twenty_first::math::tip5::RATE;
 
-use crate::data_type::DataType;
-use crate::traits::basic_snippet::BasicSnippet;
+use crate::prelude::*;
 
 /// Squeeze the sponge a statically-known number of times.
 ///
 /// Squeeze the sponge `num_squeezes` times, storing all the produced pseudorandom `BFieldElement`s
 /// contiguously in memory. It is the caller's responsibility to allocate enough memory.
 /// Number of squeezes must be statically known.
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct SqueezeRepeatedlyStaticNumber {
     pub num_squeezes: usize,
 }
@@ -30,7 +29,7 @@ impl BasicSnippet for SqueezeRepeatedlyStaticNumber {
         )
     }
 
-    fn code(&self, _library: &mut crate::library::Library) -> Vec<LabelledInstruction> {
+    fn code(&self, _: &mut Library) -> Vec<LabelledInstruction> {
         assert_eq!(10, RATE, "Code assumes RATE is 10");
 
         let entrypoint = self.entrypoint();
@@ -70,21 +69,13 @@ impl BasicSnippet for SqueezeRepeatedlyStaticNumber {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-
-    use rand::prelude::*;
-
     use super::*;
     use crate::hashing::squeeze_repeatedly::SqueezeRepeatedly;
-    use crate::snippet_bencher::BenchmarkCase;
     use crate::test_helpers::tasm_final_state;
     use crate::test_helpers::verify_memory_equivalence;
     use crate::test_helpers::verify_sponge_equivalence;
     use crate::test_helpers::verify_stack_equivalence;
-    use crate::traits::procedure::Procedure;
-    use crate::traits::procedure::ProcedureInitialState;
-    use crate::traits::procedure::ShadowedProcedure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     impl Procedure for SqueezeRepeatedlyStaticNumber {
         fn rust_shadow(
@@ -93,7 +84,7 @@ mod tests {
             memory: &mut HashMap<BFieldElement, BFieldElement>,
             nondeterminism: &NonDeterminism,
             public_input: &[BFieldElement],
-            sponge: &mut Option<crate::prelude::Tip5>,
+            sponge: &mut Option<Tip5>,
         ) -> Vec<BFieldElement> {
             stack.push(BFieldElement::new(self.num_squeezes as u64));
             let ret =
@@ -187,8 +178,7 @@ mod tests {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::traits::procedure::ShadowedProcedure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
     fn bench_10() {

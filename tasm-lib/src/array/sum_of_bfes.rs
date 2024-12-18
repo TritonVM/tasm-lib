@@ -2,12 +2,9 @@ use num::Zero;
 use triton_vm::prelude::*;
 
 use crate::data_type::ArrayType;
-use crate::data_type::DataType;
-use crate::library::Library;
 use crate::memory::load_words_from_memory_pop_pointer;
-use crate::traits::basic_snippet::BasicSnippet;
+use crate::prelude::*;
 
-#[allow(dead_code)]
 pub struct SumOfBfes {
     length: usize,
 }
@@ -31,32 +28,22 @@ impl BasicSnippet for SumOfBfes {
         format!("tasmlib_array_sum_of_{}_bfes", self.length)
     }
 
-    fn code(&self, _library: &mut Library) -> Vec<LabelledInstruction> {
-        let entrypoint = self.entrypoint();
-
+    fn code(&self, _: &mut Library) -> Vec<LabelledInstruction> {
         let move_pointer_to_last_word = match self.length {
             0 | 1 => triton_asm!(),
-            n => {
-                let length_minus_one = n - 1;
-                triton_asm!(
-                    push {length_minus_one}
-                    add
-                )
-            }
+            n => triton_asm!( addi {n - 1} ),
         };
 
         let load_all_elements_to_stack = load_words_from_memory_pop_pointer(self.length);
 
         let sum = if self.length.is_zero() {
-            triton_asm!(
-                push 0
-            )
+            triton_asm!(push 0)
         } else {
-            vec![triton_asm!(add); self.length - 1].concat()
+            triton_asm![add; self.length - 1]
         };
 
         triton_asm!(
-            {entrypoint}:
+            {self.entrypoint()}:
                 // _ *array
 
                 {&move_pointer_to_last_word}
@@ -75,20 +62,11 @@ impl BasicSnippet for SumOfBfes {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-
-    use num::Zero;
     use num_traits::ConstZero;
-    use rand::prelude::*;
-    use triton_vm::twenty_first::math::b_field_element::BFieldElement;
 
     use super::*;
     use crate::rust_shadowing_helper_functions::array::insert_random_array;
-    use crate::snippet_bencher::BenchmarkCase;
-    use crate::traits::function::Function;
-    use crate::traits::function::FunctionInitialState;
-    use crate::traits::function::ShadowedFunction;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     impl Function for SumOfBfes {
         fn rust_shadow(
@@ -97,7 +75,7 @@ mod tests {
             memory: &mut HashMap<BFieldElement, BFieldElement>,
         ) {
             let mut array_pointer = stack.pop().unwrap();
-            let mut array_quote_unquote = vec![BFieldElement::zero(); self.length];
+            let mut array_quote_unquote = bfe_vec![0; self.length];
             for array_elem in array_quote_unquote.iter_mut() {
                 memory
                     .get(&array_pointer)
@@ -114,11 +92,9 @@ mod tests {
         fn pseudorandom_initial_state(
             &self,
             seed: [u8; 32],
-            _bench_case: Option<BenchmarkCase>,
-        ) -> crate::traits::function::FunctionInitialState {
-            let mut rng = StdRng::from_seed(seed);
-            let list_pointer = BFieldElement::new(rng.gen());
-            self.prepare_state(list_pointer)
+            _: Option<BenchmarkCase>,
+        ) -> FunctionInitialState {
+            self.prepare_state(StdRng::from_seed(seed).gen())
         }
 
         fn corner_case_initial_states(&self) -> Vec<FunctionInitialState> {
@@ -140,12 +116,10 @@ mod tests {
             let mut memory = HashMap::default();
             insert_random_array(&DataType::Bfe, array_pointer, self.length, &mut memory);
 
-            let mut init_stack = self.init_stack_for_isolated_run();
-            init_stack.push(array_pointer);
-            FunctionInitialState {
-                stack: init_stack,
-                memory,
-            }
+            let mut stack = self.init_stack_for_isolated_run();
+            stack.push(array_pointer);
+
+            FunctionInitialState { stack, memory }
         }
     }
 
@@ -161,8 +135,7 @@ mod tests {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::traits::function::ShadowedFunction;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
     fn sum_bfes_bench_100() {

@@ -3,9 +3,7 @@ use std::collections::HashMap;
 use triton_vm::isa::instruction::AnInstruction;
 use triton_vm::prelude::*;
 
-use crate::data_type::DataType;
-use crate::library::Library;
-use crate::traits::basic_snippet::BasicSnippet;
+use crate::prelude::*;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 
 const MORE_THAN_ONE_INPUT_OR_OUTPUT_TYPE_IN_INNER_FUNCTION: &str = "higher-order functions \

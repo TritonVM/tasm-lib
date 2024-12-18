@@ -22,9 +22,7 @@ pub fn vm_proof_iter_type() -> StructType {
 
 #[cfg(test)]
 pub(super) mod vm_proof_iter_struct {
-    use triton_vm::prelude::bfe;
-    use triton_vm::prelude::BFieldCodec;
-    use triton_vm::prelude::BFieldElement;
+    use triton_vm::prelude::*;
     use triton_vm::proof::Proof;
     use triton_vm::proof_stream::ProofStream;
 

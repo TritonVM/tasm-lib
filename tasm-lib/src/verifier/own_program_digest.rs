@@ -1,8 +1,6 @@
 use triton_vm::prelude::*;
 
-use crate::data_type::DataType;
-use crate::library::Library;
-use crate::traits::basic_snippet::BasicSnippet;
+use crate::prelude::*;
 
 /// Return own program digest. Must be called with a clean stack.
 ///
@@ -10,7 +8,7 @@ use crate::traits::basic_snippet::BasicSnippet;
 /// Must be called as the first function in the program, as
 /// it assumes that the bottom of the stack (stack[15..=11])
 /// contains the digest of the running program
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct OwnProgramDigest;
 
 impl BasicSnippet for OwnProgramDigest {
@@ -42,12 +40,8 @@ impl BasicSnippet for OwnProgramDigest {
 
 #[cfg(test)]
 mod tests {
-    use std::cell::RefCell;
-    use std::rc::Rc;
-
     use super::*;
     use crate::execute_with_terminal_state;
-    use crate::linker::link_for_isolated_run;
 
     #[derive(Debug, Clone, Eq, PartialEq)]
     struct ProgramSetup {
@@ -58,7 +52,7 @@ mod tests {
 
     fn test_program() -> ProgramSetup {
         let snippet = OwnProgramDigest;
-        let program = Program::new(&link_for_isolated_run(Rc::new(RefCell::new(snippet))));
+        let program = Program::new(&snippet.link_for_isolated_run());
         let program_digest = program.hash();
         let init_stack = snippet.init_stack_for_isolated_run();
 

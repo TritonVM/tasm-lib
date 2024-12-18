@@ -1,26 +1,11 @@
-use std::collections::HashMap;
-
 use itertools::Itertools;
-use num::Zero;
-use rand::prelude::*;
 use triton_vm::isa::parser::tokenize;
 use triton_vm::prelude::*;
 
 use super::inner_function::InnerFunction;
-use crate::data_type::DataType;
-use crate::empty_stack;
-use crate::library::Library;
 use crate::list::get::Get;
 use crate::list::length::Length;
-use crate::list::LIST_METADATA_SIZE;
-use crate::rust_shadowing_helper_functions;
-use crate::rust_shadowing_helper_functions::list::list_get;
-use crate::rust_shadowing_helper_functions::list::untyped_insert_random_list;
-use crate::snippet_bencher::BenchmarkCase;
-use crate::traits::basic_snippet::BasicSnippet;
-use crate::traits::function::Function;
-use crate::traits::function::FunctionInitialState;
-use crate::InitVmState;
+use crate::prelude::*;
 
 /// Runs a predicate over all elements of a list and returns true only if all elements satisfy the
 /// predicate.
@@ -31,44 +16,6 @@ pub struct All {
 impl All {
     pub fn new(f: InnerFunction) -> Self {
         Self { f }
-    }
-}
-
-impl All {
-    fn generate_input_state(
-        &self,
-        list_pointer: BFieldElement,
-        list_length: usize,
-        random: bool,
-    ) -> InitVmState {
-        let mut stack = empty_stack();
-        stack.push(list_pointer);
-
-        let mut memory = HashMap::default();
-        let input_type = self.f.domain();
-        let list_bookkeeping_offset = LIST_METADATA_SIZE;
-        let element_index_in_list = list_bookkeeping_offset + list_length * input_type.stack_size();
-        let element_index = list_pointer + BFieldElement::new(element_index_in_list as u64);
-        memory.insert(BFieldElement::zero(), element_index);
-
-        if random {
-            untyped_insert_random_list(
-                list_pointer,
-                list_length,
-                &mut memory,
-                input_type.stack_size(),
-            );
-        } else {
-            rust_shadowing_helper_functions::list::list_insert(
-                list_pointer,
-                (0..list_length as u64)
-                    .map(BFieldElement::new)
-                    .collect_vec(),
-                &mut memory,
-            );
-        }
-
-        InitVmState::with_stack_and_memory(stack, memory)
     }
 }
 
@@ -179,77 +126,123 @@ impl BasicSnippet for All {
     }
 }
 
-impl Function for All {
-    fn rust_shadow(
-        &self,
-        stack: &mut Vec<BFieldElement>,
-        memory: &mut HashMap<BFieldElement, BFieldElement>,
-    ) {
-        let input_type = self.f.domain();
-        let list_pointer = stack.pop().unwrap();
-
-        // forall elements, read + map + maybe copy
-        let list_length =
-            rust_shadowing_helper_functions::list::list_get_length(list_pointer, memory);
-        let mut satisfied = true;
-        for i in 0..list_length {
-            let input_item = list_get(list_pointer, i, memory, input_type.stack_size());
-            for bfe in input_item.into_iter().rev() {
-                stack.push(bfe);
-            }
-
-            self.f.apply(stack, memory);
-
-            let single_result = stack.pop().unwrap().value() != 0;
-            satisfied = satisfied && single_result;
-        }
-
-        stack.push(BFieldElement::new(satisfied as u64));
-    }
-
-    fn pseudorandom_initial_state(
-        &self,
-        seed: [u8; 32],
-        bench_case: Option<BenchmarkCase>,
-    ) -> FunctionInitialState {
-        let (stack, memory) = match bench_case {
-            Some(BenchmarkCase::CommonCase) => {
-                let list_pointer = BFieldElement::new(5);
-                let list_length = 10;
-                let execution_state = self.generate_input_state(list_pointer, list_length, false);
-                (execution_state.stack, execution_state.nondeterminism.ram)
-            }
-            Some(BenchmarkCase::WorstCase) => {
-                let list_pointer = BFieldElement::new(5);
-                let list_length = 100;
-                let execution_state = self.generate_input_state(list_pointer, list_length, false);
-                (execution_state.stack, execution_state.nondeterminism.ram)
-            }
-            None => {
-                let mut rng = StdRng::from_seed(seed);
-                let list_pointer = BFieldElement::new(rng.next_u64() % (1 << 20));
-                let list_length = 1 << (rng.next_u32() as usize % 4);
-                let execution_state = self.generate_input_state(list_pointer, list_length, true);
-                (execution_state.stack, execution_state.nondeterminism.ram)
-            }
-        };
-
-        FunctionInitialState { stack, memory }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use num::One;
+    use num::Zero;
 
     use super::*;
     use crate::arithmetic;
+    use crate::empty_stack;
     use crate::list::higher_order::inner_function::RawCode;
-    use crate::prelude::Tip5;
+    use crate::list::LIST_METADATA_SIZE;
+    use crate::rust_shadowing_helper_functions;
+    use crate::rust_shadowing_helper_functions::list::list_get;
+    use crate::rust_shadowing_helper_functions::list::untyped_insert_random_list;
     use crate::test_helpers::test_rust_equivalence_given_complete_state;
+    use crate::test_prelude::*;
     use crate::traits::deprecated_snippet::DeprecatedSnippet;
-    use crate::traits::function::ShadowedFunction;
-    use crate::traits::rust_shadow::RustShadow;
+
+    impl All {
+        fn generate_input_state(
+            &self,
+            list_pointer: BFieldElement,
+            list_length: usize,
+            random: bool,
+        ) -> InitVmState {
+            let mut stack = empty_stack();
+            stack.push(list_pointer);
+
+            let mut memory = HashMap::default();
+            let input_type = self.f.domain();
+            let list_bookkeeping_offset = LIST_METADATA_SIZE;
+            let element_index_in_list =
+                list_bookkeeping_offset + list_length * input_type.stack_size();
+            let element_index = list_pointer + BFieldElement::new(element_index_in_list as u64);
+            memory.insert(BFieldElement::zero(), element_index);
+
+            if random {
+                untyped_insert_random_list(
+                    list_pointer,
+                    list_length,
+                    &mut memory,
+                    input_type.stack_size(),
+                );
+            } else {
+                rust_shadowing_helper_functions::list::list_insert(
+                    list_pointer,
+                    (0..list_length as u64)
+                        .map(BFieldElement::new)
+                        .collect_vec(),
+                    &mut memory,
+                );
+            }
+
+            InitVmState::with_stack_and_memory(stack, memory)
+        }
+    }
+
+    impl Function for All {
+        fn rust_shadow(
+            &self,
+            stack: &mut Vec<BFieldElement>,
+            memory: &mut HashMap<BFieldElement, BFieldElement>,
+        ) {
+            let input_type = self.f.domain();
+            let list_pointer = stack.pop().unwrap();
+
+            // forall elements, read + map + maybe copy
+            let list_length =
+                rust_shadowing_helper_functions::list::list_get_length(list_pointer, memory);
+            let mut satisfied = true;
+            for i in 0..list_length {
+                let input_item = list_get(list_pointer, i, memory, input_type.stack_size());
+                for bfe in input_item.into_iter().rev() {
+                    stack.push(bfe);
+                }
+
+                self.f.apply(stack, memory);
+
+                let single_result = stack.pop().unwrap().value() != 0;
+                satisfied = satisfied && single_result;
+            }
+
+            stack.push(BFieldElement::new(satisfied as u64));
+        }
+
+        fn pseudorandom_initial_state(
+            &self,
+            seed: [u8; 32],
+            bench_case: Option<BenchmarkCase>,
+        ) -> FunctionInitialState {
+            let (stack, memory) = match bench_case {
+                Some(BenchmarkCase::CommonCase) => {
+                    let list_pointer = BFieldElement::new(5);
+                    let list_length = 10;
+                    let execution_state =
+                        self.generate_input_state(list_pointer, list_length, false);
+                    (execution_state.stack, execution_state.nondeterminism.ram)
+                }
+                Some(BenchmarkCase::WorstCase) => {
+                    let list_pointer = BFieldElement::new(5);
+                    let list_length = 100;
+                    let execution_state =
+                        self.generate_input_state(list_pointer, list_length, false);
+                    (execution_state.stack, execution_state.nondeterminism.ram)
+                }
+                None => {
+                    let mut rng = StdRng::from_seed(seed);
+                    let list_pointer = BFieldElement::new(rng.next_u64() % (1 << 20));
+                    let list_length = 1 << (rng.next_u32() as usize % 4);
+                    let execution_state =
+                        self.generate_input_state(list_pointer, list_length, true);
+                    (execution_state.stack, execution_state.nondeterminism.ram)
+                }
+            };
+
+            FunctionInitialState { stack, memory }
+        }
+    }
 
     #[test]
     fn prop_test() {
@@ -454,53 +447,32 @@ mod tests {
         fn gen_input_states(&self) -> Vec<InitVmState> {
             // Function does not output random values, since that would make the benchmark output
             // non-deterministic.
-            vec![InitVmState::with_stack(
-                [
-                    vec![BFieldElement::zero(); 16],
-                    vec![
-                        BFieldElement::new(4888),
-                        BFieldElement::new(1u64 << 63),
-                        BFieldElement::new((1u64 << 51) + 1000),
-                    ],
-                ]
-                .concat(),
-            )]
+            let mut stack = empty_stack();
+            stack.extend(bfe_vec![4888, 1_u64 << 63, (1_u64 << 51) + 1000]);
+
+            vec![InitVmState::with_stack(stack)]
         }
 
         fn common_case_input_state(&self) -> InitVmState {
-            InitVmState::with_stack(
-                [
-                    vec![BFieldElement::zero(); 16],
-                    vec![
-                        BFieldElement::new(4888),
-                        BFieldElement::new(1u64 << 63),
-                        BFieldElement::new((1u64 << 51) + 1000),
-                    ],
-                ]
-                .concat(),
-            )
+            let mut stack = empty_stack();
+            stack.extend(bfe_vec![4888, 1_u64 << 63, (1_u64 << 51) + 1000]);
+
+            InitVmState::with_stack(stack)
         }
 
         fn worst_case_input_state(&self) -> InitVmState {
-            InitVmState::with_stack(
-                [
-                    vec![BFieldElement::zero(); 16],
-                    vec![
-                        BFieldElement::new(488800000),
-                        BFieldElement::new(1u64 << 62),
-                        BFieldElement::new((1u64 << 41) + 1001),
-                    ],
-                ]
-                .concat(),
-            )
+            let mut stack = empty_stack();
+            stack.extend(bfe_vec![488800000, 1_u64 << 62, (1_u64 << 41) + 1001]);
+
+            InitVmState::with_stack(stack)
         }
 
         fn rust_shadowing(
             &self,
             stack: &mut Vec<BFieldElement>,
-            _std_in: Vec<BFieldElement>,
-            _secret_in: Vec<BFieldElement>,
-            _memory: &mut HashMap<BFieldElement, BFieldElement>,
+            _: Vec<BFieldElement>,
+            _: Vec<BFieldElement>,
+            _: &mut HashMap<BFieldElement, BFieldElement>,
         ) {
             let mut xfield_element = vec![];
             for _ in 0..3 {
@@ -515,13 +487,12 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use self::tests::TestHashXFieldElementLsb;
+    use super::tests::TestHashXFieldElementLsb;
     use super::*;
-    use crate::traits::function::ShadowedFunction;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
-    fn all_benchmark() {
+    fn benchmark() {
         ShadowedFunction::new(All::new(InnerFunction::DeprecatedSnippet(Box::new(
             TestHashXFieldElementLsb,
         ))))

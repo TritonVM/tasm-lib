@@ -4,11 +4,10 @@ use itertools::Itertools;
 use num::Zero;
 use rand::prelude::*;
 use triton_vm::prelude::*;
-use triton_vm::twenty_first::prelude::U32s;
+use twenty_first::prelude::U32s;
 
-use crate::data_type::DataType;
 use crate::empty_stack;
-use crate::library::Library;
+use crate::prelude::*;
 use crate::push_encodable;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::InitVmState;
@@ -136,7 +135,6 @@ impl DeprecatedSnippet for Eq {
 #[cfg(test)]
 mod tests {
     use num_traits::One;
-    use rand::prelude::*;
 
     use super::*;
     use crate::empty_stack;

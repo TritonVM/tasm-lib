@@ -1,8 +1,6 @@
 use triton_vm::prelude::*;
 
-use crate::data_type::DataType;
-use crate::library::Library;
-use crate::traits::basic_snippet::BasicSnippet;
+use crate::prelude::*;
 
 pub const MERKLE_AUTHENTICATION_ROOT_MISMATCH_ERROR: i128 = 2;
 
@@ -114,25 +112,92 @@ impl BasicSnippet for MerkleVerify {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
     use std::collections::VecDeque;
 
-    use itertools::Itertools;
     use proptest::collection::vec;
-    use proptest::prop_assume;
-    use proptest_arbitrary_interop::arb;
-    use rand::prelude::*;
-    use test_strategy::proptest;
 
     use super::*;
-    use crate::prelude::Tip5;
-    use crate::snippet_bencher::BenchmarkCase;
     use crate::test_helpers::negative_test;
-    use crate::test_helpers::test_assertion_failure;
-    use crate::traits::read_only_algorithm::ReadOnlyAlgorithm;
-    use crate::traits::read_only_algorithm::ReadOnlyAlgorithmInitialState;
-    use crate::traits::read_only_algorithm::ShadowedReadOnlyAlgorithm;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
+
+    impl ReadOnlyAlgorithm for MerkleVerify {
+        fn rust_shadow(
+            &self,
+            stack: &mut Vec<BFieldElement>,
+            _: &HashMap<BFieldElement, BFieldElement>,
+            _: VecDeque<BFieldElement>,
+            mut nd_digests: VecDeque<Digest>,
+        ) {
+            // BEFORE: _ [root; 5] tree_height leaf_index [leaf; 5]
+            // AFTER:  _
+            let leaf = pop_encodable(stack);
+            let leaf_index = pop_encodable::<u32>(stack);
+            let tree_height = pop_encodable::<u32>(stack);
+            let root = pop_encodable(stack);
+
+            let num_leaves = 1 << tree_height;
+            assert!(leaf_index < num_leaves);
+
+            let mut node_digest = leaf;
+            let mut node_index = leaf_index + num_leaves;
+            while node_index != 1 {
+                let sibling = nd_digests.pop_front().unwrap();
+                let node_is_left_sibling = node_index % 2 == 0;
+                node_digest = if node_is_left_sibling {
+                    Tip5::hash_pair(node_digest, sibling)
+                } else {
+                    Tip5::hash_pair(sibling, node_digest)
+                };
+                node_index /= 2;
+            }
+            assert_eq!(node_digest, root);
+        }
+
+        fn pseudorandom_initial_state(
+            &self,
+            seed: [u8; 32],
+            maybe_bench_case: Option<BenchmarkCase>,
+        ) -> ReadOnlyAlgorithmInitialState {
+            // BEFORE: _ [root; 5] tree_height leaf_index [leaf; 5]
+            let mut rng = StdRng::from_seed(seed);
+            let tree_height = match maybe_bench_case {
+                Some(BenchmarkCase::CommonCase) => 6,
+                Some(BenchmarkCase::WorstCase) => 20,
+                None => rng.gen_range(1..20),
+            };
+
+            // sample unconstrained inputs directly
+            let num_leaves = 1 << tree_height;
+            let leaf_index = rng.gen_range(0..num_leaves);
+            let path = (0..tree_height).map(|_| rng.gen()).collect_vec();
+            let leaf = rng.gen();
+
+            // walk up tree to calculate root
+            let mut node_digest = leaf;
+            let mut node_index = leaf_index + num_leaves;
+            for &sibling in &path {
+                let node_is_left_sibling = node_index % 2 == 0;
+                node_digest = match node_is_left_sibling {
+                    true => Tip5::hash_pair(node_digest, sibling),
+                    false => Tip5::hash_pair(sibling, node_digest),
+                };
+                node_index /= 2;
+            }
+            let root = node_digest;
+
+            let mut stack = Self.init_stack_for_isolated_run();
+            push_encodable(&mut stack, &root);
+            push_encodable(&mut stack, &tree_height);
+            push_encodable(&mut stack, &leaf_index);
+            push_encodable(&mut stack, &leaf);
+
+            let nondeterminism = NonDeterminism::default().with_digests(path);
+            ReadOnlyAlgorithmInitialState {
+                stack,
+                nondeterminism,
+            }
+        }
+    }
 
     #[test]
     fn merkle_verify_test() {
@@ -280,114 +345,15 @@ mod tests {
             &[2],
         );
     }
-
-    impl ReadOnlyAlgorithm for MerkleVerify {
-        fn rust_shadow(
-            &self,
-            stack: &mut Vec<BFieldElement>,
-            _memory: &HashMap<BFieldElement, BFieldElement>,
-            _nd_tokens: VecDeque<BFieldElement>,
-            nd_digests: VecDeque<Digest>,
-        ) {
-            // BEFORE: _ [root; 5] tree_height leaf_index [leaf; 5]
-            // AFTER:  _
-            let pop_digest_from = |stack: &mut Vec<BFieldElement>| {
-                Digest::new([
-                    stack.pop().unwrap(),
-                    stack.pop().unwrap(),
-                    stack.pop().unwrap(),
-                    stack.pop().unwrap(),
-                    stack.pop().unwrap(),
-                ])
-            };
-
-            let leaf = pop_digest_from(stack);
-            let leaf_index: u32 = stack.pop().unwrap().try_into().unwrap();
-            let tree_height: u32 = stack.pop().unwrap().try_into().unwrap();
-            let root = pop_digest_from(stack);
-
-            let num_leaves = 1 << tree_height;
-            assert!(leaf_index < num_leaves);
-
-            let mut node_digest = leaf;
-            let mut sibling_height = 0;
-            let mut node_index = leaf_index + num_leaves;
-            while node_index != 1 {
-                let sibling = nd_digests[sibling_height];
-                let node_is_left_sibling = node_index % 2 == 0;
-                node_digest = if node_is_left_sibling {
-                    Tip5::hash_pair(node_digest, sibling)
-                } else {
-                    Tip5::hash_pair(sibling, node_digest)
-                };
-                sibling_height += 1;
-                node_index /= 2;
-            }
-            assert_eq!(node_digest, root);
-        }
-
-        fn pseudorandom_initial_state(
-            &self,
-            seed: [u8; 32],
-            maybe_bench_case: Option<BenchmarkCase>,
-        ) -> ReadOnlyAlgorithmInitialState {
-            {
-                // BEFORE: _ [root; 5] tree_height leaf_index [leaf; 5]
-                let mut rng = StdRng::from_seed(seed);
-                let tree_height = match maybe_bench_case {
-                    Some(BenchmarkCase::CommonCase) => 6,
-                    Some(BenchmarkCase::WorstCase) => 20,
-                    None => rng.gen_range(1..20),
-                };
-
-                // sample unconstrained inputs directly
-                let num_leaves = 1 << tree_height;
-                let leaf_index = rng.gen_range(0..num_leaves);
-                let path: Vec<Digest> = (0..tree_height).map(|_| rng.gen()).collect_vec();
-                let leaf: Digest = rng.gen();
-
-                // walk up tree to calculate root
-                let mut node_digest = leaf;
-                let mut node_index = leaf_index + num_leaves;
-                for &sibling in path.iter() {
-                    let node_is_left_sibling = node_index % 2 == 0;
-                    node_digest = match node_is_left_sibling {
-                        true => Tip5::hash_pair(node_digest, sibling),
-                        false => Tip5::hash_pair(sibling, node_digest),
-                    };
-                    node_index /= 2;
-                }
-                let root = node_digest;
-
-                // prepare stack
-                let mut stack = MerkleVerify.init_stack_for_isolated_run();
-                for r in root.reversed().values().into_iter() {
-                    stack.push(r);
-                }
-                stack.push(BFieldElement::new(tree_height));
-                stack.push(BFieldElement::new(leaf_index));
-                for l in leaf.reversed().values().into_iter() {
-                    stack.push(l);
-                }
-
-                let nondeterminism = NonDeterminism::default().with_digests(path);
-                ReadOnlyAlgorithmInitialState {
-                    stack,
-                    nondeterminism,
-                }
-            }
-        }
-    }
 }
 
 #[cfg(test)]
 mod bench {
-    use super::MerkleVerify;
-    use crate::traits::read_only_algorithm::ShadowedReadOnlyAlgorithm;
-    use crate::traits::rust_shadow::RustShadow;
+    use super::*;
+    use crate::test_prelude::*;
 
     #[test]
-    fn merkle_verify_bench() {
+    fn benchmark() {
         ShadowedReadOnlyAlgorithm::new(MerkleVerify).bench()
     }
 }

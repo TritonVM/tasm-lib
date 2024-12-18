@@ -4,7 +4,7 @@ use itertools::Itertools;
 use num::One;
 use rand::prelude::*;
 use triton_vm::prelude::*;
-use triton_vm::twenty_first::prelude::U32s;
+use twenty_first::prelude::U32s;
 
 use crate::arithmetic::u32::safeadd::Safeadd;
 use crate::arithmetic::u32::safesub::Safesub;
@@ -15,10 +15,9 @@ use crate::arithmetic::u64::or::Or;
 use crate::arithmetic::u64::shift_left::ShiftLeft;
 use crate::arithmetic::u64::shift_right::ShiftRight;
 use crate::arithmetic::u64::sub::Sub;
-use crate::data_type::DataType;
 use crate::empty_stack;
-use crate::library::Library;
 use crate::library::STATIC_MEMORY_FIRST_ADDRESS;
+use crate::prelude::*;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::InitVmState;
 

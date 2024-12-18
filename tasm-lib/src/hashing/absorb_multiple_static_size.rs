@@ -1,21 +1,11 @@
-use std::collections::HashMap;
-
-use itertools::Itertools;
-use rand::prelude::*;
 use triton_vm::prelude::*;
-use triton_vm::twenty_first::math::tip5::RATE;
-use triton_vm::twenty_first::prelude::Sponge;
+use twenty_first::math::tip5::RATE;
 
-use crate::data_type::DataType;
 use crate::memory::load_words_from_memory_pop_pointer;
-use crate::prelude::Tip5;
-use crate::snippet_bencher::BenchmarkCase;
-use crate::traits::basic_snippet::BasicSnippet;
-use crate::traits::procedure::Procedure;
-use crate::traits::procedure::ProcedureInitialState;
+use crate::prelude::*;
 
 /// Absorb a sequence of field elements stored in memory, into the Sponge.
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct AbsorbMultipleStaticSize {
     pub size: usize,
 }
@@ -71,7 +61,7 @@ impl BasicSnippet for AbsorbMultipleStaticSize {
         format!("tasmlib_hashing_absorb_multiple_static_size_{}", self.size)
     }
 
-    fn code(&self, _library: &mut crate::library::Library) -> Vec<LabelledInstruction> {
+    fn code(&self, _: &mut Library) -> Vec<LabelledInstruction> {
         let entrypoint = self.entrypoint();
 
         let absorb_all_non_padded = triton_asm![sponge_absorb_mem; self.num_absorbs_before_pad()];
@@ -110,80 +100,78 @@ impl BasicSnippet for AbsorbMultipleStaticSize {
     }
 }
 
-impl Procedure for AbsorbMultipleStaticSize {
-    fn rust_shadow(
-        &self,
-        stack: &mut Vec<BFieldElement>,
-        memory: &mut HashMap<BFieldElement, BFieldElement>,
-        _nondeterminism: &NonDeterminism,
-        _public_input: &[BFieldElement],
-        sponge: &mut Option<Tip5>,
-    ) -> Vec<BFieldElement> {
-        // read arguments
-        let address = stack.pop().unwrap();
-
-        // read sequence from memory
-        let mut sequence = vec![];
-        for i in 0..self.size {
-            sequence.push(
-                memory
-                    .get(&(address + BFieldElement::new(i as u64)))
-                    .copied()
-                    .unwrap(),
-            )
-        }
-
-        let sponge = sponge.as_mut().expect("sponge must be initialized");
-        sponge.pad_and_absorb_all(&sequence);
-
-        stack.push(address + BFieldElement::new(self.size.try_into().unwrap()));
-
-        // output empty
-        vec![]
-    }
-
-    fn pseudorandom_initial_state(
-        &self,
-        seed: [u8; 32],
-        _bench_case: Option<BenchmarkCase>,
-    ) -> ProcedureInitialState {
-        let mut rng = StdRng::from_seed(seed);
-
-        // sample address
-        let address = BFieldElement::new(rng.next_u64() % (1 << 20));
-
-        let sequence = (0..self.size)
-            .map(|_| rng.gen::<BFieldElement>())
-            .collect_vec();
-
-        // write to memory
-        let mut memory = HashMap::new();
-        for (i, s) in sequence.into_iter().enumerate() {
-            memory.insert(address + BFieldElement::new(i as u64), s);
-        }
-        let nondeterminism = NonDeterminism::default().with_ram(memory);
-
-        let stack = [self.init_stack_for_isolated_run(), vec![address]].concat();
-
-        let vm_hasher_state = Tip5 { state: rng.gen() };
-
-        ProcedureInitialState {
-            stack,
-            nondeterminism,
-            public_input: vec![],
-            sponge: Some(vm_hasher_state),
-        }
-    }
-}
-
 #[cfg(test)]
-mod test {
-    use proptest_arbitrary_interop::arb;
-    use test_strategy::proptest;
+mod tests {
+    use twenty_first::prelude::Sponge;
 
-    use super::AbsorbMultipleStaticSize;
-    use crate::traits::procedure::ShadowedProcedure;
-    use crate::traits::rust_shadow::RustShadow;
+    use super::*;
+    use crate::test_prelude::*;
+
+    impl Procedure for AbsorbMultipleStaticSize {
+        fn rust_shadow(
+            &self,
+            stack: &mut Vec<BFieldElement>,
+            memory: &mut HashMap<BFieldElement, BFieldElement>,
+            _: &NonDeterminism,
+            _: &[BFieldElement],
+            sponge: &mut Option<Tip5>,
+        ) -> Vec<BFieldElement> {
+            // read arguments
+            let address = stack.pop().unwrap();
+
+            // read sequence from memory
+            let mut sequence = vec![];
+            for i in 0..self.size {
+                sequence.push(
+                    memory
+                        .get(&(address + BFieldElement::new(i as u64)))
+                        .copied()
+                        .unwrap(),
+                )
+            }
+
+            let sponge = sponge.as_mut().expect("sponge must be initialized");
+            sponge.pad_and_absorb_all(&sequence);
+
+            stack.push(address + BFieldElement::new(self.size.try_into().unwrap()));
+
+            // output empty
+            vec![]
+        }
+
+        fn pseudorandom_initial_state(
+            &self,
+            seed: [u8; 32],
+            _bench_case: Option<BenchmarkCase>,
+        ) -> ProcedureInitialState {
+            let mut rng = StdRng::from_seed(seed);
+
+            // sample address
+            let address = BFieldElement::new(rng.next_u64() % (1 << 20));
+
+            let sequence = (0..self.size)
+                .map(|_| rng.gen::<BFieldElement>())
+                .collect_vec();
+
+            // write to memory
+            let mut memory = HashMap::new();
+            for (i, s) in sequence.into_iter().enumerate() {
+                memory.insert(address + BFieldElement::new(i as u64), s);
+            }
+            let nondeterminism = NonDeterminism::default().with_ram(memory);
+
+            let stack = [self.init_stack_for_isolated_run(), vec![address]].concat();
+
+            let vm_hasher_state = Tip5 { state: rng.gen() };
+
+            ProcedureInitialState {
+                stack,
+                nondeterminism,
+                public_input: vec![],
+                sponge: Some(vm_hasher_state),
+            }
+        }
+    }
 
     #[test]
     fn absorb_multiple_static_size_0() {
@@ -219,9 +207,8 @@ mod test {
 
 #[cfg(test)]
 mod benches {
-    use super::AbsorbMultipleStaticSize;
-    use crate::traits::procedure::ShadowedProcedure;
-    use crate::traits::rust_shadow::RustShadow;
+    use super::*;
+    use crate::test_prelude::*;
 
     #[test]
     fn absorb_multiple_static_size_benchmark_102() {

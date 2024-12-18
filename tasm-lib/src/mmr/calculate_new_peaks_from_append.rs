@@ -4,22 +4,20 @@ use itertools::Itertools;
 use num::One;
 use rand::prelude::*;
 use triton_vm::prelude::*;
-use triton_vm::twenty_first::prelude::Mmr;
 use twenty_first::math::other::random_elements;
+use twenty_first::prelude::Mmr;
 use twenty_first::util_types::mmr;
 use twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
 
 use crate::arithmetic::u64::incr::Incr;
 use crate::arithmetic::u64::index_of_last_nonzero_bit::IndexOfLastNonZeroBit;
-use crate::data_type::DataType;
 use crate::empty_stack;
-use crate::library::Library;
 use crate::list::new::New;
 use crate::list::pop::Pop;
 use crate::list::push::Push;
 use crate::list::set_length::SetLength;
 use crate::memory::dyn_malloc;
-use crate::prelude::Tip5;
+use crate::prelude::*;
 use crate::rust_shadowing_helper_functions;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::InitVmState;
@@ -314,8 +312,8 @@ impl DeprecatedSnippet for CalculateNewPeaksFromAppend {
 #[cfg(test)]
 mod tests {
     use num::Zero;
-    use triton_vm::twenty_first::prelude::MmrMembershipProof;
     use twenty_first::math::other::random_elements;
+    use twenty_first::prelude::MmrMembershipProof;
     use twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
 
     use super::*;

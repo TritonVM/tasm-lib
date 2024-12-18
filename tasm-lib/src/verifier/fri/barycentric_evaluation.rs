@@ -1,10 +1,8 @@
 use triton_vm::prelude::*;
-use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
+use twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
 use crate::arithmetic::bfe::primitive_root_of_unity::PrimitiveRootOfUnity;
-use crate::data_type::DataType;
-use crate::library::Library;
-use crate::traits::basic_snippet::BasicSnippet;
+use crate::prelude::*;
 
 const MAX_CODEWORD_LENGTH: u32 = 1 << 15;
 
@@ -223,12 +221,7 @@ impl BasicSnippet for BarycentricEvaluation {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-
-    use itertools::Itertools;
-    use rand::prelude::*;
-    use triton_vm::twenty_first::math::other::random_elements;
-    use triton_vm::twenty_first::xfe_vec;
+    use twenty_first::math::other::random_elements;
     use twenty_first::math::polynomial::barycentric_evaluate;
     use twenty_first::math::traits::Inverse;
     use twenty_first::math::traits::PrimitiveRootOfUnity;
@@ -237,11 +230,7 @@ mod tests {
     use crate::library::STATIC_MEMORY_FIRST_ADDRESS;
     use crate::rust_shadowing_helper_functions::list::list_insert;
     use crate::rust_shadowing_helper_functions::list::load_list_with_copy_elements;
-    use crate::snippet_bencher::BenchmarkCase;
-    use crate::traits::function::Function;
-    use crate::traits::function::FunctionInitialState;
-    use crate::traits::function::ShadowedFunction;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
     fn barycentric_evaluation_pbt() {
@@ -273,7 +262,7 @@ mod tests {
         fn rust_shadow(
             &self,
             stack: &mut Vec<BFieldElement>,
-            memory: &mut std::collections::HashMap<BFieldElement, BFieldElement>,
+            memory: &mut HashMap<BFieldElement, BFieldElement>,
         ) {
             let indeterminate = XFieldElement::new([
                 stack.pop().unwrap(),
@@ -313,6 +302,26 @@ mod tests {
             }
         }
 
+        fn pseudorandom_initial_state(
+            &self,
+            seed: [u8; 32],
+            bench_case: Option<BenchmarkCase>,
+        ) -> FunctionInitialState {
+            let mut rng = StdRng::from_seed(seed);
+            let codeword_length = match bench_case {
+                Some(BenchmarkCase::CommonCase) => 256,
+                Some(BenchmarkCase::WorstCase) => 512,
+                None => 1 << rng.gen_range(0..=14),
+            };
+
+            let codeword_pointer = rng.gen_range(0..=(1u64 << 34));
+            let codeword_pointer = bfe!(codeword_pointer);
+            let indeterminate: XFieldElement = rng.gen();
+            let codeword = random_elements(codeword_length);
+
+            self.prepare_state(codeword, codeword_pointer, indeterminate)
+        }
+
         fn corner_case_initial_states(&self) -> Vec<FunctionInitialState> {
             let some_indeterminate = XFieldElement::new([bfe!(1555), bfe!(1556), bfe!(1557)]);
             let some_codeword_pointer = bfe!(19191919);
@@ -338,34 +347,13 @@ mod tests {
                 const_codeword_of_length_8,
             ]
         }
-
-        fn pseudorandom_initial_state(
-            &self,
-            seed: [u8; 32],
-            bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
-        ) -> FunctionInitialState {
-            let mut rng = StdRng::from_seed(seed);
-            let codeword_length = match bench_case {
-                Some(BenchmarkCase::CommonCase) => 256,
-                Some(BenchmarkCase::WorstCase) => 512,
-                None => 1 << rng.gen_range(0..=14),
-            };
-
-            let codeword_pointer = rng.gen_range(0..=(1u64 << 34));
-            let codeword_pointer = bfe!(codeword_pointer);
-            let indeterminate: XFieldElement = rng.gen();
-            let codeword = random_elements(codeword_length);
-
-            self.prepare_state(codeword, codeword_pointer, indeterminate)
-        }
     }
 }
 
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::traits::function::ShadowedFunction;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
     fn bench_barycentric_evaluation() {

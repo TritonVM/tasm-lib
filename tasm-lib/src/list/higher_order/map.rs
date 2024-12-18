@@ -1,34 +1,15 @@
-use std::collections::HashMap;
-
 use itertools::Itertools;
-use rand::random;
-use rand::rngs::StdRng;
-use rand::Rng;
-use rand::SeedableRng;
 use strum::EnumCount;
 use tasm_lib::list::higher_order::inner_function::InnerFunction;
 use tasm_lib::structure::tasm_object::DEFAULT_MAX_DYN_FIELD_SIZE;
 use triton_vm::isa;
 use triton_vm::isa::op_stack::OpStackElement;
 use triton_vm::isa::parser::tokenize;
-use triton_vm::isa::triton_asm;
 use triton_vm::prelude::*;
 
-use crate::data_type::DataType;
-use crate::library::Library;
 use crate::list::new::New;
 use crate::list::push::Push;
-use crate::prelude::BasicSnippet;
-use crate::rust_shadowing_helper_functions::dyn_malloc::dynamic_allocator;
-use crate::rust_shadowing_helper_functions::list::list_get;
-use crate::rust_shadowing_helper_functions::list::list_get_length;
-use crate::rust_shadowing_helper_functions::list::list_pointer_to_elem_pointer;
-use crate::rust_shadowing_helper_functions::list::list_set;
-use crate::rust_shadowing_helper_functions::list::list_set_length;
-use crate::snippet_bencher::BenchmarkCase;
-use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::traits::function::Function;
-use crate::traits::function::FunctionInitialState;
+use crate::prelude::*;
 
 const INNER_FN_INCORRECT_NUM_INPUTS: &str = "Inner function in `map` only works with *one* input. \
                                              Use a tuple as a workaround.";
@@ -437,130 +418,135 @@ impl<const NUM_INPUT_LISTS: usize> ChainMap<NUM_INPUT_LISTS> {
             _ => unreachable!("see compile time checks for `NUM_INPUT_LISTS`"),
         }
     }
-
-    fn init_state(
-        &self,
-        environment_args: impl IntoIterator<Item = BFieldElement>,
-        list_lengths: [u16; NUM_INPUT_LISTS],
-        seed: <StdRng as SeedableRng>::Seed,
-    ) -> FunctionInitialState {
-        let input_type = self.f.domain();
-        let mut stack = self.init_stack_for_isolated_run();
-        let mut memory = HashMap::default();
-        let mut rng = StdRng::from_seed(seed);
-
-        stack.extend(environment_args);
-
-        for list_length in list_lengths {
-            let list_length = usize::from(list_length);
-            let list = input_type.random_list(&mut rng, list_length);
-            let list_pointer = dynamic_allocator(&mut memory);
-            let indexed_list = list
-                .into_iter()
-                .enumerate()
-                .map(|(i, v)| (list_pointer + bfe!(i), v));
-
-            memory.extend(indexed_list);
-            stack.push(list_pointer);
-        }
-
-        FunctionInitialState { stack, memory }
-    }
-}
-
-impl<const NUM_INPUT_LISTS: usize> Function for ChainMap<NUM_INPUT_LISTS> {
-    fn rust_shadow(
-        &self,
-        stack: &mut Vec<BFieldElement>,
-        memory: &mut HashMap<BFieldElement, BFieldElement>,
-    ) {
-        let input_type = self.f.domain();
-        let output_type = self.f.range();
-
-        New::new(output_type.clone()).rust_shadowing(stack, vec![], vec![], memory);
-        let output_list_pointer = stack.pop().unwrap();
-
-        let input_list_pointers = (0..NUM_INPUT_LISTS)
-            .map(|_| stack.pop().unwrap())
-            .collect_vec();
-
-        // the inner function _must not_ rely on these elements
-        let buffer = (0..Self::NUM_INTERNAL_REGISTERS).map(|_| random::<BFieldElement>());
-        stack.extend(buffer);
-
-        let mut total_output_len = 0;
-        for input_list_pointer in input_list_pointers {
-            let input_list_len = list_get_length(input_list_pointer, memory);
-
-            for i in (0..input_list_len).rev() {
-                if input_type.static_length().is_some() {
-                    let elem = list_get(input_list_pointer, i, memory, input_type.stack_size());
-                    stack.extend(elem.into_iter().rev());
-                } else {
-                    let (len, ptr) =
-                        list_pointer_to_elem_pointer(input_list_pointer, i, memory, &input_type);
-                    stack.push(ptr);
-                    stack.push(bfe!(len as u64));
-                };
-                self.f.apply(stack, memory);
-                let elem = (0..output_type.stack_size())
-                    .map(|_| stack.pop().unwrap())
-                    .collect();
-                list_set(output_list_pointer, total_output_len + i, elem, memory);
-            }
-
-            total_output_len += input_list_len;
-        }
-
-        for _ in 0..Self::NUM_INTERNAL_REGISTERS {
-            stack.pop();
-        }
-
-        stack.push(output_list_pointer);
-        list_set_length(output_list_pointer, total_output_len, memory);
-    }
-
-    fn pseudorandom_initial_state(
-        &self,
-        seed: [u8; 32],
-        bench: Option<BenchmarkCase>,
-    ) -> FunctionInitialState {
-        let mut rng = StdRng::from_seed(seed);
-        let environment_args = rng.gen::<[BFieldElement; OpStackElement::COUNT]>();
-
-        let list_lengths = match bench {
-            None => rng.gen::<[u8; NUM_INPUT_LISTS]>(),
-            Some(BenchmarkCase::CommonCase) => [10; NUM_INPUT_LISTS],
-            Some(BenchmarkCase::WorstCase) => [100; NUM_INPUT_LISTS],
-        };
-        let list_lengths = list_lengths.map(Into::into);
-
-        self.init_state(environment_args, list_lengths, rng.gen())
-    }
 }
 
 #[cfg(test)]
 mod tests {
     use itertools::Itertools;
     use num_traits::Zero;
-    use proptest_arbitrary_interop::arb;
-    use test_strategy::proptest;
-    use triton_vm::twenty_first::math::other::random_elements;
-    use triton_vm::twenty_first::prelude::*;
+    use twenty_first::math::other::random_elements;
 
     use super::*;
     use crate::arithmetic;
-    use crate::data_type::DataType;
-    use crate::library::Library;
     use crate::list::higher_order::inner_function::InnerFunction;
     use crate::list::higher_order::inner_function::RawCode;
     use crate::neptune::mutator_set::get_swbf_indices::u32_to_u128_add_another_u128;
-    use crate::prelude::Tip5;
+    use crate::rust_shadowing_helper_functions::dyn_malloc::dynamic_allocator;
+    use crate::rust_shadowing_helper_functions::list::list_get;
+    use crate::rust_shadowing_helper_functions::list::list_get_length;
+    use crate::rust_shadowing_helper_functions::list::list_pointer_to_elem_pointer;
+    use crate::rust_shadowing_helper_functions::list::list_set;
+    use crate::rust_shadowing_helper_functions::list::list_set_length;
     use crate::test_helpers::test_rust_equivalence_given_execution_state;
-    use crate::traits::function::ShadowedFunction;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
+    use crate::traits::deprecated_snippet::DeprecatedSnippet;
     use crate::twenty_first::prelude::x_field_element::EXTENSION_DEGREE;
-    use crate::InitVmState;
+
+    impl<const NUM_INPUT_LISTS: usize> ChainMap<NUM_INPUT_LISTS> {
+        fn init_state(
+            &self,
+            environment_args: impl IntoIterator<Item = BFieldElement>,
+            list_lengths: [u16; NUM_INPUT_LISTS],
+            seed: <StdRng as SeedableRng>::Seed,
+        ) -> FunctionInitialState {
+            let input_type = self.f.domain();
+            let mut stack = self.init_stack_for_isolated_run();
+            let mut memory = HashMap::default();
+            let mut rng = StdRng::from_seed(seed);
+
+            stack.extend(environment_args);
+
+            for list_length in list_lengths {
+                let list_length = usize::from(list_length);
+                let list = input_type.random_list(&mut rng, list_length);
+                let list_pointer = dynamic_allocator(&mut memory);
+                let indexed_list = list
+                    .into_iter()
+                    .enumerate()
+                    .map(|(i, v)| (list_pointer + bfe!(i), v));
+
+                memory.extend(indexed_list);
+                stack.push(list_pointer);
+            }
+
+            FunctionInitialState { stack, memory }
+        }
+    }
+
+    impl<const NUM_INPUT_LISTS: usize> Function for ChainMap<NUM_INPUT_LISTS> {
+        fn rust_shadow(
+            &self,
+            stack: &mut Vec<BFieldElement>,
+            memory: &mut HashMap<BFieldElement, BFieldElement>,
+        ) {
+            let input_type = self.f.domain();
+            let output_type = self.f.range();
+
+            New::new(output_type.clone()).rust_shadow(stack, memory);
+            let output_list_pointer = stack.pop().unwrap();
+
+            let input_list_pointers = (0..NUM_INPUT_LISTS)
+                .map(|_| stack.pop().unwrap())
+                .collect_vec();
+
+            // the inner function _must not_ rely on these elements
+            let buffer = (0..Self::NUM_INTERNAL_REGISTERS).map(|_| random::<BFieldElement>());
+            stack.extend(buffer);
+
+            let mut total_output_len = 0;
+            for input_list_pointer in input_list_pointers {
+                let input_list_len = list_get_length(input_list_pointer, memory);
+
+                for i in (0..input_list_len).rev() {
+                    if input_type.static_length().is_some() {
+                        let elem = list_get(input_list_pointer, i, memory, input_type.stack_size());
+                        stack.extend(elem.into_iter().rev());
+                    } else {
+                        let (len, ptr) = list_pointer_to_elem_pointer(
+                            input_list_pointer,
+                            i,
+                            memory,
+                            &input_type,
+                        );
+                        stack.push(ptr);
+                        stack.push(bfe!(len as u64));
+                    };
+                    self.f.apply(stack, memory);
+                    let elem = (0..output_type.stack_size())
+                        .map(|_| stack.pop().unwrap())
+                        .collect();
+                    list_set(output_list_pointer, total_output_len + i, elem, memory);
+                }
+
+                total_output_len += input_list_len;
+            }
+
+            for _ in 0..Self::NUM_INTERNAL_REGISTERS {
+                stack.pop();
+            }
+
+            stack.push(output_list_pointer);
+            list_set_length(output_list_pointer, total_output_len, memory);
+        }
+
+        fn pseudorandom_initial_state(
+            &self,
+            seed: [u8; 32],
+            bench: Option<BenchmarkCase>,
+        ) -> FunctionInitialState {
+            let mut rng = StdRng::from_seed(seed);
+            let environment_args = rng.gen::<[BFieldElement; OpStackElement::COUNT]>();
+
+            let list_lengths = match bench {
+                None => rng.gen::<[u8; NUM_INPUT_LISTS]>(),
+                Some(BenchmarkCase::CommonCase) => [10; NUM_INPUT_LISTS],
+                Some(BenchmarkCase::WorstCase) => [100; NUM_INPUT_LISTS],
+            };
+            let list_lengths = list_lengths.map(Into::into);
+
+            self.init_state(environment_args, list_lengths, rng.gen())
+        }
+    }
 
     /// Specifically exists to implement [`DeprecatedSnippet`]. Should only be
     /// upgraded to a regular snippet once [`InnerFunction`] stops supporting
@@ -903,7 +889,7 @@ mod tests {
         let raw_code = InnerFunction::RawCode(u32_to_u128_add_another_u128());
         let snippet = Map::new(raw_code);
         let encoded_u128 = random::<u128>().encode();
-        let input_list_len = rand::thread_rng().gen_range(0u16..200);
+        let input_list_len = thread_rng().gen_range(0u16..200);
         let initial_state = snippet.init_state(encoded_u128, [input_list_len], random());
         test_rust_equivalence_given_execution_state(
             &ShadowedFunction::new(snippet),
@@ -980,8 +966,7 @@ mod benches {
     use super::*;
     use crate::list::higher_order::inner_function::InnerFunction;
     use crate::list::higher_order::inner_function::RawCode;
-    use crate::traits::function::ShadowedFunction;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
     fn map_benchmark() {

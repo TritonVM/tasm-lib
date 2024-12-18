@@ -1,9 +1,7 @@
 use triton_vm::prelude::*;
 
 use crate::arithmetic::u128::overflowing_add::OverflowingAdd;
-use crate::data_type::DataType;
-use crate::library::Library;
-use crate::traits::basic_snippet::BasicSnippet;
+use crate::prelude::*;
 
 #[derive(Clone, Debug, Copy)]
 pub struct SafeAdd;
@@ -13,10 +11,6 @@ impl SafeAdd {
 }
 
 impl BasicSnippet for SafeAdd {
-    fn entrypoint(&self) -> String {
-        "tasmlib_arithmetic_u128_safe_add".to_string()
-    }
-
     fn inputs(&self) -> Vec<(DataType, String)> {
         vec![
             (DataType::U128, "lhs".to_owned()),
@@ -26,6 +20,10 @@ impl BasicSnippet for SafeAdd {
 
     fn outputs(&self) -> Vec<(DataType, String)> {
         vec![(DataType::U128, "sum".to_owned())]
+    }
+
+    fn entrypoint(&self) -> String {
+        "tasmlib_arithmetic_u128_safe_add".to_string()
     }
 
     /// Four top elements of stack are assumed to be valid u32s. So to have
@@ -50,39 +48,76 @@ impl BasicSnippet for SafeAdd {
 
 #[cfg(test)]
 mod tests {
-    use itertools::Itertools;
     use num::Zero;
-    use rand::rngs::StdRng;
-    use rand::Rng;
-    use rand::SeedableRng;
-    use tasm_lib::test_helpers::test_assertion_failure;
 
     use super::*;
-    use crate::snippet_bencher::BenchmarkCase;
-    use crate::test_helpers::test_rust_equivalence_given_complete_state;
-    use crate::traits::closure::Closure;
-    use crate::traits::closure::ShadowedClosure;
-    use crate::traits::rust_shadow::RustShadow;
-    use crate::InitVmState;
+    use crate::test_prelude::*;
+
+    impl SafeAdd {
+        fn assert_expected_add_behavior(&self, lhs: u128, rhs: u128) {
+            let initial_stack = self.set_up_test_stack((lhs, rhs));
+
+            let mut expected_stack = initial_stack.clone();
+            self.rust_shadow(&mut expected_stack);
+
+            test_rust_equivalence_given_complete_state(
+                &ShadowedClosure::new(Self),
+                &initial_stack,
+                &[],
+                &NonDeterminism::default(),
+                &None,
+                Some(&expected_stack),
+            );
+        }
+    }
+
+    impl Closure for SafeAdd {
+        type Args = <OverflowingAdd as Closure>::Args;
+
+        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
+            let (left, right) = pop_encodable::<Self::Args>(stack);
+            let sum = left.checked_add(right).unwrap();
+            push_encodable(stack, &sum);
+        }
+
+        fn pseudorandom_args(&self, seed: [u8; 32], _: Option<BenchmarkCase>) -> Self::Args {
+            let mut rng = StdRng::from_seed(seed);
+            let lhs = rng.gen();
+            let rhs = rng.gen_range(0..=u128::MAX - lhs);
+
+            (lhs, rhs)
+        }
+
+        fn corner_case_args(&self) -> Vec<Self::Args> {
+            let edge_case_points = OverflowingAdd::edge_case_points();
+
+            edge_case_points
+                .iter()
+                .cartesian_product(&edge_case_points)
+                .filter(|(&l, &r)| l.checked_add(r).is_some())
+                .map(|(&l, &r)| (l, r))
+                .collect()
+        }
+    }
 
     #[test]
-    fn add_u128_test() {
+    fn rust_shadow() {
         ShadowedClosure::new(SafeAdd).test()
     }
 
     #[test]
-    fn add_u128_unit_test() {
+    fn unit_test() {
         let snippet = SafeAdd;
         let mut expected = snippet.init_stack_for_isolated_run();
         expected.push(BFieldElement::new(0));
         expected.push(BFieldElement::new(1 << 4));
         expected.push(BFieldElement::new(0));
         expected.push(BFieldElement::new(0));
-        snippet.assert_expected_add_behavior(1u128 << 67, 1u128 << 67, Some(&expected))
+        snippet.assert_expected_add_behavior(1u128 << 67, 1u128 << 67)
     }
 
     #[test]
-    fn add_u128_overflow_test() {
+    fn overflow_test() {
         let snippet = SafeAdd;
 
         for (a, b) in [
@@ -102,12 +137,12 @@ mod tests {
         ] {
             test_assertion_failure(
                 &ShadowedClosure::new(snippet),
-                InitVmState::with_stack(snippet.setup_init_stack(a, b)),
+                InitVmState::with_stack(snippet.set_up_test_stack((a, b))),
                 &[170],
             );
             test_assertion_failure(
                 &ShadowedClosure::new(snippet),
-                InitVmState::with_stack(snippet.setup_init_stack(b, a)),
+                InitVmState::with_stack(snippet.set_up_test_stack((b, a))),
                 &[170],
             );
         }
@@ -123,104 +158,14 @@ mod tests {
 
             test_assertion_failure(
                 &ShadowedClosure::new(snippet),
-                InitVmState::with_stack(snippet.setup_init_stack(a, b)),
+                InitVmState::with_stack(snippet.set_up_test_stack((a, b))),
                 &[170],
             );
             test_assertion_failure(
                 &ShadowedClosure::new(snippet),
-                InitVmState::with_stack(snippet.setup_init_stack(b, a)),
+                InitVmState::with_stack(snippet.set_up_test_stack((b, a))),
                 &[170],
             );
-        }
-    }
-
-    impl SafeAdd {
-        fn assert_expected_add_behavior(
-            &self,
-            lhs: u128,
-            rhs: u128,
-            expected: Option<&[BFieldElement]>,
-        ) {
-            let init_stack = self.setup_init_stack(lhs, rhs);
-
-            test_rust_equivalence_given_complete_state(
-                &ShadowedClosure::new(SafeAdd),
-                &init_stack,
-                &[],
-                &NonDeterminism::default(),
-                &None,
-                expected,
-            );
-        }
-
-        fn setup_init_stack(&self, lhs: u128, rhs: u128) -> Vec<BFieldElement> {
-            [
-                self.init_stack_for_isolated_run(),
-                lhs.encode().into_iter().rev().collect_vec(),
-                rhs.encode().into_iter().rev().collect_vec(),
-            ]
-            .concat()
-        }
-    }
-
-    impl Closure for SafeAdd {
-        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
-            fn to_u128(a: u32, b: u32, c: u32, d: u32) -> u128 {
-                a as u128
-                    + b as u128 * (1u128 << 32)
-                    + c as u128 * (1u128 << 64)
-                    + d as u128 * (1u128 << 96)
-            }
-
-            // top element on stack
-            let a0: u32 = stack.pop().unwrap().try_into().unwrap();
-            let b0: u32 = stack.pop().unwrap().try_into().unwrap();
-            let c0: u32 = stack.pop().unwrap().try_into().unwrap();
-            let d0: u32 = stack.pop().unwrap().try_into().unwrap();
-            let ab0 = to_u128(a0, b0, c0, d0);
-
-            // second element on stack
-            let a1: u32 = stack.pop().unwrap().try_into().unwrap();
-            let b1: u32 = stack.pop().unwrap().try_into().unwrap();
-            let c1: u32 = stack.pop().unwrap().try_into().unwrap();
-            let d1: u32 = stack.pop().unwrap().try_into().unwrap();
-            let ab1 = to_u128(a1, b1, c1, d1);
-
-            let ab0_plus_ab1 = ab0.checked_add(ab1).unwrap();
-
-            let mut res = ab0_plus_ab1.encode();
-            for _ in 0..res.len() {
-                stack.push(res.pop().unwrap());
-            }
-        }
-
-        fn pseudorandom_initial_state(
-            &self,
-            seed: [u8; 32],
-            _bench_case: Option<BenchmarkCase>,
-        ) -> Vec<BFieldElement> {
-            let mut rng = StdRng::from_seed(seed);
-            let lhs: u128 = rng.gen();
-            let lhs = lhs / 2;
-            let rhs: u128 = rng.gen();
-            let rhs = rhs / 2;
-
-            self.setup_init_stack(lhs, rhs)
-        }
-
-        fn corner_case_initial_states(&self) -> Vec<Vec<BFieldElement>> {
-            let points_with_plus_minus_one = [0, 0x200000002fffffffffff908f8, 1 << 127, u128::MAX]
-                .into_iter()
-                .flat_map(|p| [p.checked_sub(1), Some(p), p.checked_add(1)])
-                .flatten()
-                .collect_vec();
-
-            points_with_plus_minus_one
-                .iter()
-                .cartesian_product(&points_with_plus_minus_one)
-                .filter(|(&l, &r)| l.checked_add(r).is_some())
-                .map(|(&l, &r)| self.setup_init_stack(l, r))
-                .collect()
         }
     }
 }
@@ -228,11 +173,10 @@ mod tests {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::traits::closure::ShadowedClosure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
-    fn add_u128_benchmark() {
+    fn benchmark() {
         ShadowedClosure::new(SafeAdd).bench()
     }
 }

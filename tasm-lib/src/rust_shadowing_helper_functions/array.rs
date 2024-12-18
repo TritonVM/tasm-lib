@@ -1,10 +1,9 @@
 use std::collections::HashMap;
 
 use num::Zero;
-use triton_vm::twenty_first::math::b_field_element::BFieldElement;
-use triton_vm::twenty_first::math::bfield_codec::BFieldCodec;
+use twenty_first::prelude::*;
 
-use crate::data_type::DataType;
+use crate::prelude::*;
 
 pub fn insert_random_array(
     element_type: &DataType,

@@ -1,8 +1,6 @@
 use triton_vm::prelude::*;
 
-use crate::data_type::DataType;
-use crate::library::Library;
-use crate::traits::basic_snippet::BasicSnippet;
+use crate::prelude::*;
 
 /// Calculate the sum of the `BFieldElement`s in a list
 #[allow(dead_code)]
@@ -155,26 +153,18 @@ impl BasicSnippet for SumOfBfes {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-
-    use itertools::Itertools;
     use num_traits::Zero;
-    use rand::prelude::*;
 
     use super::*;
     use crate::rust_shadowing_helper_functions::list::insert_random_list;
     use crate::rust_shadowing_helper_functions::list::load_list_with_copy_elements;
-    use crate::snippet_bencher::BenchmarkCase;
-    use crate::traits::function::Function;
-    use crate::traits::function::FunctionInitialState;
-    use crate::traits::function::ShadowedFunction;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     impl Function for SumOfBfes {
         fn rust_shadow(
             &self,
             stack: &mut Vec<BFieldElement>,
-            memory: &mut std::collections::HashMap<BFieldElement, BFieldElement>,
+            memory: &mut HashMap<BFieldElement, BFieldElement>,
         ) {
             const BFIELDELEMENT_SIZE: usize = 1;
             let list_pointer = stack.pop().unwrap();
@@ -187,7 +177,7 @@ mod tests {
         fn pseudorandom_initial_state(
             &self,
             seed: [u8; 32],
-            bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
+            bench_case: Option<BenchmarkCase>,
         ) -> FunctionInitialState {
             let mut rng = StdRng::from_seed(seed);
             let list_pointer = BFieldElement::new(rng.gen());
@@ -233,11 +223,10 @@ mod tests {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::traits::function::ShadowedFunction;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
-    fn sum_bfes_bench() {
+    fn benchmark() {
         ShadowedFunction::new(SumOfBfes).bench();
     }
 }

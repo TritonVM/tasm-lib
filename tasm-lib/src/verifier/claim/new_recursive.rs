@@ -2,18 +2,15 @@ use num_traits::ConstZero;
 use triton_vm::isa::op_stack::NUM_OP_STACK_REGISTERS;
 use triton_vm::prelude::*;
 
-use crate::data_type::DataType;
 use crate::io::InputSource;
-use crate::library::Library;
 use crate::memory::write_words_to_memory_pop_pointer;
-use crate::traits::basic_snippet::BasicSnippet;
+use crate::prelude::*;
 use crate::verifier::claim::shared::claim_type;
 
 /// Return a pointer to a claim representing the verification of a proof of the program's own
 /// execution. Must be called with an empty stack, as the program digest is read from the bottom
 /// of the stack.
-#[allow(dead_code)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct NewRecursive {
     input_size: usize,
     output_size: usize,
@@ -115,19 +112,10 @@ impl BasicSnippet for NewRecursive {
 
 #[cfg(test)]
 pub mod tests {
-    use std::collections::HashMap;
     use std::collections::VecDeque;
 
-    use itertools::Itertools;
-    use test_strategy::proptest;
-
     use super::*;
-    use crate::prelude::Tip5;
-    use crate::snippet_bencher::BenchmarkCase;
-    use crate::traits::procedure::Procedure;
-    use crate::traits::procedure::ProcedureInitialState;
-    use crate::traits::procedure::ShadowedProcedure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
     use crate::verifier::claim::shared::insert_claim_into_static_memory;
 
     #[test]
@@ -193,8 +181,8 @@ pub mod tests {
 
         fn pseudorandom_initial_state(
             &self,
-            _seed: [u8; 32],
-            _bench_case: Option<BenchmarkCase>,
+            _: [u8; 32],
+            _: Option<BenchmarkCase>,
         ) -> ProcedureInitialState {
             let output = (0..self.input_size)
                 .map(|x| BFieldElement::new(x as u64))

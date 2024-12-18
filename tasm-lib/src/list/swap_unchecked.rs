@@ -1,20 +1,8 @@
-use std::collections::HashMap;
-
-use num_traits::One;
-use rand::prelude::*;
 use triton_vm::isa::op_stack::NUM_OP_STACK_REGISTERS;
 use triton_vm::prelude::*;
 
-use crate::data_type::DataType;
-use crate::empty_stack;
-use crate::library::Library;
 use crate::list::LIST_METADATA_SIZE;
-use crate::rust_shadowing_helper_functions::list::insert_random_list;
-use crate::rust_shadowing_helper_functions::list::list_get;
-use crate::rust_shadowing_helper_functions::list::list_set;
-use crate::traits::algorithm::Algorithm;
-use crate::traits::algorithm::AlgorithmInitialState;
-use crate::traits::basic_snippet::BasicSnippet;
+use crate::prelude::*;
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct SwapUnchecked {
@@ -50,7 +38,6 @@ impl BasicSnippet for SwapUnchecked {
     }
 
     fn code(&self, _library: &mut Library) -> Vec<LabelledInstruction> {
-        let entrypoint = self.entrypoint();
         let metadata_size = LIST_METADATA_SIZE;
         let element_size = self.element_type.stack_size();
         assert!(
@@ -70,10 +57,7 @@ impl BasicSnippet for SwapUnchecked {
         let get_offset_for_last_word_in_element = if element_size == 1 {
             triton_asm!(
                 // _ i
-
-                push {metadata_size}
-                add
-                // _ i_offset_last_word
+                addi { metadata_size } // _ i_offset_last_word
             )
         } else {
             triton_asm!(
@@ -82,12 +66,10 @@ impl BasicSnippet for SwapUnchecked {
                 {&mul_with_size}
                 // _ i_offset_internal
 
-                push {metadata_size}
-                add
+                addi {metadata_size}
                 // _ i_offset
 
-                push {element_size - 1}
-                add
+                addi {element_size - 1}
                 // _ i_offset_last_word
             )
         };
@@ -95,7 +77,7 @@ impl BasicSnippet for SwapUnchecked {
         triton_asm!(
                 // BEFORE: _ *list a b
                 // AFTER:  _
-                {entrypoint}:
+                {self.entrypoint()}:
 
                     // calculate *list[b]
                     // _ *list a b
@@ -110,8 +92,7 @@ impl BasicSnippet for SwapUnchecked {
                     {&self.element_type.read_value_from_memory_leave_pointer()}
                     // _ *list a [list[b]] (*list[b] - 1)
 
-                    push 1
-                    add
+                    addi 1
                     // _ *list a [list[b]] *list[b]
 
                     dup {element_size + 2}
@@ -127,8 +108,7 @@ impl BasicSnippet for SwapUnchecked {
                     {&self.element_type.read_value_from_memory_leave_pointer()}
                     // _ *list a [list[b]] *list[b] [list[a]] (*list[a] - 1)
 
-                    push 1
-                    add
+                    addi 1
                     // _ *list a [list[b]] *list[b] [list[a]] *list[a]
 
                     swap {element_size + 1}
@@ -149,82 +129,77 @@ impl BasicSnippet for SwapUnchecked {
     }
 }
 
-impl Algorithm for SwapUnchecked {
-    fn rust_shadow(
-        &self,
-        stack: &mut Vec<BFieldElement>,
-        memory: &mut HashMap<BFieldElement, BFieldElement>,
-        _nondeterminism: &NonDeterminism,
-    ) {
-        let b_index = stack.pop().unwrap().value() as usize;
-        let a_index = stack.pop().unwrap().value() as usize;
-        let list_pointer = stack.pop().unwrap();
-        let element_size = self.element_type.stack_size();
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::empty_stack;
+    use crate::rust_shadowing_helper_functions::list::insert_random_list;
+    use crate::rust_shadowing_helper_functions::list::list_get;
+    use crate::rust_shadowing_helper_functions::list::list_set;
+    use crate::test_prelude::*;
 
-        let a = list_get(list_pointer, a_index, memory, element_size);
-        let b = list_get(list_pointer, b_index, memory, element_size);
-        list_set(list_pointer, a_index, b, memory);
-        list_set(list_pointer, b_index, a, memory);
-    }
+    impl SwapUnchecked {
+        fn initial_state(
+            &self,
+            list_pointer: BFieldElement,
+            list_length: usize,
+            a: usize,
+            b: usize,
+        ) -> AlgorithmInitialState {
+            let mut init_memory = HashMap::default();
+            insert_random_list(
+                &self.element_type,
+                list_pointer,
+                list_length,
+                &mut init_memory,
+            );
 
-    fn pseudorandom_initial_state(
-        &self,
-        seed: [u8; 32],
-        _bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
-    ) -> AlgorithmInitialState {
-        let mut rng = StdRng::from_seed(seed);
-        let list_pointer = BFieldElement::new(rng.gen());
-        let list_length = rng.gen_range(1..200);
-        let a = rng.gen_range(0..list_length);
-        let b = rng.gen_range(0..list_length);
-        self.initial_state(list_pointer, list_length, a, b)
-    }
-
-    fn corner_case_initial_states(&self) -> Vec<AlgorithmInitialState> {
-        vec![
-            self.initial_state(BFieldElement::one(), 5, 0, 0),
-            self.initial_state(BFieldElement::one(), 1, 0, 0),
-            self.initial_state(BFieldElement::one(), 2, 1, 1),
-        ]
-    }
-}
-
-impl SwapUnchecked {
-    fn initial_state(
-        &self,
-        list_pointer: BFieldElement,
-        list_length: usize,
-        a: usize,
-        b: usize,
-    ) -> AlgorithmInitialState {
-        let mut init_memory = HashMap::default();
-        insert_random_list(
-            &self.element_type,
-            list_pointer,
-            list_length,
-            &mut init_memory,
-        );
-
-        AlgorithmInitialState {
-            stack: [
-                empty_stack(),
-                vec![
-                    list_pointer,
-                    BFieldElement::new(a as u64),
-                    BFieldElement::new(b as u64),
-                ],
-            ]
-            .concat(),
-            nondeterminism: NonDeterminism::default().with_ram(init_memory),
+            AlgorithmInitialState {
+                stack: [empty_stack(), bfe_vec![list_pointer, a, b]].concat(),
+                nondeterminism: NonDeterminism::default().with_ram(init_memory),
+            }
         }
     }
-}
 
-#[cfg(test)]
-mod test {
-    use super::*;
-    use crate::traits::algorithm::ShadowedAlgorithm;
-    use crate::traits::rust_shadow::RustShadow;
+    impl Algorithm for SwapUnchecked {
+        fn rust_shadow(
+            &self,
+            stack: &mut Vec<BFieldElement>,
+            memory: &mut HashMap<BFieldElement, BFieldElement>,
+            _: &NonDeterminism,
+        ) {
+            let b_index = stack.pop().unwrap().value() as usize;
+            let a_index = stack.pop().unwrap().value() as usize;
+            let list_pointer = stack.pop().unwrap();
+            let element_size = self.element_type.stack_size();
+
+            let a = list_get(list_pointer, a_index, memory, element_size);
+            let b = list_get(list_pointer, b_index, memory, element_size);
+            list_set(list_pointer, a_index, b, memory);
+            list_set(list_pointer, b_index, a, memory);
+        }
+
+        fn pseudorandom_initial_state(
+            &self,
+            seed: [u8; 32],
+            _: Option<BenchmarkCase>,
+        ) -> AlgorithmInitialState {
+            let mut rng = StdRng::from_seed(seed);
+            let list_pointer = rng.gen();
+            let list_length = rng.gen_range(1..200);
+            let a = rng.gen_range(0..list_length);
+            let b = rng.gen_range(0..list_length);
+            self.initial_state(list_pointer, list_length, a, b)
+        }
+
+        fn corner_case_initial_states(&self) -> Vec<AlgorithmInitialState> {
+            vec![
+                self.initial_state(bfe!(1), 5, 0, 0),
+                self.initial_state(bfe!(1), 1, 0, 0),
+                self.initial_state(bfe!(1), 2, 1, 1),
+            ]
+        }
+    }
 
     #[test]
     fn test() {
@@ -257,11 +232,10 @@ mod test {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::traits::algorithm::ShadowedAlgorithm;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
-    fn bench() {
+    fn benchmark() {
         ShadowedAlgorithm::new(SwapUnchecked::new(DataType::Xfe)).bench();
     }
 }

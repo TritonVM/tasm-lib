@@ -6,7 +6,7 @@ use num_traits::ConstOne;
 use triton_vm::memory_layout::MemoryRegion;
 use triton_vm::prelude::*;
 
-use crate::traits::basic_snippet::BasicSnippet;
+use crate::prelude::*;
 
 /// By [convention](crate::memory), the last full memory page is reserved for the static allocator.
 /// For convenience during [debugging],[^1] the static allocator starts at the last address of that
@@ -181,7 +181,6 @@ mod tests {
     use triton_vm::prelude::Program;
 
     use super::*;
-    use crate::data_type::DataType;
     use crate::empty_stack;
     use crate::memory::memcpy::MemCpy;
     use crate::mmr::calculate_new_peaks_from_leaf_mutation::MmrCalculateNewPeaksFromLeafMutationMtIndices;

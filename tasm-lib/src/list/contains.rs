@@ -1,8 +1,6 @@
 use triton_vm::prelude::*;
 
-use crate::data_type::DataType;
-use crate::traits::basic_snippet::BasicSnippet;
-use crate::Library;
+use crate::prelude::*;
 
 /// Returns `true` if the list contains an element with the given value.
 ///
@@ -142,25 +140,14 @@ impl BasicSnippet for Contains {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-
-    use itertools::Itertools;
     use num::One;
     use num::Zero;
-    use rand::rngs::StdRng;
-    use rand::seq::SliceRandom;
-    use rand::Rng;
-    use rand::SeedableRng;
 
     use super::*;
     use crate::library::STATIC_MEMORY_FIRST_ADDRESS;
     use crate::rust_shadowing_helper_functions::list::load_list_unstructured;
-    use crate::snippet_bencher::BenchmarkCase;
     use crate::test_helpers::test_rust_equivalence_given_complete_state;
-    use crate::traits::function::Function;
-    use crate::traits::function::FunctionInitialState;
-    use crate::traits::function::ShadowedFunction;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     impl Contains {
         fn static_pointer_isolated_run(&self) -> BFieldElement {
@@ -403,18 +390,12 @@ mod tests {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::traits::function::ShadowedFunction;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
-    fn contains_bench() {
-        ShadowedFunction::new(Contains {
-            element_type: DataType::U64,
-        })
-        .bench();
-        ShadowedFunction::new(Contains {
-            element_type: DataType::Digest,
-        })
-        .bench();
+    fn benchmark() {
+        for element_type in [DataType::U64, DataType::Digest] {
+            ShadowedFunction::new(Contains { element_type }).bench();
+        }
     }
 }

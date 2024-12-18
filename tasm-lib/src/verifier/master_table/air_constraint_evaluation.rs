@@ -10,14 +10,11 @@ use triton_vm::table::auxiliary_table::Evaluable;
 use triton_vm::table::master_table::MasterAuxTable;
 use triton_vm::table::master_table::MasterMainTable;
 use triton_vm::table::master_table::MasterTable;
-use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
+use twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
 use crate::data_type::ArrayType;
-use crate::data_type::DataType;
-use crate::library::Library;
 use crate::memory::dyn_malloc::DYN_MALLOC_ADDRESS;
-use crate::prelude::DynMalloc;
-use crate::traits::basic_snippet::BasicSnippet;
+use crate::prelude::*;
 use crate::verifier::challenges::shared::conventional_challenges_pointer;
 
 #[derive(Debug, Clone, Copy)]
@@ -295,30 +292,22 @@ pub struct AirConstraintSnippetInputs {
 
 #[cfg(test)]
 mod tests {
-    use std::cell::RefCell;
-    use std::collections::HashMap;
-    use std::rc::Rc;
-
     use arbitrary::Arbitrary;
     use arbitrary::Unstructured;
     use num_traits::ConstZero;
     use rand::distributions::Standard;
-    use rand::prelude::*;
     use triton_vm::proof_stream::ProofStream;
     use triton_vm::table::master_table::MasterMainTable;
     use triton_vm::table::master_table::MasterTable;
-    use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
+    use twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
     use super::*;
     use crate::execute_test;
     use crate::library::STATIC_MEMORY_LAST_ADDRESS;
-    use crate::linker::link_for_isolated_run;
-    use crate::memory::encode_to_memory;
     use crate::rust_shadowing_helper_functions::array::array_get;
     use crate::rust_shadowing_helper_functions::array::insert_as_array;
     use crate::structure::tasm_object::decode_from_memory_with_size;
-    use crate::traits::function::Function;
-    use crate::traits::function::FunctionInitialState;
+    use crate::test_prelude::*;
 
     #[test]
     fn conventional_air_constraint_memory_layouts_are_integral() {
@@ -441,8 +430,8 @@ mod tests {
     impl Function for AirConstraintEvaluation {
         fn rust_shadow(
             &self,
-            _stack: &mut Vec<BFieldElement>,
-            _memory: &mut HashMap<BFieldElement, BFieldElement>,
+            _: &mut Vec<BFieldElement>,
+            _: &mut HashMap<BFieldElement, BFieldElement>,
         ) {
             // Never called as we do a more manual test.
             // The more manual test is done bc we don't want to
@@ -454,7 +443,7 @@ mod tests {
         fn pseudorandom_initial_state(
             &self,
             seed: [u8; 32],
-            _bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
+            _: Option<BenchmarkCase>,
         ) -> FunctionInitialState {
             // Used for benchmarking
             let mut rng = StdRng::from_seed(seed);
@@ -627,9 +616,8 @@ mod tests {
         ) -> (Vec<XFieldElement>, BFieldElement) {
             let (init_memory, stack) = self.prepare_tvm_memory_and_stack(input_values);
 
-            let code = link_for_isolated_run(Rc::new(RefCell::new(self.to_owned())));
             let final_state = execute_test(
-                &code,
+                &self.link_for_isolated_run(),
                 &mut stack.clone(),
                 self.stack_diff(),
                 vec![],
@@ -645,8 +633,7 @@ mod tests {
 #[cfg(test)]
 mod bench {
     use super::*;
-    use crate::traits::function::ShadowedFunction;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
     fn bench_air_constraint_evaluation() {

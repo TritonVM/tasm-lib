@@ -1,10 +1,8 @@
 use triton_vm::prelude::*;
 
-use crate::data_type::DataType;
 use crate::hashing::algebraic_hasher::hash_varlen::HashVarlen;
-use crate::library::Library;
 use crate::list::length::Length;
-use crate::traits::basic_snippet::BasicSnippet;
+use crate::prelude::*;
 
 /// Determine whether two lists are equal up to permutation.
 ///
@@ -228,31 +226,14 @@ impl BasicSnippet for MultisetEqualityDigests {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-
-    use itertools::Itertools;
     use num::One;
-    use rand::random;
-    use rand::rngs::StdRng;
-    use rand::Rng;
-    use rand::SeedableRng;
-    use tip5::Digest;
     use twenty_first::math::other::random_elements;
 
     use super::*;
     use crate::empty_stack;
     use crate::rust_shadowing_helper_functions;
     use crate::rust_shadowing_helper_functions::list::load_list_with_copy_elements;
-    use crate::snippet_bencher::BenchmarkCase;
-    use crate::traits::function::Function;
-    use crate::traits::function::FunctionInitialState;
-    use crate::traits::function::ShadowedFunction;
-    use crate::traits::rust_shadow::RustShadow;
-
-    #[test]
-    fn prop_test() {
-        ShadowedFunction::new(MultisetEqualityDigests).test();
-    }
+    use crate::test_prelude::*;
 
     impl Function for MultisetEqualityDigests {
         fn rust_shadow(
@@ -421,16 +402,20 @@ mod tests {
             FunctionInitialState { stack, memory }
         }
     }
+
+    #[test]
+    fn rust_shadow() {
+        ShadowedFunction::new(MultisetEqualityDigests).test();
+    }
 }
 
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::traits::function::ShadowedFunction;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
-    fn multiset_eq_digests_benchmark() {
+    fn benchmark() {
         ShadowedFunction::new(MultisetEqualityDigests).bench();
     }
 }

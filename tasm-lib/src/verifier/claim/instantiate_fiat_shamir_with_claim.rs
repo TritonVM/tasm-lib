@@ -1,13 +1,10 @@
-use triton_vm::prelude::LabelledInstruction;
 use triton_vm::prelude::*;
-use triton_vm::twenty_first::math::tip5::Digest;
 
-use crate::data_type::DataType;
 use crate::hashing::absorb_multiple::AbsorbMultiple;
-use crate::library::Library;
-use crate::traits::basic_snippet::BasicSnippet;
+use crate::prelude::*;
 use crate::verifier::claim::shared::claim_type;
 
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct InstantiateFiatShamirWithClaim;
 
 impl BasicSnippet for InstantiateFiatShamirWithClaim {
@@ -72,27 +69,21 @@ impl BasicSnippet for InstantiateFiatShamirWithClaim {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-
-    use rand::prelude::*;
-    use triton_vm::twenty_first::math::other::random_elements;
-    use triton_vm::twenty_first::util_types::sponge::Sponge;
+    use twenty_first::math::other::random_elements;
+    use twenty_first::prelude::Sponge;
 
     use super::*;
-    use crate::memory::encode_to_memory;
     use crate::rust_shadowing_helper_functions::claim::load_claim_from_memory;
-    use crate::snippet_bencher::BenchmarkCase;
-    use crate::traits::procedure::Procedure;
-    use crate::traits::procedure::ProcedureInitialState;
+    use crate::test_prelude::*;
 
     impl Procedure for InstantiateFiatShamirWithClaim {
         fn rust_shadow(
             &self,
             stack: &mut Vec<BFieldElement>,
-            memory: &mut std::collections::HashMap<BFieldElement, BFieldElement>,
+            memory: &mut HashMap<BFieldElement, BFieldElement>,
             _nondeterminism: &NonDeterminism,
             _public_input: &[BFieldElement],
-            sponge: &mut Option<crate::prelude::Tip5>,
+            sponge: &mut Option<Tip5>,
         ) -> Vec<BFieldElement> {
             let claim_pointer = stack.pop().unwrap();
 
@@ -150,13 +141,6 @@ mod tests {
             vec![empty_everything]
         }
     }
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-    use crate::traits::procedure::ShadowedProcedure;
-    use crate::traits::rust_shadow::RustShadow;
 
     #[test]
     fn test() {
@@ -167,8 +151,7 @@ mod test {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::traits::procedure::ShadowedProcedure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
     fn benchmark() {

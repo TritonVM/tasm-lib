@@ -1,15 +1,14 @@
 use rand::prelude::*;
 use triton_vm::prelude::*;
-use triton_vm::twenty_first::prelude::U32s;
+use twenty_first::prelude::U32s;
 
-use crate::data_type::DataType;
 use crate::empty_stack;
-use crate::library::Library;
+use crate::prelude::*;
 use crate::push_encodable;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::InitVmState;
 
-#[derive(Clone, Debug)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct WrappingMul;
 
 impl DeprecatedSnippet for WrappingMul {
@@ -167,6 +166,7 @@ mod tests {
     use num::Zero;
 
     use super::*;
+    use crate::empty_stack;
     use crate::test_helpers::test_rust_equivalence_given_input_values_deprecated;
     use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
 

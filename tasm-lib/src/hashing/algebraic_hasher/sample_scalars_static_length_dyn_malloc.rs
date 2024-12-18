@@ -1,16 +1,13 @@
 use triton_vm::prelude::*;
-use triton_vm::twenty_first::math::tip5::RATE;
-use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
+use twenty_first::math::tip5::RATE;
+use twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
 use crate::data_type::ArrayType;
-use crate::data_type::DataType;
 use crate::hashing::squeeze_repeatedly_static_number::SqueezeRepeatedlyStaticNumber;
-use crate::library::Library;
-use crate::memory::dyn_malloc::DynMalloc;
-use crate::traits::basic_snippet::BasicSnippet;
+use crate::prelude::*;
 
 /// Squeeze the sponge to sample a given number of `XFieldElement`s.
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct SampleScalarsStaticLengthDynMalloc {
     pub num_elements: usize,
 }
@@ -44,7 +41,7 @@ impl BasicSnippet for SampleScalarsStaticLengthDynMalloc {
     }
 
     fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
-        assert_eq!(10, tip5::RATE, "Code assumes Tip5's RATE is 10");
+        assert_eq!(10, RATE, "Code assumes Tip5's RATE is 10");
         assert_eq!(3, EXTENSION_DEGREE, "Code assumes extension degree 3");
         let num_squeezes = Self::num_squeezes(self.num_elements);
 
@@ -82,22 +79,13 @@ impl BasicSnippet for SampleScalarsStaticLengthDynMalloc {
 
 #[cfg(test)]
 mod tests {
-    use itertools::Itertools;
-    use rand::prelude::*;
-    use triton_vm::prelude::*;
-    use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
-    use triton_vm::twenty_first::prelude::*;
+    use twenty_first::prelude::*;
 
-    use super::SampleScalarsStaticLengthDynMalloc;
+    use super::*;
     use crate::memory::dyn_malloc::DYN_MALLOC_FIRST_ADDRESS;
-    use crate::prelude::Tip5;
     use crate::rust_shadowing_helper_functions;
     use crate::test_helpers::tasm_final_state;
-    use crate::traits::basic_snippet::BasicSnippet;
-    use crate::traits::procedure::Procedure;
-    use crate::traits::procedure::ProcedureInitialState;
-    use crate::traits::procedure::ShadowedProcedure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     impl Procedure for SampleScalarsStaticLengthDynMalloc {
         fn rust_shadow(
@@ -127,8 +115,8 @@ mod tests {
         fn pseudorandom_initial_state(
             &self,
             seed: [u8; 32],
-            _bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
-        ) -> crate::traits::procedure::ProcedureInitialState {
+            _: Option<BenchmarkCase>,
+        ) -> ProcedureInitialState {
             let mut rng = StdRng::from_seed(seed);
             let stack = self.init_stack_for_isolated_run();
             let sponge = Tip5 { state: rng.gen() };
@@ -192,8 +180,7 @@ mod tests {
 #[cfg(test)]
 mod bench {
     use super::*;
-    use crate::traits::procedure::ShadowedProcedure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
     fn bench_10() {

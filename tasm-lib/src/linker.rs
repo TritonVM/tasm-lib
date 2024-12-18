@@ -1,31 +1,12 @@
-use std::cell::RefCell;
-use std::rc::Rc;
-
 use triton_vm::prelude::*;
 
-use crate::library::Library;
-use crate::prelude::Tip5;
+use crate::prelude::*;
 use crate::prove_and_verify;
 use crate::snippet_bencher::BenchmarkResult;
-use crate::traits::basic_snippet::BasicSnippet;
 
-pub fn link_for_isolated_run<T: BasicSnippet>(snippet: Rc<RefCell<T>>) -> Vec<LabelledInstruction> {
-    let mut snippet_state = Library::new();
-    let entrypoint = snippet.borrow().entrypoint();
-    let function_body = snippet.borrow().annotated_code(&mut snippet_state);
-    let library_code = snippet_state.all_imports();
-
-    // The TASM code is always run through a function call, so the 1st instruction
-    // is a call to the function in question.
-    let code = triton_asm!(
-        call {entrypoint}
-        halt
-
-        {&function_body}
-        {&library_code}
-    );
-
-    code
+#[deprecated(since = "0.44.0", note = "Use `snippet.link_for_isolated_run` instead")]
+pub fn link_for_isolated_run<T: BasicSnippet>(snippet: &T) -> Vec<LabelledInstruction> {
+    snippet.link_for_isolated_run()
 }
 
 /// Execute a Triton-VM program and return its output and execution trace length

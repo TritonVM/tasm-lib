@@ -3,9 +3,8 @@ use std::collections::HashMap;
 use rand::prelude::*;
 use triton_vm::prelude::*;
 
-use crate::data_type::DataType;
 use crate::empty_stack;
-use crate::library::Library;
+use crate::prelude::*;
 use crate::push_encodable;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::InitVmState;
@@ -99,8 +98,6 @@ impl DeprecatedSnippet for Isodd {
 
 #[cfg(test)]
 mod tests {
-    use rand::prelude::*;
-
     use super::*;
     use crate::empty_stack;
     use crate::test_helpers::test_rust_equivalence_given_input_values_deprecated;

@@ -1,9 +1,8 @@
 use itertools::Itertools;
-use triton_vm::prelude::triton_asm;
+use triton_vm::prelude::*;
 
 use crate::data_type::ArrayType;
-use crate::data_type::DataType;
-use crate::traits::basic_snippet::BasicSnippet;
+use crate::prelude::*;
 
 /// Evaluate a polynomial in a point using the Horner method.
 ///
@@ -23,7 +22,7 @@ impl HornerEvaluation {
 }
 
 impl BasicSnippet for HornerEvaluation {
-    fn inputs(&self) -> Vec<(crate::data_type::DataType, String)> {
+    fn inputs(&self) -> Vec<(DataType, String)> {
         vec![
             (
                 DataType::Array(Box::new(ArrayType {
@@ -36,7 +35,7 @@ impl BasicSnippet for HornerEvaluation {
         ]
     }
 
-    fn outputs(&self) -> Vec<(crate::data_type::DataType, String)> {
+    fn outputs(&self) -> Vec<(DataType, String)> {
         vec![(DataType::Xfe, "value".to_string())]
     }
 
@@ -47,10 +46,7 @@ impl BasicSnippet for HornerEvaluation {
         )
     }
 
-    fn code(
-        &self,
-        _library: &mut crate::library::Library,
-    ) -> Vec<triton_vm::prelude::LabelledInstruction> {
+    fn code(&self, _library: &mut Library) -> Vec<LabelledInstruction> {
         let entrypoint = self.entrypoint();
 
         let update_running_evaluation = triton_asm! {
@@ -99,30 +95,20 @@ impl BasicSnippet for HornerEvaluation {
 }
 
 #[cfg(test)]
-mod test {
-    use std::collections::HashMap;
-
+mod tests {
     use num::Zero;
-    use rand::prelude::*;
-    use triton_vm::twenty_first::prelude::*;
 
     use super::*;
     use crate::empty_stack;
     use crate::rust_shadowing_helper_functions::array::array_get;
     use crate::rust_shadowing_helper_functions::array::insert_as_array;
-    use crate::traits::function::Function;
-    use crate::traits::function::FunctionInitialState;
-    use crate::traits::function::ShadowedFunction;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     impl Function for HornerEvaluation {
         fn rust_shadow(
             &self,
-            stack: &mut Vec<triton_vm::prelude::BFieldElement>,
-            memory: &mut std::collections::HashMap<
-                triton_vm::prelude::BFieldElement,
-                triton_vm::prelude::BFieldElement,
-            >,
+            stack: &mut Vec<BFieldElement>,
+            memory: &mut HashMap<BFieldElement, BFieldElement>,
         ) {
             // read indeterminate
             let x = XFieldElement::new([
@@ -157,8 +143,8 @@ mod test {
         fn pseudorandom_initial_state(
             &self,
             seed: [u8; 32],
-            _bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
-        ) -> crate::traits::function::FunctionInitialState {
+            _bench_case: Option<BenchmarkCase>,
+        ) -> FunctionInitialState {
             let mut rng = StdRng::from_seed(seed);
 
             // sample coefficients
@@ -202,22 +188,17 @@ mod test {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::traits::function::ShadowedFunction;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
-    fn horner_evaluation_100() {
-        ShadowedFunction::new(HornerEvaluation {
-            num_coefficients: 100,
-        })
-        .bench();
+    fn bench_100() {
+        let num_coefficients = 100;
+        ShadowedFunction::new(HornerEvaluation { num_coefficients }).bench();
     }
 
     #[test]
-    fn horner_evaluation_587() {
-        ShadowedFunction::new(HornerEvaluation {
-            num_coefficients: 587,
-        })
-        .bench();
+    fn bench_587() {
+        let num_coefficients = 587;
+        ShadowedFunction::new(HornerEvaluation { num_coefficients }).bench();
     }
 }

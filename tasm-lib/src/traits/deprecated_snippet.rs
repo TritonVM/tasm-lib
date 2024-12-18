@@ -5,12 +5,10 @@ use triton_vm::isa::parser::to_labelled_instructions;
 use triton_vm::isa::parser::tokenize;
 use triton_vm::prelude::*;
 
-use super::basic_snippet::BasicSnippet;
-use crate::data_type::DataType;
 use crate::execute_bench_deprecated;
 use crate::execute_test;
 use crate::execute_with_terminal_state;
-use crate::library::Library;
+use crate::prelude::*;
 use crate::snippet_bencher::BenchmarkResult;
 use crate::InitVmState;
 
@@ -241,17 +239,12 @@ impl<S: DeprecatedSnippet> BasicSnippet for S {
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use std::cell::RefCell;
-    use std::rc::Rc;
     use std::str::FromStr;
-
-    use itertools::Itertools;
 
     use super::*;
     use crate::arithmetic;
-    use crate::prelude::Tip5;
     use crate::test_helpers::test_rust_equivalence_given_execution_state_deprecated;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     pub(crate) struct DeprecatedSnippetWrapper<S: DeprecatedSnippet> {
         pub(crate) deprecated_snippet: S,
@@ -264,8 +257,8 @@ pub(crate) mod tests {
     }
 
     impl<S: DeprecatedSnippet + Clone + 'static> RustShadow for DeprecatedSnippetWrapper<S> {
-        fn inner(&self) -> Rc<RefCell<dyn BasicSnippet>> {
-            Rc::new(RefCell::new(self.deprecated_snippet.clone()))
+        fn inner(&self) -> &dyn BasicSnippet {
+            &self.deprecated_snippet
         }
 
         fn rust_shadow_wrapper(

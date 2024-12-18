@@ -4,9 +4,8 @@ use itertools::Itertools;
 use rand::prelude::*;
 use triton_vm::prelude::*;
 
-use crate::data_type::DataType;
 use crate::empty_stack;
-use crate::library::Library;
+use crate::prelude::*;
 use crate::rust_shadowing_helper_functions::list::list_get;
 use crate::rust_shadowing_helper_functions::list::untyped_insert_random_list;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
@@ -163,6 +162,7 @@ impl Get {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::empty_stack;
     use crate::test_helpers::test_rust_equivalence_given_input_values_deprecated;
     use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
 

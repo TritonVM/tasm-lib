@@ -1,6 +1,6 @@
 use triton_vm::prelude::*;
-use triton_vm::twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
-use triton_vm::twenty_first::util_types::mmr::mmr_successor_proof::MmrSuccessorProof;
+use twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
+use twenty_first::util_types::mmr::mmr_successor_proof::MmrSuccessorProof;
 
 use crate::arithmetic::u64::add::Add;
 use crate::arithmetic::u64::log_2_floor::Log2Floor;
@@ -8,16 +8,15 @@ use crate::arithmetic::u64::lt::Lt;
 use crate::arithmetic::u64::popcount::PopCount;
 use crate::arithmetic::u64::shift_right::ShiftRight;
 use crate::arithmetic::u64::sub::Sub;
-use crate::data_type::DataType;
 use crate::field;
 use crate::hashing::merkle_step_u64_index::MerkleStepU64Index;
 use crate::mmr::bag_peaks::BagPeaks;
 use crate::mmr::leaf_index_to_mt_index_and_peak_index::MmrLeafIndexToMtIndexAndPeakIndex;
-use crate::prelude::BasicSnippet;
+use crate::prelude::*;
 
 /// Verify that one MMR is a successor to another.
 ///
-/// Verify the scucessorship relation between two MMRs. A `MmrSuccessorProof`
+/// Verify the successorship relation between two MMRs. A `MmrSuccessorProof`
 /// is necessary to demonstrate this relation, but it is not a *stack* argument
 /// because this algorithm obtains the relevant info (authentication paths) from
 /// nondeterministic digests. Accordingly, nondeterminism must be initialized
@@ -27,14 +26,14 @@ use crate::prelude::BasicSnippet;
 pub struct VerifyMmrSuccessor;
 
 impl BasicSnippet for VerifyMmrSuccessor {
-    fn inputs(&self) -> Vec<(crate::data_type::DataType, String)> {
+    fn inputs(&self) -> Vec<(DataType, String)> {
         vec![
             (DataType::VoidPointer, "*old_mmr".to_string()),
             (DataType::VoidPointer, "*new_mmr".to_string()),
         ]
     }
 
-    fn outputs(&self) -> Vec<(crate::data_type::DataType, String)> {
+    fn outputs(&self) -> Vec<(DataType, String)> {
         vec![]
     }
 
@@ -42,10 +41,7 @@ impl BasicSnippet for VerifyMmrSuccessor {
         "tasm_lib_mmr_verify_mmr_successor".to_string()
     }
 
-    fn code(
-        &self,
-        library: &mut crate::prelude::Library,
-    ) -> Vec<triton_vm::prelude::LabelledInstruction> {
+    fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
         let field_peaks = field!(MmrAccumulator::peaks);
         let field_leaf_count = field!(MmrAccumulator::leaf_count);
         let num_peaks = triton_asm! {
@@ -360,31 +356,20 @@ impl VerifyMmrSuccessor {
 }
 
 #[cfg(test)]
-mod test {
-    use std::collections::HashMap;
+mod tests {
     use std::collections::VecDeque;
 
-    use itertools::Itertools;
-    use rand::prelude::StdRng;
-    use rand::thread_rng;
-    use rand::Rng;
-    use rand::RngCore;
-    use rand::SeedableRng;
-    use tasm_lib::prelude::TasmObject;
-    use tasm_lib::snippet_bencher::BenchmarkCase;
-    use tasm_lib::traits::mem_preserver::ShadowedMemPreserver;
-    use tasm_lib::traits::rust_shadow::RustShadow;
     use triton_vm::isa::error::AssertionError;
     use triton_vm::isa::instruction::AssertionContext;
-    use triton_vm::twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
-    use triton_vm::twenty_first::util_types::mmr::mmr_successor_proof::MmrSuccessorProof;
-    use triton_vm::twenty_first::util_types::mmr::shared_advanced::get_peak_heights;
-    use triton_vm::twenty_first::util_types::mmr::shared_basic::leaf_index_to_mt_index_and_peak_index;
+    use twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
+    use twenty_first::util_types::mmr::mmr_successor_proof::MmrSuccessorProof;
+    use twenty_first::util_types::mmr::shared_advanced::get_peak_heights;
+    use twenty_first::util_types::mmr::shared_basic::leaf_index_to_mt_index_and_peak_index;
 
     use super::*;
     use crate::empty_stack;
-    use crate::memory::encode_to_memory;
     use crate::test_helpers::negative_test;
+    use crate::test_prelude::*;
     use crate::traits::mem_preserver::MemPreserver;
     use crate::traits::mem_preserver::MemPreserverInitialState;
     use crate::twenty_first::prelude::Mmr;
@@ -538,10 +523,10 @@ mod test {
             &self,
             stack: &mut Vec<BFieldElement>,
             memory: &HashMap<BFieldElement, BFieldElement>,
-            _nd_tokens: VecDeque<BFieldElement>,
+            _: VecDeque<BFieldElement>,
             nd_digests: VecDeque<Digest>,
-            _stdin: VecDeque<BFieldElement>,
-            _sponge: &mut Option<Tip5>,
+            _: VecDeque<BFieldElement>,
+            _: &mut Option<Tip5>,
         ) -> Vec<BFieldElement> {
             let new_mmr_pointer = stack.pop().unwrap();
             let old_mmr_pointer = stack.pop().unwrap();
@@ -685,11 +670,10 @@ mod test {
 #[cfg(test)]
 mod bench {
     use super::*;
-    use crate::traits::mem_preserver::ShadowedMemPreserver;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
-    fn verify_mmr_successor_benchmark() {
+    fn benchmark() {
         ShadowedMemPreserver::new(VerifyMmrSuccessor).bench();
     }
 }

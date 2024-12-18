@@ -1,10 +1,9 @@
 use triton_vm::prelude::*;
 
-use crate::data_type::DataType;
 use crate::hashing::absorb_multiple_static_size::AbsorbMultipleStaticSize;
-use crate::traits::basic_snippet::BasicSnippet;
+use crate::prelude::*;
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct HashStaticSize {
     pub size: usize,
 }
@@ -54,21 +53,10 @@ impl BasicSnippet for HashStaticSize {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-
-    use proptest_arbitrary_interop::arb;
-    use rand::prelude::*;
-    use test_strategy::proptest;
-    use triton_vm::twenty_first::math::tip5::Digest;
-    use triton_vm::twenty_first::util_types::sponge::Sponge;
+    use twenty_first::prelude::*;
 
     use super::*;
-    use crate::prelude::Tip5;
-    use crate::snippet_bencher::BenchmarkCase;
-    use crate::traits::procedure::Procedure;
-    use crate::traits::procedure::ProcedureInitialState;
-    use crate::traits::procedure::ShadowedProcedure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
     fn hash_static_size_small_pbt() {
@@ -106,13 +94,7 @@ mod tests {
             stack.extend(squeezed);
 
             // Pop returned digest
-            let digest = Digest::new([
-                stack.pop().unwrap(),
-                stack.pop().unwrap(),
-                stack.pop().unwrap(),
-                stack.pop().unwrap(),
-                stack.pop().unwrap(),
-            ]);
+            let digest = pop_encodable::<Digest>(stack);
 
             // Remove 5 more words:
             for _ in 0..Digest::LEN {
@@ -156,9 +138,8 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use super::HashStaticSize;
-    use crate::traits::procedure::ShadowedProcedure;
-    use crate::traits::rust_shadow::RustShadow;
+    use super::*;
+    use crate::test_prelude::*;
 
     // Picked to be the size of a main table row at time of writing
     #[test]

@@ -3,7 +3,6 @@ use std::collections::HashMap;
 use triton_vm::prelude::*;
 
 use crate::arithmetic::u64::overflowing_sub::OverflowingSub;
-use crate::data_type::DataType;
 use crate::prelude::*;
 use crate::traits::basic_snippet::Reviewer;
 use crate::traits::basic_snippet::SignOffFingerprint;
@@ -78,33 +77,17 @@ impl BasicSnippet for Sub {
 
 #[cfg(test)]
 mod tests {
-    use itertools::Itertools;
-    use rand::prelude::*;
-    use test_strategy::proptest;
-
     use super::*;
-    use crate::pop_encodable;
-    use crate::push_encodable;
-    use crate::snippet_bencher::BenchmarkCase;
-    use crate::test_helpers::test_assertion_failure;
-    use crate::test_helpers::test_rust_equivalence_given_complete_state;
-    use crate::traits::closure::Closure;
-    use crate::traits::closure::ShadowedClosure;
-    use crate::traits::rust_shadow::RustShadow;
-    use crate::InitVmState;
+    use crate::test_prelude::*;
 
     impl Sub {
-        pub fn set_up_initial_stack(&self, subtrahend: u64, minuend: u64) -> Vec<BFieldElement> {
-            OverflowingSub.set_up_initial_stack(subtrahend, minuend)
-        }
-
         pub fn assert_expected_behavior(&self, subtrahend: u64, minuend: u64) {
-            let mut expected_stack = self.set_up_initial_stack(subtrahend, minuend);
+            let mut expected_stack = self.set_up_test_stack((subtrahend, minuend));
             self.rust_shadow(&mut expected_stack);
 
             test_rust_equivalence_given_complete_state(
                 &ShadowedClosure::new(Self),
-                &self.set_up_initial_stack(subtrahend, minuend),
+                &self.set_up_test_stack((subtrahend, minuend)),
                 &[],
                 &NonDeterminism::default(),
                 &None,
@@ -114,39 +97,39 @@ mod tests {
     }
 
     impl Closure for Sub {
+        type Args = <OverflowingSub as Closure>::Args;
+
         fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
-            let minuend = pop_encodable::<u64>(stack);
-            let subtrahend = pop_encodable::<u64>(stack);
+            let (subtrahend, minuend) = pop_encodable::<Self::Args>(stack);
             push_encodable(stack, &(minuend - subtrahend));
         }
 
-        fn pseudorandom_initial_state(
+        fn pseudorandom_args(
             &self,
             seed: [u8; 32],
             bench_case: Option<BenchmarkCase>,
-        ) -> Vec<BFieldElement> {
-            let (subtrahend, minuend) = match bench_case {
-                Some(BenchmarkCase::CommonCase) => (0x3ff, 0x7fff_ffff),
-                Some(BenchmarkCase::WorstCase) => (0x1_7fff_ffff, 0x64_0000_03ff),
-                None => {
-                    let mut rng = StdRng::from_seed(seed);
-                    let subtrahend = rng.gen();
-                    let minuend = rng.gen_range(subtrahend..=u64::MAX);
-                    (subtrahend, minuend)
-                }
+        ) -> Self::Args {
+            let Some(bench_case) = bench_case else {
+                let mut rng = StdRng::from_seed(seed);
+                let subtrahend = rng.gen();
+                let minuend = rng.gen_range(subtrahend..=u64::MAX);
+                return (subtrahend, minuend);
             };
 
-            self.set_up_initial_stack(subtrahend, minuend)
+            match bench_case {
+                BenchmarkCase::CommonCase => (0x3ff, 0x7fff_ffff),
+                BenchmarkCase::WorstCase => (0x1_7fff_ffff, 0x64_0000_03ff),
+            }
         }
 
-        fn corner_case_initial_states(&self) -> Vec<Vec<BFieldElement>> {
+        fn corner_case_args(&self) -> Vec<Self::Args> {
             let edge_case_values = OverflowingSub::edge_case_values();
 
             edge_case_values
                 .iter()
                 .cartesian_product(&edge_case_values)
                 .filter(|(&subtrahend, &minuend)| minuend.checked_sub(subtrahend).is_some())
-                .map(|(&subtrahend, &minuend)| self.set_up_initial_stack(subtrahend, minuend))
+                .map(|(&subtrahend, &minuend)| (subtrahend, minuend))
                 .collect()
         }
     }
@@ -174,7 +157,7 @@ mod tests {
     ) {
         test_assertion_failure(
             &ShadowedClosure::new(Sub),
-            InitVmState::with_stack(Sub.set_up_initial_stack(subtrahend, minuend)),
+            InitVmState::with_stack(Sub.set_up_test_stack((subtrahend, minuend))),
             &[Sub::OVERFLOW_ERROR_ID],
         );
     }
@@ -183,8 +166,7 @@ mod tests {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::traits::closure::ShadowedClosure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
     fn benchmark() {

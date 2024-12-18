@@ -1,6 +1,4 @@
-use std::cell::RefCell;
 use std::collections::HashMap;
-use std::rc::Rc;
 
 use rand::prelude::*;
 use triton_vm::prelude::*;
@@ -8,7 +6,6 @@ use triton_vm::prelude::*;
 use super::basic_snippet::BasicSnippet;
 use super::rust_shadow::RustShadow;
 use crate::linker::execute_bench;
-use crate::linker::link_for_isolated_run;
 use crate::prelude::Tip5;
 use crate::snippet_bencher::write_benchmarks;
 use crate::snippet_bencher::BenchmarkCase;
@@ -67,14 +64,12 @@ impl From<AccessorInitialState> for InitVmState {
 }
 
 pub struct ShadowedAccessor<T: Accessor + 'static> {
-    accessor: Rc<RefCell<T>>,
+    accessor: T,
 }
 
 impl<T: Accessor + 'static> ShadowedAccessor<T> {
     pub fn new(accessor: T) -> Self {
-        Self {
-            accessor: Rc::new(RefCell::new(accessor)),
-        }
+        Self { accessor }
     }
 }
 
@@ -82,8 +77,8 @@ impl<T> RustShadow for ShadowedAccessor<T>
 where
     T: Accessor + 'static,
 {
-    fn inner(&self) -> Rc<RefCell<dyn BasicSnippet>> {
-        self.accessor.clone()
+    fn inner(&self) -> &dyn BasicSnippet {
+        &self.accessor
     }
 
     fn rust_shadow_wrapper(
@@ -94,12 +89,12 @@ where
         memory: &mut HashMap<BFieldElement, BFieldElement>,
         _sponge: &mut Option<Tip5>,
     ) -> Vec<BFieldElement> {
-        self.accessor.borrow().rust_shadow(stack, memory);
+        self.accessor.rust_shadow(stack, memory);
         vec![]
     }
 
     fn test(&self) {
-        for corner_case in self.accessor.borrow().corner_case_initial_states() {
+        for corner_case in self.accessor.corner_case_initial_states() {
             let stdin = vec![];
             let nd = NonDeterminism::default().with_ram(corner_case.memory);
             test_rust_equivalence_given_complete_state(
@@ -115,10 +110,8 @@ where
         let num_states = 10;
         let mut rng = StdRng::from_seed(random());
         for _ in 0..num_states {
-            let AccessorInitialState { stack, memory } = self
-                .accessor
-                .borrow()
-                .pseudorandom_initial_state(rng.gen(), None);
+            let AccessorInitialState { stack, memory } =
+                self.accessor.pseudorandom_initial_state(rng.gen(), None);
 
             let stdin = vec![];
             let nd = NonDeterminism::default().with_ram(memory);
@@ -138,13 +131,12 @@ where
         for bench_case in [BenchmarkCase::CommonCase, BenchmarkCase::WorstCase] {
             let AccessorInitialState { stack, memory } = self
                 .accessor
-                .borrow()
                 .pseudorandom_initial_state(rng.gen(), Some(bench_case));
-            let program = link_for_isolated_run(self.accessor.clone());
+            let program = self.accessor.link_for_isolated_run();
             let nd = NonDeterminism::default().with_ram(memory);
             let benchmark = execute_bench(&program, &stack, vec![], nd, None);
             let benchmark = NamedBenchmarkResult {
-                name: self.accessor.borrow().entrypoint(),
+                name: self.accessor.entrypoint(),
                 benchmark_result: benchmark,
                 case: bench_case,
             };

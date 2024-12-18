@@ -1,19 +1,9 @@
-use std::collections::HashMap;
-
-use itertools::Itertools;
-use rand::prelude::*;
 use triton_vm::prelude::*;
 
-use crate::data_type::DataType;
-use crate::empty_stack;
 use crate::list::length::Length;
 use crate::list::new::New;
 use crate::list::push::Push;
-use crate::prelude::Tip5;
-use crate::rust_shadowing_helper_functions;
-use crate::traits::basic_snippet::BasicSnippet;
-use crate::traits::procedure::Procedure;
-use crate::traits::procedure::ProcedureInitialState;
+use crate::prelude::*;
 
 /// Sample n pseudorandom integers between 0 and k. It does this by squeezing the sponge. It is the
 /// caller's responsibility to ensure that the sponge is initialized to the right state.
@@ -39,7 +29,7 @@ impl BasicSnippet for SampleIndices {
         "tasmlib_hashing_algebraic_hasher_sample_indices".into()
     }
 
-    fn code(&self, library: &mut crate::library::Library) -> Vec<LabelledInstruction> {
+    fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
         let entrypoint = self.entrypoint();
         let main_loop = format!("{entrypoint}_main_loop");
         let then_reduce_and_save = format!("{entrypoint}_then_reduce_and_save");
@@ -135,93 +125,95 @@ impl BasicSnippet for SampleIndices {
     }
 }
 
-impl Procedure for SampleIndices {
-    fn rust_shadow(
-        &self,
-        stack: &mut Vec<BFieldElement>,
-        memory: &mut HashMap<BFieldElement, BFieldElement>,
-        _nondeterminism: &NonDeterminism,
-        _public_input: &[BFieldElement],
-        sponge: &mut Option<Tip5>,
-    ) -> Vec<BFieldElement> {
-        let sponge = sponge.as_mut().expect("sponge must be initialized");
-
-        // collect upper bound and number from stack
-        let upper_bound = stack.pop().unwrap().value() as u32;
-        let number = stack.pop().unwrap().value() as usize;
-
-        println!("sampling {number} indices between 0 and {upper_bound}");
-        println!("sponge before: {}", sponge.state.iter().join(","));
-
-        let indices = sponge.sample_indices(upper_bound, number);
-
-        // allocate memory for list
-        let list_pointer = rust_shadowing_helper_functions::dyn_malloc::dynamic_allocator(memory);
-        rust_shadowing_helper_functions::list::list_new(list_pointer, memory);
-
-        // store all indices
-        for index in indices.iter() {
-            rust_shadowing_helper_functions::list::list_push(
-                list_pointer,
-                vec![BFieldElement::new(*index as u64)],
-                memory,
-                1,
-            );
-        }
-        println!("sponge after: {}", sponge.state.iter().join(","));
-
-        stack.push(list_pointer);
-
-        vec![]
-    }
-
-    fn pseudorandom_initial_state(
-        &self,
-        seed: [u8; 32],
-        bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
-    ) -> ProcedureInitialState {
-        let mut rng = StdRng::from_seed(seed);
-        let number = if let Some(case) = bench_case {
-            match case {
-                // For FRI num_collinearity checks is 80 for expansion factor 4
-                crate::snippet_bencher::BenchmarkCase::CommonCase => 40,
-
-                // For FRI num_collinearity checks is 40 for expansion factor 8
-                crate::snippet_bencher::BenchmarkCase::WorstCase => 80,
-            }
-        } else {
-            rng.gen_range(0..20)
-        };
-        let upper_bound = if let Some(case) = bench_case {
-            match case {
-                crate::snippet_bencher::BenchmarkCase::CommonCase => 1 << 12,
-                crate::snippet_bencher::BenchmarkCase::WorstCase => 1 << 23,
-            }
-        } else {
-            1 << rng.gen_range(0..20)
-        };
-
-        let mut stack = empty_stack();
-        stack.push(BFieldElement::new(number as u64));
-        stack.push(BFieldElement::new(upper_bound as u64));
-
-        let public_input: Vec<BFieldElement> = vec![];
-        let state = Tip5 { state: rng.gen() };
-
-        ProcedureInitialState {
-            stack,
-            nondeterminism: NonDeterminism::default(),
-            public_input,
-            sponge: Some(state),
-        }
-    }
-}
-
 #[cfg(test)]
-mod test {
+mod tests {
     use super::*;
-    use crate::traits::procedure::ShadowedProcedure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::empty_stack;
+    use crate::rust_shadowing_helper_functions;
+    use crate::test_prelude::*;
+
+    impl Procedure for SampleIndices {
+        fn rust_shadow(
+            &self,
+            stack: &mut Vec<BFieldElement>,
+            memory: &mut HashMap<BFieldElement, BFieldElement>,
+            _: &NonDeterminism,
+            _: &[BFieldElement],
+            sponge: &mut Option<Tip5>,
+        ) -> Vec<BFieldElement> {
+            let sponge = sponge.as_mut().expect("sponge must be initialized");
+
+            // collect upper bound and number from stack
+            let upper_bound = stack.pop().unwrap().value() as u32;
+            let number = stack.pop().unwrap().value() as usize;
+
+            println!("sampling {number} indices between 0 and {upper_bound}");
+            println!("sponge before: {}", sponge.state.iter().join(","));
+
+            let indices = sponge.sample_indices(upper_bound, number);
+
+            // allocate memory for list
+            let list_pointer =
+                rust_shadowing_helper_functions::dyn_malloc::dynamic_allocator(memory);
+            rust_shadowing_helper_functions::list::list_new(list_pointer, memory);
+
+            // store all indices
+            for index in indices.iter() {
+                rust_shadowing_helper_functions::list::list_push(
+                    list_pointer,
+                    vec![BFieldElement::new(*index as u64)],
+                    memory,
+                    1,
+                );
+            }
+            println!("sponge after: {}", sponge.state.iter().join(","));
+
+            stack.push(list_pointer);
+
+            vec![]
+        }
+
+        fn pseudorandom_initial_state(
+            &self,
+            seed: [u8; 32],
+            bench_case: Option<BenchmarkCase>,
+        ) -> ProcedureInitialState {
+            let mut rng = StdRng::from_seed(seed);
+            let number = if let Some(case) = bench_case {
+                match case {
+                    // For FRI num_collinearity checks is 80 for expansion factor 4
+                    BenchmarkCase::CommonCase => 40,
+
+                    // For FRI num_collinearity checks is 40 for expansion factor 8
+                    BenchmarkCase::WorstCase => 80,
+                }
+            } else {
+                rng.gen_range(0..20)
+            };
+            let upper_bound = if let Some(case) = bench_case {
+                match case {
+                    BenchmarkCase::CommonCase => 1 << 12,
+                    BenchmarkCase::WorstCase => 1 << 23,
+                }
+            } else {
+                1 << rng.gen_range(0..20)
+            };
+
+            let mut stack = empty_stack();
+            stack.push(BFieldElement::new(number as u64));
+            stack.push(BFieldElement::new(upper_bound as u64));
+
+            let public_input: Vec<BFieldElement> = vec![];
+            let state = Tip5 { state: rng.gen() };
+
+            ProcedureInitialState {
+                stack,
+                nondeterminism: NonDeterminism::default(),
+                public_input,
+                sponge: Some(state),
+            }
+        }
+    }
 
     #[test]
     fn test() {
@@ -232,11 +224,10 @@ mod test {
 #[cfg(test)]
 mod bench {
     use super::*;
-    use crate::traits::procedure::ShadowedProcedure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
-    fn bench() {
+    fn benchmark() {
         ShadowedProcedure::new(SampleIndices).bench();
     }
 }

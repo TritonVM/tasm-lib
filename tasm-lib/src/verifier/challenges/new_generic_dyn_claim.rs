@@ -4,13 +4,10 @@ use triton_vm::air::cross_table_argument::CrossTableArg;
 use triton_vm::air::cross_table_argument::EvalArg;
 use triton_vm::challenges::Challenges;
 use triton_vm::prelude::*;
-use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
+use twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
-use crate::data_type::DataType;
 use crate::hashing::algebraic_hasher::sample_scalars_static_length_static_pointer::SampleScalarsStaticLengthStaticPointer;
-use crate::library::Library;
-use crate::prelude::Digest;
-use crate::traits::basic_snippet::BasicSnippet;
+use crate::prelude::*;
 use crate::verifier::challenges::shared::challenges_data_type;
 use crate::verifier::claim::shared::claim_type;
 use crate::verifier::eval_arg::compute_terminal_const_sized_static_symbols::ComputeTerminalConstSizedStaticSymbols;
@@ -217,23 +214,13 @@ impl BasicSnippet for NewGenericDynClaim {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-
-    use rand::prelude::*;
     use triton_vm::challenges::Challenges;
-    use triton_vm::twenty_first::math::other::random_elements;
+    use twenty_first::math::other::random_elements;
 
     use super::*;
-    use crate::memory::encode_to_memory;
-    use crate::prelude::Tip5;
     use crate::rust_shadowing_helper_functions::array::insert_as_array;
     use crate::rust_shadowing_helper_functions::claim::load_claim_from_memory;
-    use crate::snippet_bencher::BenchmarkCase;
-    use crate::traits::basic_snippet::BasicSnippet;
-    use crate::traits::procedure::Procedure;
-    use crate::traits::procedure::ProcedureInitialState;
-    use crate::traits::procedure::ShadowedProcedure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
     use crate::verifier::challenges::shared::conventional_challenges_pointer;
 
     impl Procedure for NewGenericDynClaim {
@@ -303,10 +290,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use super::super::shared::conventional_challenges_pointer;
     use super::*;
-    use crate::traits::procedure::ShadowedProcedure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
+    use crate::verifier::challenges::shared::conventional_challenges_pointer;
 
     #[test]
     fn bench_for_challenges_calc_for_recufier() {

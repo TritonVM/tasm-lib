@@ -1,10 +1,8 @@
 use triton_vm::prelude::*;
 use twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
-use crate::data_type::DataType;
 use crate::hashing::algebraic_hasher::hash_varlen::HashVarlen;
-use crate::library::Library;
-use crate::traits::basic_snippet::BasicSnippet;
+use crate::prelude::*;
 
 #[derive(Debug, Clone, Copy)]
 pub struct MultisetEqualityU64s;
@@ -250,18 +248,8 @@ impl BasicSnippet for MultisetEqualityU64s {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-
-    use itertools::Itertools;
     use num::One;
     use num::Zero;
-    use rand::prelude::SliceRandom;
-    use rand::rngs::StdRng;
-    use rand::thread_rng;
-    use rand::Rng;
-    use rand::RngCore;
-    use rand::SeedableRng;
-    use tip5::Digest;
 
     use super::*;
     use crate::library::STATIC_MEMORY_FIRST_ADDRESS;
@@ -270,12 +258,8 @@ mod tests {
     use crate::rust_shadowing_helper_functions;
     use crate::rust_shadowing_helper_functions::list::list_get;
     use crate::rust_shadowing_helper_functions::list::load_list_with_copy_elements;
-    use crate::snippet_bencher::BenchmarkCase;
     use crate::test_helpers::test_rust_equivalence_given_complete_state;
-    use crate::traits::function::Function;
-    use crate::traits::function::FunctionInitialState;
-    use crate::traits::function::ShadowedFunction;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
     fn returns_true_on_multiset_equality() {
@@ -615,11 +599,10 @@ mod tests {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::traits::function::ShadowedFunction;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
-    fn multiset_eq_u64s_bench() {
+    fn benchmark() {
         ShadowedFunction::new(MultisetEqualityU64s).bench()
     }
 }

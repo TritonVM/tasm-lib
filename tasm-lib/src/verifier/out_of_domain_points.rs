@@ -1,12 +1,9 @@
-use triton_vm::prelude::triton_asm;
-use triton_vm::prelude::LabelledInstruction;
-use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
+use triton_vm::prelude::*;
+use twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
 use crate::arithmetic::xfe::to_the_fourth::ToTheFourth;
 use crate::data_type::ArrayType;
-use crate::data_type::DataType;
-use crate::library::Library;
-use crate::traits::basic_snippet::BasicSnippet;
+use crate::prelude::*;
 
 /// Calculate the three needed values related to out-of-domain points and store them in a statically
 /// allocated array. Return the pointer to this array.
@@ -34,7 +31,7 @@ impl OutOfDomainPoints {
             // _ (*ood_points[n] + 2)
 
             read_mem {EXTENSION_DEGREE}
-            // _ [ood_piont] (*ood_points[n] - 1)
+            // _ [ood_point] (*ood_points[n] - 1)
 
             pop 1
         )
@@ -127,21 +124,13 @@ impl BasicSnippet for OutOfDomainPoints {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-
-    use rand::prelude::*;
-    use triton_vm::prelude::*;
     use triton_vm::table::NUM_QUOTIENT_SEGMENTS;
-    use triton_vm::twenty_first::math::traits::ModPowU32;
-    use triton_vm::twenty_first::math::traits::PrimitiveRootOfUnity;
+    use twenty_first::math::traits::ModPowU32;
+    use twenty_first::math::traits::PrimitiveRootOfUnity;
 
     use super::*;
     use crate::rust_shadowing_helper_functions::array::insert_as_array;
-    use crate::snippet_bencher::BenchmarkCase;
-    use crate::traits::function::Function;
-    use crate::traits::function::FunctionInitialState;
-    use crate::traits::function::ShadowedFunction;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
     fn ood_points_pbt() {
@@ -179,7 +168,7 @@ mod tests {
         fn pseudorandom_initial_state(
             &self,
             seed: [u8; 32],
-            bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
+            bench_case: Option<BenchmarkCase>,
         ) -> FunctionInitialState {
             let domain_length = match bench_case {
                 Some(BenchmarkCase::CommonCase) => 1u64 << 20,
@@ -214,11 +203,10 @@ mod tests {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::traits::function::ShadowedFunction;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
-    fn ood_points_pbt_bench() {
+    fn benchmark() {
         ShadowedFunction::new(OutOfDomainPoints).bench();
     }
 }

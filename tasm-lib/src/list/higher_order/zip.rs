@@ -2,15 +2,17 @@ use std::collections::HashMap;
 
 use itertools::Itertools;
 use rand::prelude::*;
+use triton_vm::isa::op_stack::NUM_OP_STACK_REGISTERS;
 use triton_vm::prelude::*;
 
-use crate::data_type::DataType;
+use crate::empty_stack;
 use crate::list::new::New;
 use crate::list::LIST_METADATA_SIZE;
+use crate::prelude::*;
 use crate::rust_shadowing_helper_functions::list::untyped_insert_random_list;
-use crate::traits::basic_snippet::BasicSnippet;
+use crate::snippet_bencher::BenchmarkCase;
 use crate::traits::function::*;
-use crate::*;
+use crate::InitVmState;
 
 /// Zips two lists of equal length, returning a new list of pairs of elements.
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
@@ -70,7 +72,11 @@ impl BasicSnippet for Zip {
         let left_size_plus_three = left_size + 3;
         let sum_of_size = left_size + right_size;
         let sum_of_size_plus_two = sum_of_size + 2;
-        assert!(sum_of_size_plus_two <= NUM_OP_STACK_REGISTERS, "zip only works for an output element size less than or equal to the available op-stack words");
+        assert!(
+            sum_of_size_plus_two <= NUM_OP_STACK_REGISTERS,
+            "zip only works for an output element size less than or equal to the available \
+                op-stack words"
+        );
         let minus_two_times_sum_of_size = -(2 * sum_of_size as i32);
 
         let mul_with_size = |n| match n {
@@ -209,8 +215,8 @@ impl Function for Zip {
         stack: &mut Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
     ) {
-        use rust_shadowing_helper_functions::dyn_malloc;
-        use rust_shadowing_helper_functions::list;
+        use crate::rust_shadowing_helper_functions::dyn_malloc;
+        use crate::rust_shadowing_helper_functions::list;
 
         let right_pointer = stack.pop().unwrap();
         let left_pointer = stack.pop().unwrap();
@@ -238,7 +244,7 @@ impl Function for Zip {
     fn pseudorandom_initial_state(
         &self,
         seed: [u8; 32],
-        _bench_case: Option<snippet_bencher::BenchmarkCase>,
+        _bench_case: Option<BenchmarkCase>,
     ) -> FunctionInitialState {
         let mut rng = StdRng::from_seed(seed);
         let list_len = rng.gen_range(0..20);
@@ -274,15 +280,11 @@ impl Zip {
 #[cfg(test)]
 mod tests {
     use proptest::collection::vec;
-    use proptest::prelude::*;
-    use proptest_arbitrary_interop::arb;
-    use test_strategy::proptest;
 
     use super::*;
     use crate::rust_shadowing_helper_functions::list;
     use crate::structure::tasm_object::MemoryIter;
-    use crate::traits::function::ShadowedFunction;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
     fn prop_test_xfe_digest() {
@@ -346,11 +348,10 @@ mod tests {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::traits::function::ShadowedFunction;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
-    fn zip_benchmark() {
+    fn benchmark() {
         ShadowedFunction::new(Zip::new(DataType::Xfe, DataType::Digest)).bench();
     }
 }

@@ -1,10 +1,9 @@
 use std::collections::HashMap;
 
 use num::Zero;
-use triton_vm::proof::Claim;
-use triton_vm::twenty_first::math::b_field_element::BFieldElement;
+use triton_vm::prelude::*;
 
-use crate::prelude::Digest;
+use crate::prelude::*;
 use crate::structure::tasm_object::decode_from_memory_with_size;
 
 pub fn load_claim_from_memory(

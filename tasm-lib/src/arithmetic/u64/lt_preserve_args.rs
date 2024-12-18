@@ -3,9 +3,7 @@ use std::collections::HashMap;
 use triton_vm::prelude::*;
 
 use crate::arithmetic::u64::lt::Lt;
-use crate::data_type::DataType;
-use crate::library::Library;
-use crate::traits::basic_snippet::BasicSnippet;
+use crate::prelude::*;
 use crate::traits::basic_snippet::Reviewer;
 use crate::traits::basic_snippet::SignOffFingerprint;
 
@@ -94,29 +92,19 @@ impl BasicSnippet for LtPreserveArgs {
 
 #[cfg(test)]
 mod tests {
-    use test_strategy::proptest;
-
     use super::*;
-    use crate::pop_encodable;
-    use crate::push_encodable;
-    use crate::snippet_bencher::BenchmarkCase;
-    use crate::test_helpers::test_rust_equivalence_given_complete_state;
-    use crate::traits::closure::Closure;
-    use crate::traits::closure::ShadowedClosure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     impl LtPreserveArgs {
-        pub fn set_up_initial_stack(&self, lhs: u64, rhs: u64) -> Vec<BFieldElement> {
-            Lt.set_up_initial_stack(lhs, rhs)
-        }
+        pub fn assert_expected_lt_behavior(&self, left: u64, right: u64) {
+            let initial_stack = self.set_up_test_stack((left, right));
 
-        pub fn assert_expected_lt_behavior(&self, lhs: u64, rhs: u64) {
-            let mut expected_stack = self.set_up_initial_stack(lhs, rhs);
-            push_encodable(&mut expected_stack, &(lhs < rhs));
+            let mut expected_stack = initial_stack.clone();
+            self.rust_shadow(&mut expected_stack);
 
             test_rust_equivalence_given_complete_state(
                 &ShadowedClosure::new(Self),
-                &self.set_up_initial_stack(lhs, rhs),
+                &initial_stack,
                 &[],
                 &NonDeterminism::default(),
                 &None,
@@ -126,24 +114,24 @@ mod tests {
     }
 
     impl Closure for LtPreserveArgs {
+        type Args = <Lt as Closure>::Args;
+
         fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
-            let left = pop_encodable::<u64>(stack);
-            let right = pop_encodable::<u64>(stack);
-            push_encodable(stack, &right);
-            push_encodable(stack, &left);
+            let (right, left) = pop_encodable::<Self::Args>(stack);
+            push_encodable(stack, &(right, left));
             push_encodable(stack, &(left < right));
         }
 
-        fn pseudorandom_initial_state(
+        fn pseudorandom_args(
             &self,
             seed: [u8; 32],
             bench_case: Option<BenchmarkCase>,
-        ) -> Vec<BFieldElement> {
-            Lt.pseudorandom_initial_state(seed, bench_case)
+        ) -> Self::Args {
+            Lt.pseudorandom_args(seed, bench_case)
         }
 
-        fn corner_case_initial_states(&self) -> Vec<Vec<BFieldElement>> {
-            Lt.corner_case_initial_states()
+        fn corner_case_args(&self) -> Vec<Self::Args> {
+            Lt.corner_case_args()
         }
     }
 
@@ -166,8 +154,7 @@ mod tests {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::traits::closure::ShadowedClosure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
     fn benchmark() {

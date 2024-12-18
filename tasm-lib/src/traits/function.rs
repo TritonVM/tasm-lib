@@ -1,6 +1,4 @@
-use std::cell::RefCell;
 use std::collections::HashMap;
-use std::rc::Rc;
 
 use rand::prelude::*;
 use triton_vm::prelude::*;
@@ -8,7 +6,6 @@ use triton_vm::prelude::*;
 use super::basic_snippet::BasicSnippet;
 use super::rust_shadow::RustShadow;
 use crate::linker::execute_bench;
-use crate::linker::link_for_isolated_run;
 use crate::prelude::Tip5;
 use crate::snippet_bencher::write_benchmarks;
 use crate::snippet_bencher::BenchmarkCase;
@@ -70,14 +67,12 @@ impl From<FunctionInitialState> for InitVmState {
 }
 
 pub struct ShadowedFunction<F: Function + 'static> {
-    pub function: Rc<RefCell<F>>,
+    function: F,
 }
 
 impl<F: Function + 'static> ShadowedFunction<F> {
     pub fn new(function: F) -> Self {
-        Self {
-            function: Rc::new(RefCell::new(function)),
-        }
+        Self { function }
     }
 }
 
@@ -106,8 +101,8 @@ impl<F> RustShadow for ShadowedFunction<F>
 where
     F: Function + 'static,
 {
-    fn inner(&self) -> Rc<RefCell<dyn BasicSnippet>> {
-        self.function.clone()
+    fn inner(&self) -> &dyn BasicSnippet {
+        &self.function
     }
 
     fn rust_shadow_wrapper(
@@ -118,13 +113,13 @@ where
         memory: &mut HashMap<BFieldElement, BFieldElement>,
         _sponge: &mut Option<Tip5>,
     ) -> Vec<BFieldElement> {
-        self.function.borrow().rust_shadow(stack, memory);
+        self.function.rust_shadow(stack, memory);
         vec![]
     }
 
     /// Test rust-tasm equivalence.
     fn test(&self) {
-        for cornercase_state in self.function.borrow().corner_case_initial_states() {
+        for cornercase_state in self.function.corner_case_initial_states() {
             self.test_initial_state(cornercase_state);
         }
 
@@ -132,10 +127,7 @@ where
         let mut rng = thread_rng();
 
         for _ in 0..num_rng_states {
-            let initial_state = self
-                .function
-                .borrow()
-                .pseudorandom_initial_state(rng.gen(), None);
+            let initial_state = self.function.pseudorandom_initial_state(rng.gen(), None);
             self.test_initial_state(initial_state)
         }
     }
@@ -153,13 +145,12 @@ where
         for bench_case in [BenchmarkCase::CommonCase, BenchmarkCase::WorstCase] {
             let FunctionInitialState { stack, memory } = self
                 .function
-                .borrow()
                 .pseudorandom_initial_state(rng.gen(), Some(bench_case));
-            let program = link_for_isolated_run(self.function.clone());
+            let program = self.function.link_for_isolated_run();
             let non_determinism = NonDeterminism::default().with_ram(memory);
             let benchmark = execute_bench(&program, &stack, vec![], non_determinism, None);
             let benchmark = NamedBenchmarkResult {
-                name: self.function.borrow().entrypoint(),
+                name: self.function.entrypoint(),
                 benchmark_result: benchmark,
                 case: bench_case,
             };

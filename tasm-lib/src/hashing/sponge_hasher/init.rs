@@ -1,11 +1,8 @@
-use triton_vm::prelude::LabelledInstruction;
 use triton_vm::prelude::*;
 
-use crate::data_type::DataType;
-use crate::library::Library;
-use crate::traits::basic_snippet::BasicSnippet;
+use crate::prelude::*;
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct Init;
 
 impl BasicSnippet for Init {
@@ -32,50 +29,42 @@ impl BasicSnippet for Init {
 }
 
 #[cfg(test)]
-mod test {
-    use std::collections::HashMap;
-
+mod tests {
     use arbitrary::Arbitrary;
     use arbitrary::Unstructured;
-    use rand::prelude::*;
-    use triton_vm::twenty_first::prelude::Sponge;
+    use twenty_first::prelude::Sponge;
 
     use super::*;
     use crate::empty_stack;
-    use crate::prelude::Tip5;
-    use crate::snippet_bencher::BenchmarkCase;
-    use crate::traits::procedure::Procedure;
-    use crate::traits::procedure::ProcedureInitialState;
-    use crate::traits::procedure::ShadowedProcedure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     impl Procedure for Init {
         fn rust_shadow(
             &self,
-            _stack: &mut Vec<BFieldElement>,
-            _memory: &mut HashMap<BFieldElement, BFieldElement>,
-            _nondeterminism: &NonDeterminism,
-            _public_input: &[BFieldElement],
+            _: &mut Vec<BFieldElement>,
+            _: &mut HashMap<BFieldElement, BFieldElement>,
+            _: &NonDeterminism,
+            _: &[BFieldElement],
             sponge: &mut Option<Tip5>,
         ) -> Vec<BFieldElement> {
             *sponge = Some(Tip5::init());
-            Vec::default()
+            vec![]
         }
 
         fn pseudorandom_initial_state(
             &self,
             seed: [u8; 32],
-            _bench_case: Option<BenchmarkCase>,
+            _: Option<BenchmarkCase>,
         ) -> ProcedureInitialState {
-            let mut rng = StdRng::from_seed(seed);
-            let mut bytes = [0u8; 400];
-            rng.fill_bytes(&mut bytes);
+            let bytes = StdRng::from_seed(seed).gen::<[u8; 400]>();
             let mut unstructured = Unstructured::new(&bytes);
+            let sponge = Tip5::arbitrary(&mut unstructured).unwrap();
+
             ProcedureInitialState {
                 stack: empty_stack(),
                 nondeterminism: NonDeterminism::default(),
-                public_input: Vec::default(),
-                sponge: Some(Tip5::arbitrary(&mut unstructured).unwrap()),
+                public_input: vec![],
+                sponge: Some(sponge),
             }
         }
     }
@@ -89,11 +78,10 @@ mod test {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::traits::procedure::ShadowedProcedure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
-    fn bench() {
+    fn benchmark() {
         ShadowedProcedure::new(Init).bench();
     }
 }

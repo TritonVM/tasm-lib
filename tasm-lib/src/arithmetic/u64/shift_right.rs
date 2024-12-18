@@ -2,7 +2,6 @@ use std::collections::HashMap;
 
 use triton_vm::prelude::*;
 
-use crate::data_type::DataType;
 use crate::prelude::*;
 use crate::traits::basic_snippet::Reviewer;
 use crate::traits::basic_snippet::SignOffFingerprint;
@@ -146,36 +145,19 @@ impl BasicSnippet for ShiftRight {
 
 #[cfg(test)]
 mod tests {
-    use rand::prelude::*;
-    use test_strategy::proptest;
-
     use super::*;
-    use crate::pop_encodable;
-    use crate::push_encodable;
-    use crate::snippet_bencher::BenchmarkCase;
-    use crate::test_helpers::test_assertion_failure;
-    use crate::test_helpers::test_rust_equivalence_given_complete_state;
-    use crate::traits::closure::Closure;
-    use crate::traits::closure::ShadowedClosure;
-    use crate::traits::rust_shadow::RustShadow;
-    use crate::InitVmState;
+    use crate::test_prelude::*;
 
     impl ShiftRight {
-        pub fn set_up_initial_stack(&self, arg: u64, shift_amount: u32) -> Vec<BFieldElement> {
-            let mut stack = self.init_stack_for_isolated_run();
-            push_encodable(&mut stack, &arg);
-            push_encodable(&mut stack, &shift_amount);
+        pub fn assert_expected_shift_right_behavior(&self, shift_amount: u32, arg: u64) {
+            let initial_stack = self.set_up_test_stack((arg, shift_amount));
 
-            stack
-        }
-
-        pub fn assert_expected_shift_right_behavior(&self, arg: u64, shift_amount: u32) {
-            let mut expected_stack = self.init_stack_for_isolated_run();
-            push_encodable(&mut expected_stack, &(arg >> shift_amount));
+            let mut expected_stack = initial_stack.clone();
+            self.rust_shadow(&mut expected_stack);
 
             test_rust_equivalence_given_complete_state(
                 &ShadowedClosure::new(Self),
-                &self.set_up_initial_stack(arg, shift_amount),
+                &initial_stack,
                 &[],
                 &NonDeterminism::default(),
                 &None,
@@ -185,34 +167,30 @@ mod tests {
     }
 
     impl Closure for ShiftRight {
-        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
-            let shift_amount = pop_encodable::<u32>(stack);
-            assert!(shift_amount < 64);
+        type Args = (u64, u32);
 
-            let arg = pop_encodable::<u64>(stack);
+        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
+            let (arg, shift_amount) = pop_encodable::<Self::Args>(stack);
+            assert!(shift_amount < 64);
             push_encodable(stack, &(arg >> shift_amount));
         }
 
-        fn pseudorandom_initial_state(
+        fn pseudorandom_args(
             &self,
             seed: [u8; 32],
             bench_case: Option<BenchmarkCase>,
-        ) -> Vec<BFieldElement> {
+        ) -> Self::Args {
             let mut rng = StdRng::from_seed(seed);
 
-            let (arg, shift_amount) = match bench_case {
+            match bench_case {
                 Some(BenchmarkCase::CommonCase) => (0x642, 15),
                 Some(BenchmarkCase::WorstCase) => (0x123, 33),
                 None => (rng.gen(), rng.gen_range(0..64)),
-            };
-
-            self.set_up_initial_stack(arg, shift_amount)
+            }
         }
 
-        fn corner_case_initial_states(&self) -> Vec<Vec<BFieldElement>> {
-            (0..64)
-                .map(|i| self.set_up_initial_stack(1 << i, i))
-                .collect()
+        fn corner_case_args(&self) -> Vec<Self::Args> {
+            (0..64).map(|i| (1 << i, i)).collect()
         }
     }
 
@@ -223,19 +201,19 @@ mod tests {
 
     #[test]
     fn unit_test() {
-        ShiftRight.assert_expected_shift_right_behavior(8, 2);
+        ShiftRight.assert_expected_shift_right_behavior(2, 8);
     }
 
     #[proptest]
     fn property_test(arg: u64, #[strategy(0_u32..64)] shift_amount: u32) {
-        ShiftRight.assert_expected_shift_right_behavior(arg, shift_amount);
+        ShiftRight.assert_expected_shift_right_behavior(shift_amount, arg);
     }
 
     #[proptest]
     fn negative_property_test(arg: u64, #[strategy(64_u32..)] shift_amount: u32) {
         test_assertion_failure(
             &ShadowedClosure::new(ShiftRight),
-            InitVmState::with_stack(ShiftRight.set_up_initial_stack(arg, shift_amount)),
+            InitVmState::with_stack(ShiftRight.set_up_test_stack((arg, shift_amount))),
             &[ShiftRight::SHIFT_AMOUNT_TOO_BIG_ERROR_ID],
         );
     }
@@ -244,8 +222,7 @@ mod tests {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::traits::closure::ShadowedClosure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
     fn benchmark() {

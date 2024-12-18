@@ -1,9 +1,7 @@
 use triton_vm::prelude::*;
 
-use crate::data_type::DataType;
-use crate::library::Library;
 use crate::list::LIST_METADATA_SIZE;
-use crate::traits::basic_snippet::BasicSnippet;
+use crate::prelude::*;
 
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct ComputeTerminalDynSizedDynamicSymbols;
@@ -126,22 +124,14 @@ impl BasicSnippet for ComputeTerminalDynSizedDynamicSymbols {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-
-    use itertools::Itertools;
     use num_traits::One;
     use num_traits::Zero;
-    use rand::prelude::*;
     use triton_vm::air::cross_table_argument::CrossTableArg;
     use triton_vm::air::cross_table_argument::EvalArg;
 
     use super::*;
     use crate::rust_shadowing_helper_functions::list::insert_random_list;
-    use crate::snippet_bencher::BenchmarkCase;
-    use crate::traits::function::Function;
-    use crate::traits::function::FunctionInitialState;
-    use crate::traits::function::ShadowedFunction;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     impl Function for ComputeTerminalDynSizedDynamicSymbols {
         fn rust_shadow(
@@ -274,11 +264,10 @@ mod tests {
 #[cfg(test)]
 mod bench {
     use super::*;
-    use crate::traits::function::ShadowedFunction;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
-    fn compute_terminal() {
+    fn benchmark() {
         ShadowedFunction::new(ComputeTerminalDynSizedDynamicSymbols).bench()
     }
 }

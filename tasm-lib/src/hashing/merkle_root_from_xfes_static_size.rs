@@ -1,14 +1,11 @@
 use itertools::Itertools;
-use triton_vm::prelude::LabelledInstruction;
 use triton_vm::prelude::*;
 use twenty_first::prelude::*;
 use x_field_element::EXTENSION_DEGREE;
 
 use crate::data_type::ArrayType;
-use crate::data_type::DataType;
 use crate::hashing::merkle_root_static_size::MerkleRootStaticSize;
-use crate::library::Library;
-use crate::traits::basic_snippet::BasicSnippet;
+use crate::prelude::*;
 
 pub struct MerkleRootFromXfesStaticSize {
     /// Aka `height` of the Merkle tree
@@ -106,23 +103,13 @@ impl BasicSnippet for MerkleRootFromXfesStaticSize {
 }
 
 #[cfg(test)]
-mod test {
-    use std::collections::HashMap;
-
+mod tests {
     use num::Zero;
-    use proptest_arbitrary_interop::arb;
-    use rand::prelude::*;
-    use test_strategy::proptest;
 
     use super::*;
-    use crate::memory::encode_to_memory;
     use crate::rust_shadowing_helper_functions::array::array_from_memory;
     use crate::rust_shadowing_helper_functions::array::insert_as_array;
-    use crate::snippet_bencher::BenchmarkCase;
-    use crate::traits::function::Function;
-    use crate::traits::function::FunctionInitialState;
-    use crate::traits::function::ShadowedFunction;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     impl Function for MerkleRootFromXfesStaticSize {
         fn rust_shadow(
@@ -213,11 +200,10 @@ mod test {
 
 #[cfg(test)]
 mod benches {
-    use test::STATIC_MEMORY_POINTER_FOR_TESTS;
+    use tests::STATIC_MEMORY_POINTER_FOR_TESTS;
 
     use super::*;
-    use crate::traits::function::ShadowedFunction;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     fn bench_case(log2_length: u8) {
         let shadowed_function = MerkleRootFromXfesStaticSize {

@@ -3,8 +3,7 @@ use tasm_lib::prelude::BasicSnippet;
 use triton_vm::prelude::*;
 
 use crate::arithmetic;
-use crate::data_type::DataType;
-use crate::library::Library;
+use crate::prelude::*;
 use crate::traits::basic_snippet::Reviewer;
 use crate::traits::basic_snippet::SignOffFingerprint;
 
@@ -71,57 +70,36 @@ impl BasicSnippet for Add {
 
 #[cfg(test)]
 mod tests {
-    use itertools::Itertools;
-    use proptest::prop_assume;
-    use rand::prelude::*;
-    use test_strategy::proptest;
-
     use super::*;
     use crate::arithmetic::u64::overflowing_add::OverflowingAdd;
-    use crate::pop_encodable;
-    use crate::push_encodable;
-    use crate::snippet_bencher::BenchmarkCase;
-    use crate::test_helpers::test_assertion_failure;
     use crate::test_helpers::test_rust_equivalence_given_execution_state;
-    use crate::traits::closure::Closure;
-    use crate::traits::closure::ShadowedClosure;
-    use crate::traits::rust_shadow::RustShadow;
-    use crate::InitVmState;
-
-    impl Add {
-        fn set_up_initial_stack(&self, left: u64, right: u64) -> Vec<BFieldElement> {
-            OverflowingAdd.set_up_initial_stack(left, right)
-        }
-    }
+    use crate::test_prelude::*;
 
     impl Closure for Add {
+        type Args = <OverflowingAdd as Closure>::Args;
+
         fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
-            let left = pop_encodable::<u64>(stack);
-            let right = pop_encodable::<u64>(stack);
+            let (left, right) = pop_encodable::<Self::Args>(stack);
             let sum = left.checked_add(right).expect("overflow occurred");
             push_encodable(stack, &sum);
         }
 
-        fn pseudorandom_initial_state(
-            &self,
-            seed: [u8; 32],
-            _: Option<BenchmarkCase>,
-        ) -> Vec<BFieldElement> {
+        fn pseudorandom_args(&self, seed: [u8; 32], _: Option<BenchmarkCase>) -> Self::Args {
             let mut rng = StdRng::from_seed(seed);
             let left = rng.gen();
             let right = rng.gen_range(0..=u64::MAX - left);
 
-            self.set_up_initial_stack(left, right)
+            (left, right)
         }
 
-        fn corner_case_initial_states(&self) -> Vec<Vec<BFieldElement>> {
+        fn corner_case_args(&self) -> Vec<Self::Args> {
             let corner_case_points = OverflowingAdd::corner_case_points();
 
             corner_case_points
                 .iter()
                 .cartesian_product(&corner_case_points)
                 .filter(|(&l, &r)| l.checked_add(r).is_some())
-                .map(|(&l, &r)| self.set_up_initial_stack(l, r))
+                .map(|(&l, &r)| (l, r))
                 .collect()
         }
     }
@@ -133,7 +111,7 @@ mod tests {
 
     #[proptest]
     fn proptest(left: u64, #[strategy(0..u64::MAX - #left)] right: u64) {
-        let initial_state = InitVmState::with_stack(Add.set_up_initial_stack(left, right));
+        let initial_state = InitVmState::with_stack(Add.set_up_test_stack((left, right)));
         test_rust_equivalence_given_execution_state(&ShadowedClosure::new(Add), initial_state);
     }
 
@@ -143,7 +121,7 @@ mod tests {
 
         test_assertion_failure(
             &ShadowedClosure::new(Add),
-            InitVmState::with_stack(Add.set_up_initial_stack(left, right)),
+            InitVmState::with_stack(Add.set_up_test_stack((left, right))),
             &[Add::OVERFLOW_ERROR_ID],
         );
     }
@@ -152,11 +130,10 @@ mod tests {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::traits::closure::ShadowedClosure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
-    fn bench() {
+    fn benchmark() {
         ShadowedClosure::new(Add).bench()
     }
 }

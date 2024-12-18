@@ -2,11 +2,10 @@ use itertools::Itertools;
 use triton_vm::prelude::*;
 use twenty_first::error::BFieldCodecError;
 use twenty_first::math::x_field_element::EXTENSION_DEGREE;
-use twenty_first::prelude::Polynomial;
+use twenty_first::prelude::*;
 
 use super::tasm_object::Result;
-use crate::data_type::DataType;
-use crate::prelude::TasmObject;
+use crate::prelude::*;
 
 impl<const N: usize, T> TasmObject for [T; N]
 where
@@ -28,9 +27,7 @@ where
         todo!()
     }
 
-    fn compute_size_and_assert_valid_size_indicator(
-        _library: &mut crate::prelude::Library,
-    ) -> Vec<LabelledInstruction> {
+    fn compute_size_and_assert_valid_size_indicator(_: &mut Library) -> Vec<LabelledInstruction> {
         if let Some(static_size) = T::static_length() {
             let own_size = static_size * N;
             triton_asm!(
@@ -71,7 +68,7 @@ where
     }
 
     fn compute_size_and_assert_valid_size_indicator(
-        library: &mut tasm_lib::Library,
+        library: &mut Library,
     ) -> Vec<LabelledInstruction> {
         if let Some(static_size) = T::static_length() {
             // _ *list_len
@@ -224,9 +221,7 @@ impl TasmObject for BFieldElement {
         panic!()
     }
 
-    fn compute_size_and_assert_valid_size_indicator(
-        _library: &mut tasm_lib::Library,
-    ) -> Vec<LabelledInstruction> {
+    fn compute_size_and_assert_valid_size_indicator(_: &mut Library) -> Vec<LabelledInstruction> {
         panic!("Size is known statically for BFieldElement encoding")
     }
 
@@ -253,9 +248,7 @@ impl TasmObject for XFieldElement {
         panic!()
     }
 
-    fn compute_size_and_assert_valid_size_indicator(
-        _library: &mut tasm_lib::Library,
-    ) -> Vec<LabelledInstruction> {
+    fn compute_size_and_assert_valid_size_indicator(_: &mut Library) -> Vec<LabelledInstruction> {
         panic!("Size is known statically for XFieldElement encoding")
     }
 
@@ -285,9 +278,7 @@ impl TasmObject for Digest {
         panic!()
     }
 
-    fn compute_size_and_assert_valid_size_indicator(
-        _library: &mut tasm_lib::Library,
-    ) -> Vec<LabelledInstruction> {
+    fn compute_size_and_assert_valid_size_indicator(_: &mut Library) -> Vec<LabelledInstruction> {
         panic!("Size is known statically for Digest encoding")
     }
 
@@ -317,9 +308,7 @@ impl TasmObject for bool {
         panic!()
     }
 
-    fn compute_size_and_assert_valid_size_indicator(
-        _library: &mut tasm_lib::Library,
-    ) -> Vec<LabelledInstruction> {
+    fn compute_size_and_assert_valid_size_indicator(_: &mut Library) -> Vec<LabelledInstruction> {
         panic!("Size is known statically for bool encoding")
     }
 
@@ -350,9 +339,7 @@ impl TasmObject for u32 {
         panic!()
     }
 
-    fn compute_size_and_assert_valid_size_indicator(
-        _library: &mut tasm_lib::Library,
-    ) -> Vec<LabelledInstruction> {
+    fn compute_size_and_assert_valid_size_indicator(_: &mut Library) -> Vec<LabelledInstruction> {
         panic!("Size is known statically for u32 encoding")
     }
 
@@ -384,9 +371,7 @@ impl TasmObject for u64 {
         panic!()
     }
 
-    fn compute_size_and_assert_valid_size_indicator(
-        _library: &mut tasm_lib::Library,
-    ) -> Vec<LabelledInstruction> {
+    fn compute_size_and_assert_valid_size_indicator(_: &mut Library) -> Vec<LabelledInstruction> {
         panic!("Size is known statically for u64 encoding")
     }
 
@@ -420,9 +405,7 @@ impl TasmObject for u128 {
         panic!()
     }
 
-    fn compute_size_and_assert_valid_size_indicator(
-        _library: &mut tasm_lib::Library,
-    ) -> Vec<LabelledInstruction> {
+    fn compute_size_and_assert_valid_size_indicator(_: &mut Library) -> Vec<LabelledInstruction> {
         panic!("Size is known statically for u128 encoding")
     }
 
@@ -467,7 +450,7 @@ where
     }
 
     fn compute_size_and_assert_valid_size_indicator(
-        library: &mut tasm_lib::Library,
+        library: &mut Library,
     ) -> Vec<LabelledInstruction> {
         let size_left = match T::static_length() {
             Some(static_size) => triton_asm!(
@@ -587,9 +570,7 @@ impl TasmObject for Polynomial<'_, XFieldElement> {
         todo!()
     }
 
-    fn compute_size_and_assert_valid_size_indicator(
-        _library: &mut crate::prelude::Library,
-    ) -> Vec<LabelledInstruction> {
+    fn compute_size_and_assert_valid_size_indicator(_: &mut Library) -> Vec<LabelledInstruction> {
         triton_asm!(
             // _ *field_size
 
@@ -644,9 +625,7 @@ impl TasmObject for Proof {
         panic!()
     }
 
-    fn compute_size_and_assert_valid_size_indicator(
-        _library: &mut tasm_lib::Library,
-    ) -> Vec<LabelledInstruction> {
+    fn compute_size_and_assert_valid_size_indicator(_: &mut Library) -> Vec<LabelledInstruction> {
         // Proofs are special, as the fields of a proof is only accessed through
         // the [`DequeueNextAs`](crate::verifier::vm_proof_iter::dequeue_next_as)
         // snippet which does some checks itself. So we just report the total size
@@ -693,7 +672,7 @@ where
     }
 
     fn compute_size_and_assert_valid_size_indicator(
-        library: &mut tasm_lib::Library,
+        library: &mut Library,
     ) -> Vec<LabelledInstruction> {
         let get_payload_size = match T::static_length() {
             Some(static_size) => triton_asm!(

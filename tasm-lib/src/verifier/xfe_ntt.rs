@@ -1,36 +1,24 @@
-use std::collections::HashMap;
-
-use rand::prelude::*;
 use triton_vm::prelude::*;
-use twenty_first::math::ntt::ntt;
-use twenty_first::math::traits::PrimitiveRootOfUnity;
 
-use crate::data_type::DataType;
-use crate::empty_stack;
-use crate::memory::encode_to_memory;
-use crate::structure::tasm_object::TasmObject;
-use crate::traits::basic_snippet::BasicSnippet;
-use crate::traits::function::Function;
-use crate::traits::function::FunctionInitialState;
-use crate::Library;
+use crate::prelude::*;
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct XfeNtt;
 
 impl BasicSnippet for XfeNtt {
-    fn entrypoint(&self) -> String {
-        "tasmlib_verifier_xfe_ntt".to_owned()
+    fn inputs(&self) -> Vec<(DataType, String)> {
+        vec![
+            (DataType::List(Box::new(DataType::Xfe)), "x".to_owned()),
+            (DataType::Bfe, "omega".to_owned()),
+        ]
     }
 
     fn outputs(&self) -> Vec<(DataType, String)> {
         vec![(DataType::Tuple(vec![]), "result".to_owned())]
     }
 
-    fn inputs(&self) -> Vec<(DataType, String)> {
-        vec![
-            (DataType::List(Box::new(DataType::Xfe)), "x".to_owned()),
-            (DataType::Bfe, "omega".to_owned()),
-        ]
+    fn entrypoint(&self) -> String {
+        "tasmlib_verifier_xfe_ntt".to_owned()
     }
 
     fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
@@ -473,59 +461,59 @@ impl BasicSnippet for XfeNtt {
     }
 }
 
-impl Function for XfeNtt {
-    fn rust_shadow(
-        &self,
-        stack: &mut Vec<BFieldElement>,
-        memory: &mut HashMap<BFieldElement, BFieldElement>,
-    ) {
-        let _root_of_unity = stack.pop().unwrap();
-        let input_pointer = stack.pop().unwrap();
-
-        let mut vector = *Vec::<XFieldElement>::decode_from_memory(memory, input_pointer).unwrap();
-        ntt(&mut vector);
-
-        encode_to_memory(memory, input_pointer, &vector);
-    }
-
-    fn pseudorandom_initial_state(
-        &self,
-        seed: [u8; 32],
-        bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
-    ) -> FunctionInitialState {
-        let mut rng = StdRng::from_seed(seed);
-        let n = match bench_case {
-            Some(crate::snippet_bencher::BenchmarkCase::CommonCase) => 256,
-            Some(crate::snippet_bencher::BenchmarkCase::WorstCase) => 512,
-            None => 1 << rng.gen_range(1..=9),
-        };
-        let vector = (0..n).map(|_| rng.gen()).collect::<Vec<XFieldElement>>();
-
-        let mut stack = empty_stack();
-        let mut memory = HashMap::new();
-
-        let vector_pointer = BFieldElement::new(100);
-        encode_to_memory(&mut memory, vector_pointer, &vector);
-        stack.push(vector_pointer);
-        stack.push(BFieldElement::primitive_root_of_unity(n as u64).unwrap());
-
-        FunctionInitialState { stack, memory }
-    }
-}
-
 #[cfg(test)]
-mod test {
-    use itertools::Itertools;
-    use rand::prelude::*;
+mod tests {
+    use twenty_first::math::ntt::ntt;
+    use twenty_first::math::traits::PrimitiveRootOfUnity;
 
     use super::*;
-    use crate::structure::tasm_object::TasmObject;
+    use crate::empty_stack;
     use crate::test_helpers::rust_final_state;
     use crate::test_helpers::tasm_final_state;
     use crate::test_helpers::verify_stack_equivalence;
     use crate::test_helpers::verify_stack_growth;
-    use crate::traits::function::Function;
-    use crate::traits::function::ShadowedFunction;
+    use crate::test_prelude::*;
+
+    impl Function for XfeNtt {
+        fn rust_shadow(
+            &self,
+            stack: &mut Vec<BFieldElement>,
+            memory: &mut HashMap<BFieldElement, BFieldElement>,
+        ) {
+            let _root_of_unity = stack.pop().unwrap();
+            let input_pointer = stack.pop().unwrap();
+
+            let mut vector =
+                *Vec::<XFieldElement>::decode_from_memory(memory, input_pointer).unwrap();
+            ntt(&mut vector);
+
+            encode_to_memory(memory, input_pointer, &vector);
+        }
+
+        fn pseudorandom_initial_state(
+            &self,
+            seed: [u8; 32],
+            bench_case: Option<BenchmarkCase>,
+        ) -> FunctionInitialState {
+            let mut rng = StdRng::from_seed(seed);
+            let n = match bench_case {
+                Some(BenchmarkCase::CommonCase) => 256,
+                Some(BenchmarkCase::WorstCase) => 512,
+                None => 1 << rng.gen_range(1..=9),
+            };
+            let vector = (0..n).map(|_| rng.gen()).collect::<Vec<XFieldElement>>();
+
+            let mut stack = empty_stack();
+            let mut memory = HashMap::new();
+
+            let vector_pointer = BFieldElement::new(100);
+            encode_to_memory(&mut memory, vector_pointer, &vector);
+            stack.push(vector_pointer);
+            stack.push(BFieldElement::primitive_root_of_unity(n as u64).unwrap());
+
+            FunctionInitialState { stack, memory }
+        }
+    }
 
     #[test]
     fn test() {
@@ -588,11 +576,10 @@ mod test {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::traits::function::ShadowedFunction;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
-    fn xfe_ntt_benchmark() {
+    fn benchmark() {
         ShadowedFunction::new(XfeNtt).bench();
     }
 }

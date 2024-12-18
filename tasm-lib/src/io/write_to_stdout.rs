@@ -3,10 +3,8 @@ use std::collections::HashMap;
 use rand::prelude::*;
 use triton_vm::prelude::*;
 
-use crate::data_type::DataType;
 use crate::empty_stack;
-use crate::prelude::Tip5;
-use crate::traits::basic_snippet::BasicSnippet;
+use crate::prelude::*;
 use crate::traits::procedure::Procedure;
 use crate::traits::procedure::ProcedureInitialState;
 
@@ -31,7 +29,7 @@ impl BasicSnippet for WriteToStdout {
         )
     }
 
-    fn code(&self, _library: &mut crate::library::Library) -> Vec<LabelledInstruction> {
+    fn code(&self, _: &mut Library) -> Vec<LabelledInstruction> {
         triton_asm!(
             {self.entrypoint()}:
                 {&self.data_type.write_value_to_stdout()}
@@ -44,10 +42,10 @@ impl Procedure for WriteToStdout {
     fn rust_shadow(
         &self,
         stack: &mut Vec<BFieldElement>,
-        _memory: &mut HashMap<BFieldElement, BFieldElement>,
-        _nondeterminism: &NonDeterminism,
-        _public_input: &[BFieldElement],
-        _sponge: &mut Option<Tip5>,
+        _: &mut HashMap<BFieldElement, BFieldElement>,
+        _: &NonDeterminism,
+        _: &[BFieldElement],
+        _: &mut Option<Tip5>,
     ) -> Vec<BFieldElement> {
         let mut ret = vec![];
         for _ in 0..self.data_type.stack_size() {
@@ -77,11 +75,10 @@ impl Procedure for WriteToStdout {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::traits::procedure::ShadowedProcedure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
-    fn write_to_stdout_auto_test() {
+    fn rust_shadow() {
         for data_type in DataType::big_random_generatable_type_collection() {
             ShadowedProcedure::new(WriteToStdout { data_type }).test();
         }
@@ -91,11 +88,10 @@ mod tests {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::traits::procedure::ShadowedProcedure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
-    fn bench_for_digest_writing() {
+    fn benchmark_digest_writing() {
         ShadowedProcedure::new(WriteToStdout {
             data_type: DataType::Digest,
         })

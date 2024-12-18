@@ -4,11 +4,10 @@ use itertools::Itertools;
 use num::One;
 use num::Zero;
 use triton_vm::prelude::*;
-use triton_vm::twenty_first::prelude::U32s;
+use twenty_first::prelude::U32s;
 
-use crate::data_type::DataType;
 use crate::empty_stack;
-use crate::library::Library;
+use crate::prelude::*;
 use crate::push_encodable;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::InitVmState;
@@ -137,15 +136,13 @@ impl DeprecatedSnippet for Decr {
 #[cfg(test)]
 mod tests {
     use num::Zero;
-    use rand::prelude::*;
 
     use super::*;
     use crate::empty_stack;
-    use crate::push_encodable;
-    use crate::test_helpers::test_assertion_failure;
+    use crate::prelude::BasicSnippet;
     use crate::test_helpers::test_rust_equivalence_given_input_values_deprecated;
     use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
-    use crate::traits::basic_snippet::BasicSnippet;
+    use crate::test_prelude::*;
     use crate::traits::deprecated_snippet::tests::DeprecatedSnippetWrapper;
 
     #[test]

@@ -7,7 +7,7 @@ use num_traits::Zero;
 pub use tasm_object_derive::TasmObject;
 use triton_vm::prelude::*;
 
-use crate::library::Library;
+use crate::prelude::*;
 
 pub(super) type Result<T> = std::result::Result<T, Box<dyn Error + Send + Sync>>;
 
@@ -207,25 +207,17 @@ impl Iterator for MemoryIter<'_> {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use arbitrary::Arbitrary;
     use arbitrary::Unstructured;
-    use proptest::prelude::*;
-    use proptest_arbitrary_interop::arb;
-    use rand::prelude::*;
-    use test_strategy::proptest;
     use triton_vm::proof_item::FriResponse;
 
     use super::*;
-    use crate::data_type::DataType;
     use crate::empty_stack;
     use crate::execute_with_terminal_state;
-    use crate::library::Library;
     use crate::list::length::Length;
-    use crate::memory::encode_to_memory;
     use crate::memory::FIRST_NON_DETERMINISTICALLY_INITIALIZED_MEMORY_ADDRESS;
-    use crate::prelude::Digest;
-    use crate::structure::tasm_object::TasmObject;
+    use crate::test_prelude::*;
 
     #[derive(Debug, Clone, PartialEq, Eq, BFieldCodec, TasmObject, Arbitrary)]
     struct InnerStruct(XFieldElement, u32);

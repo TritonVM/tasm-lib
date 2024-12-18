@@ -1,23 +1,10 @@
 use strum::EnumCount;
-use strum::EnumIter;
 use triton_vm::prelude::*;
-use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
+use triton_vm::table::ConstraintType;
+use twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
 use crate::arithmetic::xfe::to_the_power_of_power_of_2::ToThePowerOfPowerOf2;
-use crate::data_type::DataType;
-use crate::library::Library;
-use crate::traits::basic_snippet::BasicSnippet;
-
-// TODO: Remove this once `ConstraintType` is made public in Triton VM:
-// https://github.com/TritonVM/triton-vm/issues/263
-#[repr(usize)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, EnumCount, EnumIter)]
-pub(super) enum ConstraintType {
-    Initial,
-    Consistency,
-    Transition,
-    Terminal,
-}
+use crate::prelude::*;
 
 /// Calculate all inverses of the zerofiers. It is the caller's responsibility
 /// to statically allocate memory for the array where the result is stored.
@@ -187,23 +174,14 @@ impl BasicSnippet for ZerofiersInverse {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-
-    use itertools::Itertools;
     use num::One;
-    use rand::prelude::*;
-    use triton_vm::twenty_first::math::traits::Inverse;
-    use triton_vm::twenty_first::math::traits::ModPowU32;
-    use triton_vm::twenty_first::math::traits::PrimitiveRootOfUnity;
+    use twenty_first::math::traits::Inverse;
+    use twenty_first::math::traits::ModPowU32;
+    use twenty_first::math::traits::PrimitiveRootOfUnity;
 
     use super::*;
     use crate::rust_shadowing_helper_functions::array::insert_as_array;
-    use crate::snippet_bencher::BenchmarkCase;
-    use crate::traits::basic_snippet::BasicSnippet;
-    use crate::traits::function::Function;
-    use crate::traits::function::FunctionInitialState;
-    use crate::traits::function::ShadowedFunction;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
     fn zerofiers_inverse_pbt() {

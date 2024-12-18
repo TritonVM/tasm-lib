@@ -1,17 +1,11 @@
 use std::collections::HashMap;
 
-use num_traits::Zero;
-use rand::prelude::*;
 use triton_vm::prelude::*;
 use twenty_first::math::traits::PrimitiveRootOfUnity as PRU;
 
-use crate::data_type::DataType;
-use crate::empty_stack;
-use crate::snippet_bencher::BenchmarkCase;
-use crate::traits::basic_snippet::BasicSnippet;
+use crate::prelude::*;
 use crate::traits::basic_snippet::Reviewer;
 use crate::traits::basic_snippet::SignOffFingerprint;
-use crate::traits::closure::Closure;
 
 /// Fetch the primitive root of unity of the given order.
 ///
@@ -26,7 +20,7 @@ use crate::traits::closure::Closure;
 ///
 /// - the root is a primitive root of the given order for the field with
 ///   [`BFieldElement::P`] elements
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct PrimitiveRootOfUnity;
 
 impl BasicSnippet for PrimitiveRootOfUnity {
@@ -42,7 +36,7 @@ impl BasicSnippet for PrimitiveRootOfUnity {
         "tasmlib_arithmetic_bfe_primitive_root_of_unity".to_string()
     }
 
-    fn code(&self, _library: &mut crate::library::Library) -> Vec<LabelledInstruction> {
+    fn code(&self, _: &mut Library) -> Vec<LabelledInstruction> {
         let root_of_pow = |pow: u64| BFieldElement::primitive_root_of_unity(1 << pow).unwrap();
 
         triton_asm!(
@@ -190,47 +184,37 @@ impl BasicSnippet for PrimitiveRootOfUnity {
     }
 }
 
-impl Closure for PrimitiveRootOfUnity {
-    fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
-        let order_lo: u32 = stack.pop().unwrap().try_into().unwrap();
-        let order_hi: u32 = stack.pop().unwrap().try_into().unwrap();
-        let order: u64 = order_lo as u64 + ((order_hi as u64) << 32);
-        assert!(!order.is_zero(), "No root of order 0 exists");
-
-        let root_of_unity = BFieldElement::primitive_root_of_unity(order).unwrap();
-
-        stack.push(root_of_unity);
-    }
-
-    fn pseudorandom_initial_state(
-        &self,
-        seed: [u8; 32],
-        bench_case: Option<BenchmarkCase>,
-    ) -> Vec<BFieldElement> {
-        let order = match bench_case {
-            Some(BenchmarkCase::CommonCase) => 1_u64 << 10,
-            Some(BenchmarkCase::WorstCase) => 1 << 32,
-            None => 1 << StdRng::from_seed(seed).gen_range(1..=32),
-        };
-
-        let mut stack = empty_stack();
-        stack.extend(order.encode().iter().rev());
-        stack
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use proptest::prelude::*;
-    use tasm_lib::test_helpers::test_assertion_failure;
-    use test_strategy::proptest;
-    use triton_vm::prelude::*;
+    use num_traits::Zero;
 
     use super::*;
-    use crate::test_helpers::test_rust_equivalence_given_complete_state;
-    use crate::traits::closure::ShadowedClosure;
-    use crate::traits::rust_shadow::RustShadow;
-    use crate::InitVmState;
+    use crate::empty_stack;
+    use crate::test_prelude::*;
+
+    impl Closure for PrimitiveRootOfUnity {
+        type Args = u64;
+
+        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
+            let order = pop_encodable::<Self::Args>(stack);
+            assert!(!order.is_zero(), "No root of order 0 exists");
+
+            let root_of_unity = BFieldElement::primitive_root_of_unity(order).unwrap();
+            stack.push(root_of_unity);
+        }
+
+        fn pseudorandom_args(
+            &self,
+            seed: [u8; 32],
+            bench_case: Option<BenchmarkCase>,
+        ) -> Self::Args {
+            match bench_case {
+                Some(BenchmarkCase::CommonCase) => 1_u64 << 10,
+                Some(BenchmarkCase::WorstCase) => 1 << 32,
+                None => 1 << StdRng::from_seed(seed).gen_range(1..=32),
+            }
+        }
+    }
 
     #[test]
     fn primitive_root_of_order_2_pow_32_is_not_a_legal_order() {
@@ -325,11 +309,10 @@ mod tests {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::traits::closure::ShadowedClosure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
-    fn bfe_primitive_root_of_unity_bench() {
+    fn benchmark() {
         ShadowedClosure::new(PrimitiveRootOfUnity).bench()
     }
 }

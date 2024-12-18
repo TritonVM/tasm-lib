@@ -6,7 +6,7 @@ use triton_vm::table::master_table::MasterAuxTable;
 use triton_vm::table::master_table::MasterMainTable;
 use triton_vm::table::master_table::MasterTable;
 use triton_vm::table::NUM_QUOTIENT_SEGMENTS;
-use triton_vm::twenty_first::prelude::*;
+use twenty_first::prelude::*;
 
 use crate::prelude::Digest;
 

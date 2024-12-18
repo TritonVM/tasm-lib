@@ -1,7 +1,5 @@
-use std::cell::RefCell;
 use std::collections::HashMap;
 use std::collections::VecDeque;
-use std::rc::Rc;
 
 use rand::prelude::*;
 use triton_vm::prelude::*;
@@ -9,7 +7,6 @@ use triton_vm::prelude::*;
 use super::basic_snippet::BasicSnippet;
 use super::rust_shadow::RustShadow;
 use crate::linker::execute_bench;
-use crate::linker::link_for_isolated_run;
 use crate::prelude::Tip5;
 use crate::snippet_bencher::write_benchmarks;
 use crate::snippet_bencher::BenchmarkCase;
@@ -68,14 +65,12 @@ impl From<ReadOnlyAlgorithmInitialState> for InitVmState {
 }
 
 pub struct ShadowedReadOnlyAlgorithm<T: ReadOnlyAlgorithm + 'static> {
-    read_only_algorithm: Rc<RefCell<T>>,
+    algorithm: T,
 }
 
 impl<T: ReadOnlyAlgorithm + 'static> ShadowedReadOnlyAlgorithm<T> {
     pub fn new(algorithm: T) -> Self {
-        Self {
-            read_only_algorithm: Rc::new(RefCell::new(algorithm)),
-        }
+        Self { algorithm }
     }
 }
 
@@ -83,8 +78,8 @@ impl<T> RustShadow for ShadowedReadOnlyAlgorithm<T>
 where
     T: ReadOnlyAlgorithm + 'static,
 {
-    fn inner(&self) -> Rc<RefCell<dyn BasicSnippet>> {
-        self.read_only_algorithm.clone()
+    fn inner(&self) -> &dyn BasicSnippet {
+        &self.algorithm
     }
 
     fn rust_shadow_wrapper(
@@ -95,7 +90,7 @@ where
         memory: &mut HashMap<BFieldElement, BFieldElement>,
         _sponge: &mut Option<Tip5>,
     ) -> Vec<BFieldElement> {
-        self.read_only_algorithm.borrow().rust_shadow(
+        self.algorithm.rust_shadow(
             stack,
             memory,
             nondeterminism.individual_tokens.to_owned().into(),
@@ -105,11 +100,7 @@ where
     }
 
     fn test(&self) {
-        for corner_case in self
-            .read_only_algorithm
-            .borrow()
-            .corner_case_initial_states()
-        {
+        for corner_case in self.algorithm.corner_case_initial_states() {
             let stdin = vec![];
             test_rust_equivalence_given_complete_state(
                 self,
@@ -127,10 +118,7 @@ where
             let ReadOnlyAlgorithmInitialState {
                 stack,
                 nondeterminism,
-            } = self
-                .read_only_algorithm
-                .borrow()
-                .pseudorandom_initial_state(rng.gen(), None);
+            } = self.algorithm.pseudorandom_initial_state(rng.gen(), None);
 
             let stdin = vec![];
             test_rust_equivalence_given_complete_state(
@@ -158,13 +146,12 @@ where
                 stack,
                 nondeterminism,
             } = self
-                .read_only_algorithm
-                .borrow()
+                .algorithm
                 .pseudorandom_initial_state(rng.gen(), Some(bench_case));
-            let program = link_for_isolated_run(self.read_only_algorithm.clone());
+            let program = self.algorithm.link_for_isolated_run();
             let benchmark = execute_bench(&program, &stack, vec![], nondeterminism, None);
             let benchmark = NamedBenchmarkResult {
-                name: self.read_only_algorithm.borrow().entrypoint(),
+                name: self.algorithm.entrypoint(),
                 benchmark_result: benchmark,
                 case: bench_case,
             };

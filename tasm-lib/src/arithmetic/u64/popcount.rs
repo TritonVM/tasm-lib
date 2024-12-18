@@ -2,7 +2,6 @@ use std::collections::HashMap;
 
 use triton_vm::prelude::*;
 
-use crate::data_type::DataType;
 use crate::prelude::*;
 use crate::traits::basic_snippet::Reviewer;
 use crate::traits::basic_snippet::SignOffFingerprint;
@@ -62,50 +61,34 @@ impl BasicSnippet for PopCount {
 
 #[cfg(test)]
 mod tests {
-    use rand::prelude::*;
-
     use super::*;
-    use crate::pop_encodable;
-    use crate::push_encodable;
-    use crate::snippet_bencher::BenchmarkCase;
-    use crate::traits::closure::Closure;
-    use crate::traits::closure::ShadowedClosure;
-    use crate::traits::rust_shadow::RustShadow;
-
-    impl PopCount {
-        pub fn set_up_initial_stack(&self, x: u64) -> Vec<BFieldElement> {
-            let mut stack = self.init_stack_for_isolated_run();
-            push_encodable(&mut stack, &x);
-            stack
-        }
-    }
+    use crate::test_prelude::*;
 
     impl Closure for PopCount {
+        type Args = u64;
+
         fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
-            let x = pop_encodable::<u64>(stack);
+            let x = pop_encodable::<Self::Args>(stack);
             push_encodable(stack, &x.count_ones());
         }
 
-        fn pseudorandom_initial_state(
+        fn pseudorandom_args(
             &self,
             seed: [u8; 32],
             bench_case: Option<BenchmarkCase>,
-        ) -> Vec<BFieldElement> {
-            let x = match bench_case {
+        ) -> Self::Args {
+            match bench_case {
                 Some(BenchmarkCase::CommonCase) => 1 << 25,
                 Some(BenchmarkCase::WorstCase) => u64::MAX,
                 None => StdRng::from_seed(seed).gen(),
-            };
-
-            self.set_up_initial_stack(x)
+            }
         }
 
-        fn corner_case_initial_states(&self) -> Vec<Vec<BFieldElement>> {
+        fn corner_case_args(&self) -> Vec<Self::Args> {
             [1, 1 << 32, u64::MAX]
                 .into_iter()
                 .flat_map(|x| [x.checked_sub(1), Some(x), x.checked_add(1)])
                 .flatten()
-                .map(|x| self.set_up_initial_stack(x))
                 .collect()
         }
     }
@@ -119,8 +102,7 @@ mod tests {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::traits::closure::ShadowedClosure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
     fn benchmark() {

@@ -1,11 +1,8 @@
 use triton_vm::prelude::*;
 use twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
-use crate::data_type::DataType;
 use crate::hashing::merkle_root::MerkleRoot;
-use crate::library::Library;
-use crate::memory::dyn_malloc::DynMalloc;
-use crate::traits::basic_snippet::BasicSnippet;
+use crate::prelude::*;
 
 /// Calculate a Merkle root from a list of X-field elements.
 /// The input list must have a length that is a power of two
@@ -176,36 +173,24 @@ impl BasicSnippet for MerkleRootFromXfesGeneric {
 }
 
 #[cfg(test)]
-mod test {
-    use std::collections::HashMap;
-
-    use itertools::Itertools;
+mod tests {
     use num::One;
-    use num::Zero;
-    use rand::prelude::*;
     use twenty_first::prelude::MerkleTreeMaker;
     use twenty_first::util_types::merkle_tree::CpuParallel;
     use twenty_first::util_types::merkle_tree::MerkleTree;
 
     use super::*;
-    use crate::memory::encode_to_memory;
-    use crate::prelude::TasmObject;
     use crate::rust_shadowing_helper_functions::dyn_malloc::dynamic_allocator;
     use crate::rust_shadowing_helper_functions::list::list_new;
     use crate::rust_shadowing_helper_functions::list::list_push;
-    use crate::snippet_bencher::BenchmarkCase;
     use crate::test_helpers::test_assertion_failure;
-    use crate::traits::function::Function;
-    use crate::traits::function::FunctionInitialState;
-    use crate::traits::function::ShadowedFunction;
-    use crate::traits::rust_shadow::RustShadow;
-    use crate::InitVmState;
+    use crate::test_prelude::*;
 
     impl Function for MerkleRootFromXfesGeneric {
         fn rust_shadow(
             &self,
             stack: &mut Vec<BFieldElement>,
-            memory: &mut std::collections::HashMap<BFieldElement, BFieldElement>,
+            memory: &mut HashMap<BFieldElement, BFieldElement>,
         ) {
             let leafs_pointer = stack.pop().unwrap();
             let leafs = *Vec::<XFieldElement>::decode_from_memory(memory, leafs_pointer).unwrap();
@@ -272,11 +257,9 @@ mod test {
         }
 
         fn corner_case_initial_states(&self) -> Vec<FunctionInitialState> {
-            let height_1 = self.init_state(vec![XFieldElement::one(); 2], BFieldElement::zero());
-            let height_2 = self.init_state(vec![XFieldElement::one(); 4], BFieldElement::zero());
-            let height_3 = self.init_state(vec![XFieldElement::one(); 8], BFieldElement::zero());
-
-            vec![height_1, height_2, height_3]
+            [2, 4, 8]
+                .map(|height| self.init_state(xfe_vec![1; height], bfe!(0)))
+                .to_vec()
         }
     }
 
@@ -286,8 +269,9 @@ mod test {
             xfes: Vec<XFieldElement>,
             xfe_pointer: BFieldElement,
         ) -> FunctionInitialState {
-            let mut memory = HashMap::<BFieldElement, BFieldElement>::new();
+            let mut memory = HashMap::new();
             encode_to_memory(&mut memory, xfe_pointer, &xfes);
+
             let mut stack = self.init_stack_for_isolated_run();
             stack.push(xfe_pointer);
 
@@ -326,11 +310,10 @@ mod test {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::traits::function::ShadowedFunction;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
-    fn merkle_root_bench() {
+    fn benchmark() {
         ShadowedFunction::new(MerkleRootFromXfesGeneric).bench()
     }
 }

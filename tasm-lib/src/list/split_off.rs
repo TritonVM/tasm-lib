@@ -1,10 +1,6 @@
 use triton_vm::prelude::*;
 
-use crate::data_type::DataType;
-use crate::library::Library;
-use crate::memory::dyn_malloc;
-use crate::memory::memcpy;
-use crate::traits::basic_snippet::BasicSnippet;
+use crate::prelude::*;
 
 /// Mutates an existing vector by reducing its length to `at` and returns the new vector. Mirrors
 /// the behavior of the Rust method `Vec::split_off`.
@@ -41,8 +37,8 @@ impl BasicSnippet for SplitOff {
     fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
         let entrypoint = self.entrypoint();
         let element_size = self.element_type.stack_size();
-        let dyn_malloc = library.import(Box::new(dyn_malloc::DynMalloc));
-        let mem_cpy = library.import(Box::new(memcpy::MemCpy));
+        let dyn_malloc = library.import(Box::new(DynMalloc));
+        let mem_cpy = library.import(Box::new(MemCpy));
 
         triton_asm!(
             {entrypoint}:
@@ -132,22 +128,13 @@ impl BasicSnippet for SplitOff {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-
-    use rand::prelude::*;
-
     use super::*;
     use crate::rust_shadowing_helper_functions::dyn_malloc::dynamic_allocator;
     use crate::rust_shadowing_helper_functions::list::insert_random_list;
     use crate::rust_shadowing_helper_functions::list::list_set_length;
     use crate::rust_shadowing_helper_functions::list::load_list_unstructured;
-    use crate::snippet_bencher::BenchmarkCase;
     use crate::test_helpers::test_assertion_failure;
-    use crate::traits::function::Function;
-    use crate::traits::function::FunctionInitialState;
-    use crate::traits::function::ShadowedFunction;
-    use crate::traits::rust_shadow::RustShadow;
-    use crate::InitVmState;
+    use crate::test_prelude::*;
 
     #[test]
     fn split_off_pbt() {
@@ -255,11 +242,10 @@ mod tests {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::traits::function::ShadowedFunction;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
-    fn split_off_bench() {
+    fn benchmark() {
         ShadowedFunction::new(SplitOff {
             element_type: DataType::Xfe,
         })

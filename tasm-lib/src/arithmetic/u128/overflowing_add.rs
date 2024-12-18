@@ -1,8 +1,6 @@
 use triton_vm::prelude::*;
 
-use crate::data_type::DataType;
-use crate::library::Library;
-use crate::traits::basic_snippet::BasicSnippet;
+use crate::prelude::*;
 
 #[derive(Clone, Debug, Copy)]
 pub struct OverflowingAdd;
@@ -92,21 +90,62 @@ impl BasicSnippet for OverflowingAdd {
 }
 
 #[cfg(test)]
-mod tests {
-    use itertools::Itertools;
+pub(crate) mod tests {
     use num::Zero;
-    use rand::rngs::StdRng;
-    use rand::Rng;
-    use rand::SeedableRng;
 
     use super::*;
-    use crate::pop_encodable;
-    use crate::push_encodable;
-    use crate::snippet_bencher::BenchmarkCase;
-    use crate::test_helpers::test_rust_equivalence_given_complete_state;
-    use crate::traits::closure::Closure;
-    use crate::traits::closure::ShadowedClosure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
+
+    impl OverflowingAdd {
+        fn assert_expected_add_behavior(&self, lhs: u128, rhs: u128) {
+            let initial_stack = self.set_up_test_stack((lhs, rhs));
+
+            let mut expected_stack = initial_stack.clone();
+            self.rust_shadow(&mut expected_stack);
+
+            test_rust_equivalence_given_complete_state(
+                &ShadowedClosure::new(Self),
+                &initial_stack,
+                &[],
+                &NonDeterminism::default(),
+                &None,
+                Some(&expected_stack),
+            );
+        }
+
+        pub fn edge_case_points() -> Vec<u128> {
+            [0, 0x200000002fffffffffff908f8, 1 << 127, u128::MAX]
+                .into_iter()
+                .flat_map(|p| [p.checked_sub(1), Some(p), p.checked_add(1)])
+                .flatten()
+                .collect()
+        }
+    }
+
+    impl Closure for OverflowingAdd {
+        type Args = (u128, u128);
+
+        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
+            let (left, right) = pop_encodable::<Self::Args>(stack);
+            let (sum, is_overflow) = left.overflowing_add(right);
+            push_encodable(stack, &sum);
+            push_encodable(stack, &is_overflow);
+        }
+
+        fn pseudorandom_args(&self, seed: [u8; 32], _: Option<BenchmarkCase>) -> Self::Args {
+            StdRng::from_seed(seed).gen()
+        }
+
+        fn corner_case_args(&self) -> Vec<Self::Args> {
+            let edge_case_points = Self::edge_case_points();
+
+            edge_case_points
+                .iter()
+                .cartesian_product(&edge_case_points)
+                .map(|(&l, &r)| (l, r))
+                .collect()
+        }
+    }
 
     #[test]
     fn overflowing_add_u128_test() {
@@ -154,79 +193,15 @@ mod tests {
             snippet.assert_expected_add_behavior(b, a);
         }
     }
-
-    impl OverflowingAdd {
-        fn assert_expected_add_behavior(&self, lhs: u128, rhs: u128) {
-            let init_stack = self.setup_init_stack(lhs, rhs);
-
-            let expected = {
-                let (sum, overflow) = lhs.overflowing_add(rhs);
-                let mut stack = self.init_stack_for_isolated_run();
-                push_encodable(&mut stack, &sum);
-                push_encodable(&mut stack, &overflow);
-                stack
-            };
-
-            test_rust_equivalence_given_complete_state(
-                &ShadowedClosure::new(OverflowingAdd),
-                &init_stack,
-                &[],
-                &NonDeterminism::default(),
-                &None,
-                Some(&expected),
-            );
-        }
-
-        fn setup_init_stack(&self, lhs: u128, rhs: u128) -> Vec<BFieldElement> {
-            let mut stack = self.init_stack_for_isolated_run();
-            push_encodable(&mut stack, &lhs);
-            push_encodable(&mut stack, &rhs);
-            stack
-        }
-    }
-
-    impl Closure for OverflowingAdd {
-        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
-            let left = pop_encodable::<u128>(stack);
-            let right = pop_encodable(stack);
-            let (sum, is_overflow) = left.overflowing_add(right);
-            push_encodable(stack, &sum);
-            push_encodable(stack, &is_overflow);
-        }
-
-        fn pseudorandom_initial_state(
-            &self,
-            seed: [u8; 32],
-            _bench_case: Option<BenchmarkCase>,
-        ) -> Vec<BFieldElement> {
-            let mut rng = StdRng::from_seed(seed);
-            self.setup_init_stack(rng.gen(), rng.gen())
-        }
-
-        fn corner_case_initial_states(&self) -> Vec<Vec<BFieldElement>> {
-            let points_with_plus_minus_one = [0, 0x200000002fffffffffff908f8, 1 << 127, u128::MAX]
-                .into_iter()
-                .flat_map(|p| [p.checked_sub(1), Some(p), p.checked_add(1)])
-                .flatten()
-                .collect_vec();
-
-            points_with_plus_minus_one
-                .iter()
-                .cartesian_product(&points_with_plus_minus_one)
-                .map(|(&l, &r)| self.setup_init_stack(l, r))
-                .collect()
-        }
-    }
 }
 
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::traits::closure::ShadowedClosure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
-    fn overflowing_add_u128_benchmark() {
+    fn benchmark() {
         ShadowedClosure::new(OverflowingAdd).bench()
     }
 }

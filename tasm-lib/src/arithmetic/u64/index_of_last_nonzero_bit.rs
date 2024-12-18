@@ -5,8 +5,8 @@ use super::decr::Decr;
 use super::xor::Xor;
 use crate::arithmetic::u64::and::And;
 use crate::arithmetic::u64::log_2_floor::Log2Floor;
-use crate::data_type::DataType;
 use crate::empty_stack;
+use crate::prelude::*;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::InitVmState;
 

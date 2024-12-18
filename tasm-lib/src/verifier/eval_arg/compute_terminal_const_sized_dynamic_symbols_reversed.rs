@@ -1,14 +1,12 @@
 use triton_vm::prelude::*;
 
 use crate::data_type::ArrayType;
-use crate::data_type::DataType;
-use crate::traits::basic_snippet::BasicSnippet;
-use crate::Library;
+use crate::prelude::*;
 
 /// A snippet for calculating terminal value by traversing the symbols
 /// list in reverse order and where symbols list length is statically
 /// known. Produces verbose code but minimizes clock cycle count.
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct ComputeTerminalConstSizedDynamicSymbolsReversed<const N: usize>;
 
 impl<const N: usize> BasicSnippet for ComputeTerminalConstSizedDynamicSymbolsReversed<N> {
@@ -99,27 +97,19 @@ impl<const N: usize> BasicSnippet for ComputeTerminalConstSizedDynamicSymbolsRev
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-
-    use itertools::Itertools;
     use num_traits::One;
     use num_traits::Zero;
-    use rand::prelude::*;
     use triton_vm::air::cross_table_argument::CrossTableArg;
     use triton_vm::air::cross_table_argument::EvalArg;
 
     use super::*;
-    use crate::snippet_bencher::BenchmarkCase;
-    use crate::traits::function::Function;
-    use crate::traits::function::FunctionInitialState;
-    use crate::traits::function::ShadowedFunction;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     impl<const N: usize> Function for ComputeTerminalConstSizedDynamicSymbolsReversed<N> {
         fn rust_shadow(
             &self,
             stack: &mut Vec<BFieldElement>,
-            memory: &mut std::collections::HashMap<BFieldElement, BFieldElement>,
+            memory: &mut HashMap<BFieldElement, BFieldElement>,
         ) {
             let symbols_pointer = stack.pop().unwrap();
             let initial = XFieldElement::new([
@@ -248,11 +238,8 @@ mod tests {
 
 #[cfg(test)]
 mod bench {
-    use triton_vm::twenty_first::math::tip5::Digest;
-
     use super::*;
-    use crate::traits::function::ShadowedFunction;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
     fn bench_const_sized_terminal_calc_rev_5() {

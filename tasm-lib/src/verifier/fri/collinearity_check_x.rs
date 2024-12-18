@@ -1,12 +1,11 @@
 use triton_vm::prelude::*;
 
-use crate::data_type::DataType;
 use crate::field;
-use crate::traits::basic_snippet::BasicSnippet;
+use crate::prelude::*;
 use crate::verifier::fri::verify::FriVerify;
 
 /// Compute domain\[index\]^(1<<round)
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct GetCollinearityCheckX;
 
 impl BasicSnippet for GetCollinearityCheckX {
@@ -26,7 +25,7 @@ impl BasicSnippet for GetCollinearityCheckX {
         "tasmlib_verifier_collinearity_check_x".to_string()
     }
 
-    fn code(&self, _library: &mut crate::library::Library) -> Vec<LabelledInstruction> {
+    fn code(&self, _: &mut Library) -> Vec<LabelledInstruction> {
         let entrypoint = self.entrypoint();
         let domain_offset = field!(FriVerify::domain_offset);
         let domain_generator = field!(FriVerify::domain_generator);
@@ -59,22 +58,12 @@ impl BasicSnippet for GetCollinearityCheckX {
 }
 
 #[cfg(test)]
-mod test {
-    use std::collections::HashMap;
-
+mod tests {
     use num_traits::Zero;
-    use rand::prelude::*;
-    use triton_vm::twenty_first::prelude::BFieldElement;
 
     use super::*;
     use crate::empty_stack;
-    use crate::memory::encode_to_memory;
-    use crate::snippet_bencher::BenchmarkCase;
-    use crate::structure::tasm_object::TasmObject;
-    use crate::traits::function::Function;
-    use crate::traits::function::FunctionInitialState;
-    use crate::traits::function::ShadowedFunction;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     impl Function for GetCollinearityCheckX {
         fn rust_shadow(
@@ -146,9 +135,8 @@ mod test {
 
 #[cfg(test)]
 mod bench {
-    use super::GetCollinearityCheckX;
-    use crate::traits::function::ShadowedFunction;
-    use crate::traits::rust_shadow::RustShadow;
+    use super::*;
+    use crate::test_prelude::*;
 
     #[test]
     fn bench() {

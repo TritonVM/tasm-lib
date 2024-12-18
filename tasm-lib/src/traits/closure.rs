@@ -1,14 +1,11 @@
-use std::cell::RefCell;
-use std::rc::Rc;
-
 use rand::prelude::*;
 use triton_vm::prelude::*;
 
 use super::basic_snippet::BasicSnippet;
 use super::rust_shadow::RustShadow;
 use crate::linker::execute_bench;
-use crate::linker::link_for_isolated_run;
 use crate::prelude::Tip5;
+use crate::push_encodable;
 use crate::snippet_bencher::write_benchmarks;
 use crate::snippet_bencher::BenchmarkCase;
 use crate::snippet_bencher::NamedBenchmarkResult;
@@ -27,36 +24,44 @@ use crate::test_helpers::test_rust_equivalence_given_complete_state;
 /// [mem_preserver]: crate::traits::mem_preserver::MemPreserver
 /// [read_only_algorithm]: crate::traits::read_only_algorithm::ReadOnlyAlgorithm
 pub trait Closure: BasicSnippet {
+    /// The arguments of this closure.
+    ///
+    /// Because rust does not support variadic types (yet?), it is recommended to
+    /// use a tuple if the closure takes more than one argument. Because of the way
+    /// [`BFieldCodec`] works for tuples, specify the element the closure expects on
+    /// top of the stack as the last element of the tuple.
+    type Args: BFieldCodec;
+
     fn rust_shadow(&self, stack: &mut Vec<BFieldElement>);
 
-    /// Generate a pseudorandom initial state (in this case, just the opstack) from the
-    /// given seed.
-    fn pseudorandom_initial_state(
-        &self,
-        seed: [u8; 32],
-        bench_case: Option<BenchmarkCase>,
-    ) -> Vec<BFieldElement>;
+    /// Given a [seed](StdRng::Seed), generate pseudorandom [arguments](Self::Args),
+    /// from which an [initial stack](Self::set_up_test_stack) can be constructed.
+    fn pseudorandom_args(&self, seed: [u8; 32], bench_case: Option<BenchmarkCase>) -> Self::Args;
 
-    fn corner_case_initial_states(&self) -> Vec<Vec<BFieldElement>> {
+    fn corner_case_args(&self) -> Vec<Self::Args> {
         vec![]
+    }
+
+    fn set_up_test_stack(&self, args: Self::Args) -> Vec<BFieldElement> {
+        let mut stack = self.init_stack_for_isolated_run();
+        push_encodable(&mut stack, &args);
+        stack
     }
 }
 
 pub struct ShadowedClosure<C: Closure + 'static> {
-    pub closure: Rc<RefCell<C>>,
+    closure: C,
 }
 
 impl<C: Closure + 'static> ShadowedClosure<C> {
     pub fn new(closure: C) -> Self {
-        Self {
-            closure: Rc::new(RefCell::new(closure)),
-        }
+        Self { closure }
     }
 }
 
 impl<C: Closure + 'static> RustShadow for ShadowedClosure<C> {
-    fn inner(&self) -> Rc<RefCell<dyn BasicSnippet>> {
-        self.closure.clone()
+    fn inner(&self) -> &dyn BasicSnippet {
+        &self.closure
     }
 
     fn rust_shadow_wrapper(
@@ -67,7 +72,7 @@ impl<C: Closure + 'static> RustShadow for ShadowedClosure<C> {
         _memory: &mut std::collections::HashMap<BFieldElement, BFieldElement>,
         _sponge: &mut Option<Tip5>,
     ) -> Vec<BFieldElement> {
-        self.closure.borrow().rust_shadow(stack);
+        self.closure.rust_shadow(stack);
         vec![]
     }
 
@@ -76,12 +81,11 @@ impl<C: Closure + 'static> RustShadow for ShadowedClosure<C> {
         let mut rng = thread_rng();
 
         // First test corner-cases as they're easier to debug on failure
-        for init_stack_corner_case in self.closure.borrow().corner_case_initial_states() {
-            let stdin = vec![];
+        for args in self.closure.corner_case_args() {
             test_rust_equivalence_given_complete_state(
                 self,
-                &init_stack_corner_case,
-                &stdin,
+                &self.closure.set_up_test_stack(args),
+                &[],
                 &NonDeterminism::default(),
                 &None,
                 None,
@@ -90,7 +94,8 @@ impl<C: Closure + 'static> RustShadow for ShadowedClosure<C> {
 
         for _ in 0..num_states {
             let seed: [u8; 32] = rng.gen();
-            let stack = self.closure.borrow().pseudorandom_initial_state(seed, None);
+            let args = self.closure.pseudorandom_args(seed, None);
+            let stack = self.closure.set_up_test_stack(args);
 
             let stdin = vec![];
             test_rust_equivalence_given_complete_state(
@@ -114,15 +119,13 @@ impl<C: Closure + 'static> RustShadow for ShadowedClosure<C> {
         let mut benchmarks = Vec::with_capacity(2);
 
         for bench_case in [BenchmarkCase::CommonCase, BenchmarkCase::WorstCase] {
-            let stack = self
-                .closure
-                .borrow()
-                .pseudorandom_initial_state(rng.gen(), Some(bench_case));
-            let program = link_for_isolated_run(self.closure.clone());
+            let args = self.closure.pseudorandom_args(rng.gen(), Some(bench_case));
+            let stack = self.closure.set_up_test_stack(args);
+            let program = self.closure.link_for_isolated_run();
             let benchmark =
                 execute_bench(&program, &stack, vec![], NonDeterminism::new(vec![]), None);
             let benchmark = NamedBenchmarkResult {
-                name: self.closure.borrow().entrypoint(),
+                name: self.closure.entrypoint(),
                 benchmark_result: benchmark,
                 case: bench_case,
             };
