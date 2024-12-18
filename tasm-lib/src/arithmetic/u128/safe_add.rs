@@ -3,7 +3,7 @@ use triton_vm::prelude::*;
 use crate::arithmetic::u128::overflowing_add::OverflowingAdd;
 use crate::prelude::*;
 
-#[derive(Clone, Debug, Copy)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub struct SafeAdd;
 
 impl SafeAdd {
@@ -48,8 +48,6 @@ impl BasicSnippet for SafeAdd {
 
 #[cfg(test)]
 mod tests {
-    use num::Zero;
-
     use super::*;
     use crate::test_prelude::*;
 
@@ -107,21 +105,13 @@ mod tests {
 
     #[test]
     fn unit_test() {
-        let snippet = SafeAdd;
-        let mut expected = snippet.init_stack_for_isolated_run();
-        expected.push(BFieldElement::new(0));
-        expected.push(BFieldElement::new(1 << 4));
-        expected.push(BFieldElement::new(0));
-        expected.push(BFieldElement::new(0));
-        snippet.assert_expected_add_behavior(1u128 << 67, 1u128 << 67)
+        SafeAdd.assert_expected_add_behavior(1 << 67, 1 << 67)
     }
 
     #[test]
     fn overflow_test() {
-        let snippet = SafeAdd;
-
-        for (a, b) in [
-            (1u128 << 127, 1u128 << 127),
+        for args in [
+            (1 << 127, 1 << 127),
             (u128::MAX, u128::MAX),
             (u128::MAX, 1),
             (u128::MAX, 1 << 31),
@@ -134,37 +124,26 @@ mod tests {
             (u128::MAX, 1 << 96),
             (u128::MAX, 1 << 97),
             (u128::MAX - 1, 2),
-        ] {
+        ]
+        .into_iter()
+        .flat_map(|(left, right)| [(left, right), (right, left)])
+        {
             test_assertion_failure(
-                &ShadowedClosure::new(snippet),
-                InitVmState::with_stack(snippet.set_up_test_stack((a, b))),
-                &[170],
-            );
-            test_assertion_failure(
-                &ShadowedClosure::new(snippet),
-                InitVmState::with_stack(snippet.set_up_test_stack((b, a))),
-                &[170],
+                &ShadowedClosure::new(SafeAdd),
+                InitVmState::with_stack(SafeAdd.set_up_test_stack(args)),
+                &[SafeAdd::OVERFLOW_ERROR_ID],
             );
         }
 
         for i in 0..128 {
-            let a = u128::MAX - ((1u128 << i) - 1);
-            let b = 1u128 << i;
+            let a = 1 << i;
+            let b = u128::MAX - a + 1;
 
-            // sanity check of test input values
-            let (wrapped_add, is_overflow) = a.overflowing_add(b);
-            assert!(is_overflow, "i = {i}. a = {a}, b = {b}");
-            assert!(wrapped_add.is_zero());
-
+            assert_eq!((0, true), a.overflowing_add(b), "i = {i}. a = {a}, b = {b}");
             test_assertion_failure(
-                &ShadowedClosure::new(snippet),
-                InitVmState::with_stack(snippet.set_up_test_stack((a, b))),
-                &[170],
-            );
-            test_assertion_failure(
-                &ShadowedClosure::new(snippet),
-                InitVmState::with_stack(snippet.set_up_test_stack((b, a))),
-                &[170],
+                &ShadowedClosure::new(SafeAdd),
+                InitVmState::with_stack(SafeAdd.set_up_test_stack((a, b))),
+                &[SafeAdd::OVERFLOW_ERROR_ID],
             );
         }
     }
