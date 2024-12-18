@@ -1,197 +1,133 @@
 use std::collections::HashMap;
 
-use itertools::Itertools;
-use num::One;
-use num::Zero;
 use triton_vm::prelude::*;
-use twenty_first::prelude::U32s;
 
-use crate::empty_stack;
 use crate::prelude::*;
-use crate::push_encodable;
-use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::InitVmState;
+use crate::traits::basic_snippet::Reviewer;
+use crate::traits::basic_snippet::SignOffFingerprint;
 
-#[derive(Clone, Debug)]
+/// [Decrement][dec] the given argument by 1.
+///
+/// ### Behavior
+///
+/// ```text
+/// BEFORE: _ [arg: u64]
+/// AFTER:  _ [arg-1: u64]
+/// ```
+///
+/// ### Preconditions
+///
+/// - the input `arg` is greater than 0
+/// - the input `arg` is properly [`BFieldCodec`] encoded
+///
+/// ### Postconditions
+///
+/// - the output is properly [`BFieldCodec`] encoded
+///
+/// [dec]: num::Integer::dec
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub struct Decr;
 
-impl DeprecatedSnippet for Decr {
-    fn entrypoint_name(&self) -> String {
+impl Decr {
+    pub const OVERFLOW_ERROR_ID: i128 = 110;
+}
+
+impl BasicSnippet for Decr {
+    fn inputs(&self) -> Vec<(DataType, String)> {
+        vec![(DataType::U64, "arg".to_string())]
+    }
+
+    fn outputs(&self) -> Vec<(DataType, String)> {
+        vec![(DataType::U64, "(arg-1)".to_string())]
+    }
+
+    fn entrypoint(&self) -> String {
         "tasmlib_arithmetic_u64_decr".to_string()
     }
 
-    fn input_field_names(&self) -> Vec<String> {
-        vec!["value_hi".to_string(), "value_lo".to_string()]
-    }
-
-    fn input_types(&self) -> Vec<DataType> {
-        vec![DataType::U64]
-    }
-
-    fn output_field_names(&self) -> Vec<String> {
-        vec!["(value - 1)_hi".to_string(), "(value - 1)_lo".to_string()]
-    }
-
-    fn output_types(&self) -> Vec<DataType> {
-        vec![DataType::U64]
-    }
-
-    fn stack_diff(&self) -> isize {
-        0
-    }
-
-    fn function_code(&self, _library: &mut Library) -> String {
-        let entrypoint = self.entrypoint_name();
-        let carry_entrypoint = format!("{entrypoint}_carry");
-        const U32_MAX: u32 = u32::MAX;
+    fn code(&self, _: &mut Library) -> Vec<LabelledInstruction> {
+        let entrypoint = self.entrypoint();
+        let propagate_carry = format!("{entrypoint}_propagate_carry");
 
         triton_asm!(
             {entrypoint}:
-                push -1
-                add
+                addi -1
+                // _ arg_hi (arg_lo - 1)
+
                 dup 0
                 push -1
                 eq
                 skiz
-                    call {carry_entrypoint}
+                    call {propagate_carry}
                 return
 
-            {carry_entrypoint}:
-                pop 1
-                push -1
+            // BEFORE: _ arg_hi -1
+            // AFTER:  _ (arg_hi - 1) u32::MAX
+            {propagate_carry}:
                 add
+                // _ (arg_hi - 1)
+
                 dup 0
                 push -1
                 eq
+                // _ (arg_hi - 1) (arg_hi - 1 == -1)
+                // _ (arg_hi - 1) (arg_hi == 0)
+
                 push 0
                 eq
-                assert error_id 110
-                push {U32_MAX}
+                // _ (arg_hi - 1) (arg_hi != 0)
+
+                assert error_id {Self::OVERFLOW_ERROR_ID}
+
+                push {u32::MAX}
                 return
         )
-        .iter()
-        .join("\n")
     }
 
-    fn crash_conditions(&self) -> Vec<String> {
-        vec!["value == 0".to_string()]
-    }
-
-    fn gen_input_states(&self) -> Vec<InitVmState> {
-        let values = vec![
-            // U32s::<2>::zero(),
-            U32s::<2>::new([0, 14]),
-            U32s::<2>::new([u32::MAX, 13]),
-        ];
-        values
-            .into_iter()
-            .map(|value| {
-                let mut stack = empty_stack();
-                push_encodable(&mut stack, &value);
-                InitVmState::with_stack(stack)
-            })
-            .collect()
-    }
-
-    fn common_case_input_state(&self) -> InitVmState {
-        // no carry
-        InitVmState::with_stack(
-            [
-                empty_stack(),
-                vec![BFieldElement::zero(), BFieldElement::new(7)],
-            ]
-            .concat(),
-        )
-    }
-
-    fn worst_case_input_state(&self) -> InitVmState {
-        // with carry
-        InitVmState::with_stack(
-            [
-                empty_stack(),
-                vec![BFieldElement::new(1000), BFieldElement::new(0)],
-            ]
-            .concat(),
-        )
-    }
-
-    fn rust_shadowing(
-        &self,
-        stack: &mut Vec<BFieldElement>,
-        _std_in: Vec<BFieldElement>,
-        _secret_in: Vec<BFieldElement>,
-        _memory: &mut HashMap<BFieldElement, BFieldElement>,
-    ) {
-        let a: u32 = stack.pop().unwrap().try_into().unwrap();
-        let b: u32 = stack.pop().unwrap().try_into().unwrap();
-        let ab = U32s::<2>::new([a, b]);
-        let ab_incr = ab - U32s::one();
-        let mut res = ab_incr.encode();
-        for _ in 0..res.len() {
-            stack.push(res.pop().unwrap());
-        }
+    fn sign_offs(&self) -> HashMap<Reviewer, SignOffFingerprint> {
+        let mut sign_offs = HashMap::new();
+        sign_offs.insert(Reviewer("ferdinand"), 0xc7d3ab3d4996bc9c.into());
+        sign_offs
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use num::Zero;
-
     use super::*;
-    use crate::empty_stack;
-    use crate::prelude::BasicSnippet;
-    use crate::test_helpers::test_rust_equivalence_given_input_values_deprecated;
-    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
     use crate::test_prelude::*;
-    use crate::traits::deprecated_snippet::tests::DeprecatedSnippetWrapper;
 
-    #[test]
-    fn decr_u64_test() {
-        test_rust_equivalence_multiple_deprecated(&Decr, true);
-    }
+    impl Closure for Decr {
+        type Args = u64;
 
-    #[test]
-    fn decr_u64_negative_tasm_test() {
-        let mut stack = empty_stack();
-        push_encodable(&mut stack, &U32s::<2>::zero());
-        assert!(Decr
-            .link_and_run_tasm_for_test(&mut stack, vec![], NonDeterminism::default())
-            .is_err());
-    }
+        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
+            let arg = pop_encodable::<Self::Args>(stack);
+            push_encodable(stack, &arg.checked_sub(1).unwrap());
+        }
 
-    #[test]
-    fn decr_u64_negative_rust_test() {
-        let snippet = Decr;
-        let mut stack = Decr.init_stack_for_isolated_run();
-        push_encodable(&mut stack, &U32s::<2>::zero());
-        let snippet = DeprecatedSnippetWrapper::new(snippet);
-
-        test_assertion_failure(&snippet, InitVmState::with_stack(stack), &[110]);
-    }
-
-    #[test]
-    fn decr_u64_pbt() {
-        prop_decr_u64(U32s::new([u32::MAX, 0]));
-        prop_decr_u64(U32s::new([0, u32::MAX]));
-        prop_decr_u64(U32s::new([u32::MAX, u32::MAX - 1]));
-        prop_decr_u64(U32s::new([0, 1]));
-
-        let mut rng = rand::thread_rng();
-        for _ in 0..10 {
-            prop_decr_u64(U32s::new([0, rng.gen()]));
-            prop_decr_u64(U32s::new([rng.gen(), rng.gen()]));
+        fn pseudorandom_args(
+            &self,
+            seed: [u8; 32],
+            bench_case: Option<BenchmarkCase>,
+        ) -> Self::Args {
+            match bench_case {
+                Some(BenchmarkCase::CommonCase) => 7,
+                Some(BenchmarkCase::WorstCase) => 1 << 35,
+                None => StdRng::from_seed(seed).gen_range(1..=u64::MAX),
+            }
         }
     }
 
-    fn prop_decr_u64(value: U32s<2>) {
-        let mut stack = empty_stack();
-        push_encodable(&mut stack, &value);
-        test_rust_equivalence_given_input_values_deprecated(
-            &Decr,
-            &stack,
-            &[],
-            HashMap::default(),
-            None,
+    #[test]
+    fn rust_shadow() {
+        ShadowedClosure::new(Decr).test();
+    }
+
+    #[test]
+    fn negative_test() {
+        test_assertion_failure(
+            &ShadowedClosure::new(Decr),
+            InitVmState::with_stack(Decr.set_up_test_stack(0)),
+            &[Decr::OVERFLOW_ERROR_ID],
         );
     }
 }
@@ -199,10 +135,10 @@ mod tests {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::snippet_bencher::bench_and_write;
+    use crate::test_prelude::*;
 
     #[test]
-    fn decr_u64_benchmark() {
-        bench_and_write(Decr);
+    fn benchmark() {
+        ShadowedClosure::new(Decr).bench();
     }
 }
