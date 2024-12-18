@@ -1,9 +1,7 @@
 use triton_vm::prelude::*;
 
 use crate::arithmetic::u128::overflowing_add::OverflowingAdd;
-use crate::data_type::DataType;
-use crate::library::Library;
-use crate::traits::basic_snippet::BasicSnippet;
+use crate::prelude::*;
 
 #[derive(Clone, Debug, Copy)]
 pub struct SafeAdd;
@@ -50,22 +48,10 @@ impl BasicSnippet for SafeAdd {
 
 #[cfg(test)]
 mod tests {
-    use itertools::Itertools;
     use num::Zero;
-    use rand::rngs::StdRng;
-    use rand::Rng;
-    use rand::SeedableRng;
-    use tasm_lib::test_helpers::test_assertion_failure;
 
     use super::*;
-    use crate::pop_encodable;
-    use crate::push_encodable;
-    use crate::snippet_bencher::BenchmarkCase;
-    use crate::test_helpers::test_rust_equivalence_given_complete_state;
-    use crate::traits::closure::Closure;
-    use crate::traits::closure::ShadowedClosure;
-    use crate::traits::rust_shadow::RustShadow;
-    use crate::InitVmState;
+    use crate::test_prelude::*;
 
     impl SafeAdd {
         fn assert_expected_add_behavior(&self, lhs: u128, rhs: u128) {
@@ -187,11 +173,10 @@ mod tests {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::traits::closure::ShadowedClosure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
-    fn add_u128_benchmark() {
+    fn benchmark() {
         ShadowedClosure::new(SafeAdd).bench()
     }
 }

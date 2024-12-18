@@ -4,7 +4,7 @@ use itertools::Itertools;
 use num::BigUint;
 use rand::prelude::*;
 use triton_vm::prelude::*;
-use triton_vm::twenty_first::prelude::U32s;
+use twenty_first::prelude::U32s;
 use twenty_first::util_types::mmr;
 
 use crate::arithmetic::u64::add::Add;
@@ -14,9 +14,8 @@ use crate::arithmetic::u64::log_2_floor::Log2Floor;
 use crate::arithmetic::u64::lt_preserve_args::LtPreserveArgs;
 use crate::arithmetic::u64::popcount::PopCount;
 use crate::arithmetic::u64::pow2::Pow2;
-use crate::data_type::DataType;
 use crate::empty_stack;
-use crate::library::Library;
+use crate::prelude::*;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::InitVmState;
 

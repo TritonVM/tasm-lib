@@ -1,15 +1,12 @@
 use std::collections::HashMap;
 
-use num::One;
-use num::Zero;
+use num_traits::Zero;
 use rand::prelude::*;
 use triton_vm::memory_layout::MemoryRegion;
 use triton_vm::prelude::*;
 
-use crate::data_type::DataType;
 use crate::empty_stack;
-use crate::library::Library;
-use crate::prelude::BasicSnippet;
+use crate::prelude::*;
 use crate::snippet_bencher::BenchmarkCase;
 use crate::traits::function::Function;
 use crate::traits::function::FunctionInitialState;
@@ -119,7 +116,7 @@ impl Function for DynMalloc {
             "All allocations must happen inside dyn malloc's region"
         );
 
-        let next_page_idx = page_idx + BFieldElement::one();
+        let next_page_idx = page_idx + bfe!(1);
 
         memory.insert(DYN_MALLOC_ADDRESS, next_page_idx);
 
@@ -137,7 +134,7 @@ impl Function for DynMalloc {
         let stack = empty_stack();
 
         let mut memory = HashMap::new();
-        let page_number = rng.gen_range(0..(1u64 << 31));
+        let page_number = rng.gen_range(0..1_u64 << 31);
         memory.insert(DYN_MALLOC_ADDRESS, page_number.into());
 
         FunctionInitialState { stack, memory }
@@ -186,25 +183,20 @@ impl Function for DynMalloc {
 }
 
 #[cfg(test)]
-mod tests {
-    use proptest_arbitrary_interop::arb;
-    use test_strategy::proptest;
+pub mod tests {
+    use std::collections::HashMap;
 
     use super::*;
     use crate::test_helpers::negative_test;
-    use crate::test_helpers::test_assertion_failure;
-    use crate::traits::function::ShadowedFunction;
-    use crate::traits::rust_shadow::RustShadow;
-    use crate::InitVmState;
+    use crate::test_prelude::*;
 
     #[test]
     fn expected_address_chosen_for_dyn_malloc() {
-        let negative_one = -BFieldElement::one();
-        assert_eq!(negative_one, DYN_MALLOC_ADDRESS);
+        assert_eq!(bfe!(-1), DYN_MALLOC_ADDRESS);
     }
 
     #[test]
-    fn dynamic_allocator_behaves_like_rust_shadowing() {
+    fn rust_shadow() {
         ShadowedFunction::new(DynMalloc).test();
     }
 
@@ -317,11 +309,10 @@ mod tests {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::traits::function::ShadowedFunction;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
-    fn dyn_malloc_benchmark() {
+    fn benchmark() {
         ShadowedFunction::new(DynMalloc).bench();
     }
 }

@@ -97,7 +97,7 @@ pub fn bench_and_profile_program<P: CompiledProgram>(
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::*;
 
     pub(super) struct FiboTest;
@@ -156,7 +156,7 @@ mod test {
 
 #[cfg(test)]
 mod benches {
-    use super::test::FiboTest;
+    use super::tests::FiboTest;
     use super::*;
     use crate::snippet_bencher::BenchmarkCase;
 

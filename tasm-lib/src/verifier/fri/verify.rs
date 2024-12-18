@@ -8,22 +8,20 @@ use triton_vm::prelude::*;
 use triton_vm::proof_item::FriResponse;
 use triton_vm::proof_item::ProofItemVariant;
 use triton_vm::proof_stream::ProofStream;
-use triton_vm::twenty_first::math::polynomial::Polynomial;
-use triton_vm::twenty_first::math::traits::ModPowU32;
-use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
-use triton_vm::twenty_first::util_types::merkle_tree::MerkleTreeInclusionProof;
 use twenty_first::math::polynomial::barycentric_evaluate;
+use twenty_first::math::polynomial::Polynomial;
+use twenty_first::math::traits::ModPowU32;
+use twenty_first::math::x_field_element::EXTENSION_DEGREE;
 use twenty_first::prelude::MerkleTreeMaker;
 use twenty_first::util_types::merkle_tree::CpuParallel;
 use twenty_first::util_types::merkle_tree::MerkleTree;
+use twenty_first::util_types::merkle_tree::MerkleTreeInclusionProof;
 
-use crate::data_type::DataType;
 use crate::data_type::StructType;
 use crate::field;
 use crate::hashing::algebraic_hasher::sample_indices::SampleIndices;
 use crate::hashing::algebraic_hasher::sample_scalars_static_length_dyn_malloc::SampleScalarsStaticLengthDynMalloc;
 use crate::hashing::merkle_root_from_xfes_generic::MerkleRootFromXfesGeneric;
-use crate::library::Library;
 use crate::list::get::Get;
 use crate::list::higher_order::inner_function::InnerFunction;
 use crate::list::higher_order::inner_function::RawCode;
@@ -33,8 +31,7 @@ use crate::list::horner_evaluation_dynamic_length::HornerEvaluationDynamicLength
 use crate::list::length::Length;
 use crate::list::new::New;
 use crate::list::push::Push;
-use crate::structure::tasm_object::TasmObject;
-use crate::traits::basic_snippet::BasicSnippet;
+use crate::prelude::*;
 use crate::verifier::fri::barycentric_evaluation::BarycentricEvaluation;
 use crate::verifier::fri::number_of_rounds::NumberOfRounds;
 use crate::verifier::fri::verify_fri_authentication_paths::VerifyFriAuthenticationPaths;
@@ -1158,40 +1155,26 @@ impl FriVerify {
 }
 
 #[cfg(test)]
-mod test {
-    use std::collections::HashMap;
+mod tests {
     use std::collections::HashSet;
     use std::panic::catch_unwind;
 
-    use itertools::Itertools;
-    use num_traits::One;
     use num_traits::Zero;
     use proptest::collection::vec;
-    use proptest::prelude::*;
-    use proptest_arbitrary_interop::arb;
-    use rand::prelude::*;
     use rayon::prelude::*;
-    use test_strategy::proptest;
-    use triton_vm::arithmetic_domain::ArithmeticDomain;
-    use triton_vm::fri::Fri;
     use triton_vm::proof_item::ProofItem;
-    use triton_vm::proof_stream::ProofStream;
-    use triton_vm::twenty_first::math::ntt::ntt;
-    use triton_vm::twenty_first::util_types::sponge::Sponge;
+    use twenty_first::math::ntt::ntt;
+    use twenty_first::util_types::sponge::Sponge;
 
     use super::*;
     use crate::empty_stack;
     use crate::memory::dyn_malloc::DYN_MALLOC_FIRST_ADDRESS;
-    use crate::memory::encode_to_memory;
-    use crate::snippet_bencher::BenchmarkCase;
     use crate::structure::tasm_object::decode_from_memory_with_size;
     use crate::test_helpers::rust_final_state;
     use crate::test_helpers::tasm_final_state;
     use crate::test_helpers::verify_sponge_equivalence;
     use crate::test_helpers::verify_stack_growth;
-    use crate::traits::procedure::Procedure;
-    use crate::traits::procedure::ProcedureInitialState;
-    use crate::traits::procedure::ShadowedProcedure;
+    use crate::test_prelude::*;
 
     impl FriVerify {
         pub fn new(
@@ -1416,7 +1399,7 @@ mod test {
 
         /// A test case with no FRI rounds.
         fn tiny_case() -> Self {
-            let fri_verify = FriVerify::new(BFieldElement::one(), 2, 2, 1);
+            let fri_verify = FriVerify::new(bfe!(1), 2, 2, 1);
             assert_eq!(0, fri_verify.num_rounds());
             assert_eq!(0, fri_verify.last_round_max_degree());
 
@@ -1428,7 +1411,7 @@ mod test {
 
         /// A test case with 2 FRI rounds.
         fn small_case() -> Self {
-            let fri_verify = FriVerify::new(BFieldElement::one(), 64, 2, 7);
+            let fri_verify = FriVerify::new(bfe!(1), 64, 2, 7);
             assert_eq!(2, fri_verify.num_rounds(), "test case must be meaningful");
 
             let coefficients = Self::thirty_two_coefficients();
@@ -1669,10 +1652,8 @@ mod bench {
     use crate::generate_full_profile;
     use crate::test_helpers::prepend_program_with_sponge_init;
     use crate::test_helpers::prepend_program_with_stack_setup;
-    use crate::traits::procedure::ProcedureInitialState;
-    use crate::traits::procedure::ShadowedProcedure;
-    use crate::traits::rust_shadow::RustShadow;
-    use crate::verifier::fri::verify::test::TestCase;
+    use crate::test_prelude::*;
+    use crate::verifier::fri::verify::tests::TestCase;
 
     #[test]
     fn bench() {

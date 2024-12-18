@@ -1,10 +1,9 @@
 use triton_vm::prelude::*;
 
-use crate::data_type::DataType;
-use crate::traits::basic_snippet::BasicSnippet;
+use crate::prelude::*;
 
 /// Sample a single scalar from the sponge state
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct SampleScalarOne;
 
 impl BasicSnippet for SampleScalarOne {
@@ -20,10 +19,7 @@ impl BasicSnippet for SampleScalarOne {
         "tasmlib_hashing_algebraic_hasher_sample_scalar_one".to_owned()
     }
 
-    fn code(
-        &self,
-        _library: &mut crate::library::Library,
-    ) -> Vec<triton_vm::prelude::LabelledInstruction> {
+    fn code(&self, _: &mut Library) -> Vec<LabelledInstruction> {
         let entrypoint = self.entrypoint();
 
         triton_asm!(
@@ -50,18 +46,11 @@ impl BasicSnippet for SampleScalarOne {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-
-    use rand::prelude::*;
-    use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
-    use triton_vm::twenty_first::util_types::sponge::Sponge;
+    use twenty_first::math::x_field_element::EXTENSION_DEGREE;
+    use twenty_first::util_types::sponge::Sponge;
 
     use super::*;
-    use crate::snippet_bencher::BenchmarkCase;
-    use crate::traits::procedure::Procedure;
-    use crate::traits::procedure::ProcedureInitialState;
-    use crate::traits::procedure::ShadowedProcedure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
     fn sample_scalar_one_test() {
@@ -75,7 +64,7 @@ mod tests {
             _memory: &mut HashMap<BFieldElement, BFieldElement>,
             _nondeterminism: &NonDeterminism,
             _public_input: &[BFieldElement],
-            sponge: &mut Option<crate::prelude::Tip5>,
+            sponge: &mut Option<Tip5>,
         ) -> Vec<BFieldElement> {
             let vals = sponge.as_mut().unwrap().squeeze();
 

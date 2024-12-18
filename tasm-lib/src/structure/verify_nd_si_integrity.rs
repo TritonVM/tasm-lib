@@ -3,10 +3,7 @@ use std::marker::PhantomData;
 
 use triton_vm::prelude::*;
 
-use crate::data_type::DataType;
-use crate::library::Library;
-use crate::prelude::BasicSnippet;
-use crate::prelude::TasmObject;
+use crate::prelude::*;
 
 /// Verify size-indicator integrity of preloaded data, return size.
 ///
@@ -75,25 +72,17 @@ impl<T: TasmObject + BFieldCodec + Clone + Debug> BasicSnippet for VerifyNdSiInt
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
     use std::fmt::Debug;
 
     use arbitrary::Arbitrary;
     use arbitrary::Unstructured;
     use num_traits::ConstZero;
-    use rand::rngs::StdRng;
-    use rand::Rng;
-    use rand::SeedableRng;
     use twenty_first::util_types::mmr::mmr_successor_proof::MmrSuccessorProof;
 
     use super::*;
     use crate::memory::encode_to_memory;
     use crate::neptune::neptune_like_types_for_tests::*;
-    use crate::snippet_bencher::BenchmarkCase;
-    use crate::traits::accessor::Accessor;
-    use crate::traits::accessor::AccessorInitialState;
-    use crate::traits::accessor::ShadowedAccessor;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     impl<T> VerifyNdSiIntegrity<T>
     where
@@ -415,8 +404,7 @@ mod benches {
     use super::*;
     use crate::neptune::neptune_like_types_for_tests::ProofCollectionLookalike;
     use crate::neptune::neptune_like_types_for_tests::TransactionKernelLookalike;
-    use crate::traits::accessor::ShadowedAccessor;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
     fn bench_proof_collection_lookalike() {

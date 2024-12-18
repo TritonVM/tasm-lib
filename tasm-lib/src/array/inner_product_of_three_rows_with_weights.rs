@@ -6,8 +6,7 @@ use triton_vm::table::master_table::MasterMainTable;
 use triton_vm::table::master_table::MasterTable;
 
 use crate::data_type::ArrayType;
-use crate::data_type::DataType;
-use crate::traits::basic_snippet::BasicSnippet;
+use crate::prelude::*;
 
 #[derive(Debug, Clone, Copy, Display, Arbitrary)]
 pub enum MainElementType {
@@ -126,23 +125,13 @@ impl BasicSnippet for InnerProductOfThreeRowsWithWeights {
 }
 
 #[cfg(test)]
-mod test {
-    use std::collections::HashMap;
-
-    use itertools::Itertools;
-    use proptest_arbitrary_interop::arb;
-    use rand::prelude::*;
-    use test_strategy::proptest;
+mod tests {
     use triton_vm::prelude::*;
 
     use super::*;
     use crate::rust_shadowing_helper_functions::array::array_from_memory;
     use crate::rust_shadowing_helper_functions::array::insert_random_array;
-    use crate::snippet_bencher::BenchmarkCase;
-    use crate::traits::function::Function;
-    use crate::traits::function::FunctionInitialState;
-    use crate::traits::function::ShadowedFunction;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
     fn three_rows_tvm_parameters_xfe_main_test() {
@@ -259,8 +248,7 @@ mod test {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::traits::function::ShadowedFunction;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     /// Benchmark the calculation of the (in-domain) current rows that happen in the
     /// main-loop, where all revealed FRI values are verified.

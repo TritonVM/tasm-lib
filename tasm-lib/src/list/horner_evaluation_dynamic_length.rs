@@ -1,11 +1,8 @@
 use itertools::Itertools;
-use triton_vm::prelude::triton_asm;
-use triton_vm::prelude::LabelledInstruction;
+use triton_vm::prelude::*;
 
-use crate::data_type::DataType;
-use crate::library::Library;
 use crate::list::length::Length;
-use crate::traits::basic_snippet::BasicSnippet;
+use crate::prelude::*;
 
 /// HornerEvaluationDynamicLength takes a list of XFieldElements, representing
 /// the coefficients of a polynomial, and evaluates it in a given indeterminate,
@@ -32,15 +29,14 @@ impl BasicSnippet for HornerEvaluationDynamicLength {
     }
 
     fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
-        let entrypoint = self.entrypoint();
         let horner_iteration = triton_asm! {
             // BEFORE: _ *ptr [x] [acc]
             // AFTER:  _ *ptr-3 [x] [acc*x+ct]
-            dup 5 dup 5 dup 5   // _ *ptr [x] [acc] [x]
+            dup 5 dup 5 dup 5    // _ *ptr [x] [acc] [x]
             xx_mul               // _ *ptr [x] [x*acc]
-            dup 6               // _ *ptr [x] [x*acc] *ptr
-            read_mem 3          // _ *ptr [x] [x*acc] [ct] *ptr-3
-            swap 10 pop 1       // _ *ptr-3 [x] [x*acc] [ct]
+            dup 6                // _ *ptr [x] [x*acc] *ptr
+            read_mem 3           // _ *ptr [x] [x*acc] [ct] *ptr-3
+            swap 10 pop 1        // _ *ptr-3 [x] [x*acc] [ct]
             xx_add               // _ *ptr-3 [x] [x*acc+ct]
 
         };
@@ -49,6 +45,8 @@ impl BasicSnippet for HornerEvaluationDynamicLength {
         let many_horner_iterations = (0..batch_size)
             .flat_map(|_| horner_iteration.clone())
             .collect_vec();
+
+        let entrypoint = self.entrypoint();
         let loop_batches = format!("{entrypoint}_loop_batches");
         let loop_remainder = format!("{entrypoint}_loop_remainder");
         let length_of_list_of_xfes = library.import(Box::new(Length {
@@ -100,24 +98,12 @@ impl BasicSnippet for HornerEvaluationDynamicLength {
 }
 
 #[cfg(test)]
-mod test {
-    use std::collections::HashMap;
-
+mod tests {
     use itertools::Itertools;
-    use rand::prelude::*;
-    use triton_vm::prelude::*;
-    use triton_vm::twenty_first::math::polynomial::Polynomial;
-    use triton_vm::twenty_first::xfe_vec;
+    use twenty_first::math::polynomial::Polynomial;
 
-    use super::HornerEvaluationDynamicLength;
-    use crate::memory::encode_to_memory;
-    use crate::prelude::TasmObject;
-    use crate::snippet_bencher::BenchmarkCase;
-    use crate::traits::basic_snippet::BasicSnippet;
-    use crate::traits::function::Function;
-    use crate::traits::function::FunctionInitialState;
-    use crate::traits::function::ShadowedFunction;
-    use crate::traits::rust_shadow::RustShadow;
+    use super::*;
+    use crate::test_prelude::*;
 
     impl HornerEvaluationDynamicLength {
         fn prepare_state(
@@ -207,12 +193,11 @@ mod test {
 
 #[cfg(test)]
 mod bench {
-    use super::HornerEvaluationDynamicLength;
-    use crate::traits::function::ShadowedFunction;
-    use crate::traits::rust_shadow::RustShadow;
+    use super::*;
+    use crate::test_prelude::*;
 
     #[test]
-    fn bench() {
+    fn benchmark() {
         ShadowedFunction::new(HornerEvaluationDynamicLength).bench();
     }
 }

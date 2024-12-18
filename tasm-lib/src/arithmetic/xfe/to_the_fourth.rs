@@ -1,9 +1,7 @@
 use std::collections::HashMap;
 use triton_vm::prelude::*;
 
-use crate::data_type::DataType;
-use crate::library::Library;
-use crate::traits::basic_snippet::BasicSnippet;
+use crate::prelude::*;
 use crate::traits::basic_snippet::Reviewer;
 use crate::traits::basic_snippet::SignOffFingerprint;
 
@@ -64,21 +62,11 @@ impl BasicSnippet for ToTheFourth {
 
 #[cfg(test)]
 mod tests {
-    use proptest::prelude::*;
-    use proptest_arbitrary_interop::arb;
-    use rand::prelude::*;
-    use test_strategy::proptest;
-    use triton_vm::twenty_first::math::traits::ModPowU32;
+    use twenty_first::math::traits::ModPowU32;
 
     use super::*;
     use crate::arithmetic::xfe::mod_pow_u32_generic::XfeModPowU32Generic;
-    use crate::pop_encodable;
-    use crate::push_encodable;
-    use crate::snippet_bencher::BenchmarkCase;
-    use crate::test_helpers::test_rust_equivalence_given_complete_state;
-    use crate::traits::closure::Closure;
-    use crate::traits::closure::ShadowedClosure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     impl Closure for ToTheFourth {
         type Args = XFieldElement;
@@ -136,11 +124,10 @@ mod tests {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::traits::closure::ShadowedClosure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
-    fn xfe_to_the_fourth_benchmark() {
+    fn benchmark() {
         ShadowedClosure::new(ToTheFourth).bench();
     }
 }

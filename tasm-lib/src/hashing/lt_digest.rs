@@ -1,9 +1,7 @@
 use tip5::Digest;
 use triton_vm::prelude::*;
 
-use crate::data_type::DataType;
-use crate::library::Library;
-use crate::traits::basic_snippet::BasicSnippet;
+use crate::prelude::*;
 
 /// Compare two digests
 pub struct LtDigest;
@@ -146,25 +144,9 @@ impl BasicSnippet for LtDigest {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-
-    use rand::rngs::StdRng;
-    use rand::thread_rng;
-    use rand::Rng;
-    use rand::SeedableRng;
-
     use super::*;
     use crate::memory::encode_to_memory;
-    use crate::snippet_bencher::BenchmarkCase;
-    use crate::traits::function::Function;
-    use crate::traits::function::FunctionInitialState;
-    use crate::traits::function::ShadowedFunction;
-    use crate::traits::rust_shadow::RustShadow;
-
-    #[test]
-    fn lt_digest_pbt() {
-        ShadowedFunction::new(LtDigest).test()
-    }
+    use crate::test_prelude::*;
 
     impl LtDigest {
         fn prepare_state(
@@ -265,13 +247,17 @@ mod tests {
             .concat()
         }
     }
+
+    #[test]
+    fn rust_shadow() {
+        ShadowedFunction::new(LtDigest).test()
+    }
 }
 
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::traits::function::ShadowedFunction;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
     fn lt_digest_bench() {

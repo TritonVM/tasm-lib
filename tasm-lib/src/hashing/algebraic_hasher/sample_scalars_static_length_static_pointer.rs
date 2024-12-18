@@ -1,12 +1,10 @@
 use triton_vm::prelude::*;
-use triton_vm::twenty_first::math::tip5::RATE;
-use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
+use twenty_first::math::tip5::RATE;
+use twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
-use crate::data_type::DataType;
 use crate::hashing::algebraic_hasher::sample_scalars_static_length_dyn_malloc::SampleScalarsStaticLengthDynMalloc;
 use crate::hashing::squeeze_repeatedly_static_number::SqueezeRepeatedlyStaticNumber;
-use crate::library::Library;
-use crate::traits::basic_snippet::BasicSnippet;
+use crate::prelude::*;
 
 /// Squeeze the sponge to sample a given number of [`XFieldElement`]s. Puts the scalars into
 /// statically allocated memory.
@@ -14,7 +12,7 @@ use crate::traits::basic_snippet::BasicSnippet;
 /// # Panics
 ///
 /// Panics if both fields are 0 because the static allocator will be unhappy. :)
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct SampleScalarsStaticLengthStaticPointer {
     pub num_elements_to_sample: usize,
 
@@ -47,7 +45,7 @@ impl BasicSnippet for SampleScalarsStaticLengthStaticPointer {
     }
 
     fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
-        assert_eq!(10, tip5::RATE, "Code assumes Tip5's RATE is 10");
+        assert_eq!(10, RATE, "Code assumes Tip5's RATE is 10");
         assert_eq!(3, EXTENSION_DEGREE, "Code assumes extension degree 3");
         let num_squeezes =
             SampleScalarsStaticLengthDynMalloc::num_squeezes(self.num_elements_to_sample);
@@ -74,30 +72,22 @@ impl BasicSnippet for SampleScalarsStaticLengthStaticPointer {
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use itertools::Itertools;
-    use proptest_arbitrary_interop::arb;
-    use rand::prelude::*;
-    use test_strategy::proptest;
-    use triton_vm::prelude::*;
-    use triton_vm::twenty_first::util_types::sponge::Sponge;
+    use twenty_first::util_types::sponge::Sponge;
 
     use super::*;
     use crate::prelude::Tip5;
     use crate::rust_shadowing_helper_functions::array::array_get;
     use crate::rust_shadowing_helper_functions::array::insert_as_array;
     use crate::test_helpers::tasm_final_state;
-    use crate::traits::procedure::Procedure;
-    use crate::traits::procedure::ProcedureInitialState;
-    use crate::traits::procedure::ShadowedProcedure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     impl Procedure for SampleScalarsStaticLengthStaticPointer {
         fn rust_shadow(
             &self,
-            _stack: &mut Vec<BFieldElement>,
+            _: &mut Vec<BFieldElement>,
             memory: &mut std::collections::HashMap<BFieldElement, BFieldElement>,
-            _nondeterminism: &NonDeterminism,
-            _public_input: &[BFieldElement],
+            _: &NonDeterminism,
+            _: &[BFieldElement],
             sponge: &mut Option<Tip5>,
         ) -> Vec<BFieldElement> {
             let sponge = sponge.as_mut().expect("sponge must be initialized");
@@ -191,8 +181,7 @@ pub(crate) mod tests {
 #[cfg(test)]
 mod bench {
     use super::*;
-    use crate::traits::procedure::ShadowedProcedure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
     use crate::verifier::challenges::shared::conventional_challenges_pointer;
 
     #[test]

@@ -2,8 +2,8 @@ use num::Zero;
 use rand::prelude::*;
 use triton_vm::prelude::*;
 
-use crate::data_type::DataType;
 use crate::empty_stack;
+use crate::prelude::*;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::InitVmState;
 

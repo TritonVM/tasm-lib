@@ -3,7 +3,6 @@ use std::collections::HashMap;
 use triton_vm::prelude::*;
 use twenty_first::util_types::shared::bag_peaks;
 
-use crate::data_type::DataType;
 use crate::mmr::MAX_MMR_HEIGHT;
 use crate::prelude::*;
 use crate::traits::basic_snippet::Reviewer;
@@ -176,18 +175,10 @@ impl BasicSnippet for BagPeaks {
 mod tests {
     use std::collections::HashMap;
 
-    use rand::prelude::*;
     use twenty_first::math::other::random_elements;
 
     use super::*;
-    use crate::memory::encode_to_memory;
-    use crate::pop_encodable;
-    use crate::push_encodable;
-    use crate::snippet_bencher::BenchmarkCase;
-    use crate::traits::function::Function;
-    use crate::traits::function::FunctionInitialState;
-    use crate::traits::function::ShadowedFunction;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     impl BagPeaks {
         fn set_up_initial_state(&self, num_peaks: usize) -> FunctionInitialState {
@@ -244,8 +235,7 @@ mod tests {
 #[cfg(test)]
 mod benches {
     use super::BagPeaks;
-    use crate::traits::function::ShadowedFunction;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
     fn benchmark() {

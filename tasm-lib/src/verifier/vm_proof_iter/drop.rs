@@ -1,15 +1,13 @@
-use triton_vm::isa::triton_asm;
-use triton_vm::prelude::LabelledInstruction;
+use triton_vm::prelude::*;
 
-use crate::data_type::DataType;
-use crate::library::Library;
-use crate::prelude::BasicSnippet;
+use crate::prelude::*;
 use crate::verifier::vm_proof_iter::shared::vm_proof_iter_type;
 
 /// Signals the end of the lifetime of a VmProofIter
 ///
 /// This snippet crashes the VM if the VmProofIter does not end up in a sane
 /// state after a verification.
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct Drop;
 
 impl BasicSnippet for Drop {
@@ -64,32 +62,18 @@ impl BasicSnippet for Drop {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-
     use arbitrary::Arbitrary;
     use arbitrary::Unstructured;
-    use rand::rngs::StdRng;
-    use rand::Rng;
-    use rand::SeedableRng;
-    use triton_vm::prelude::bfe;
-    use triton_vm::prelude::BFieldElement;
     use triton_vm::proof_item::ProofItemVariant;
     use triton_vm::proof_stream::ProofStream;
 
     use super::*;
-    use crate::memory::encode_to_memory;
-    use crate::snippet_bencher::BenchmarkCase;
-    use crate::structure::tasm_object::TasmObject;
-    use crate::test_helpers::test_assertion_failure;
-    use crate::traits::accessor::Accessor;
-    use crate::traits::accessor::AccessorInitialState;
-    use crate::traits::accessor::ShadowedAccessor;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
     use crate::verifier::vm_proof_iter::dequeue_next_as::DequeueNextAs;
     use crate::verifier::vm_proof_iter::shared::vm_proof_iter_struct::VmProofIter;
 
     #[test]
-    fn drop_prop() {
+    fn rust_shadow() {
         ShadowedAccessor::new(Drop).test();
     }
 
@@ -207,11 +191,10 @@ mod tests {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::traits::accessor::ShadowedAccessor;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
-    fn drop_bench() {
+    fn benchmark() {
         ShadowedAccessor::new(Drop).bench();
     }
 }

@@ -1,6 +1,5 @@
 use triton_vm::prelude::*;
 
-use crate::data_type::DataType;
 use crate::prelude::*;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
@@ -115,17 +114,11 @@ impl BasicSnippet for CollinearYXfe {
 }
 
 #[cfg(test)]
-mod test {
-    use rand::prelude::*;
+mod tests {
     use twenty_first::math::polynomial::Polynomial;
 
     use super::*;
-    use crate::pop_encodable;
-    use crate::push_encodable;
-    use crate::snippet_bencher::BenchmarkCase;
-    use crate::traits::closure::Closure;
-    use crate::traits::closure::ShadowedClosure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     impl Closure for CollinearYXfe {
         type Args = (
@@ -155,12 +148,11 @@ mod test {
 
 #[cfg(test)]
 mod bench {
-    use super::CollinearYXfe;
-    use crate::traits::closure::ShadowedClosure;
-    use crate::traits::rust_shadow::RustShadow;
+    use super::*;
+    use crate::test_prelude::*;
 
     #[test]
-    fn bench_colinear_y() {
+    fn benchmark() {
         ShadowedClosure::new(CollinearYXfe).bench();
     }
 }

@@ -1,17 +1,9 @@
-use rand::prelude::*;
 use triton_vm::prelude::*;
 
-use crate::data_type::DataType;
-use crate::empty_stack;
-use crate::library::Library;
-use crate::push_encodable;
-use crate::snippet_bencher::BenchmarkCase;
-use crate::traits::basic_snippet::BasicSnippet;
-use crate::traits::procedure::Procedure;
-use crate::traits::procedure::ProcedureInitialState;
+use crate::prelude::*;
 
 /// `merkle_step` but for index of type `u64`
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct MerkleStepU64Index;
 
 impl BasicSnippet for MerkleStepU64Index {
@@ -57,94 +49,83 @@ impl BasicSnippet for MerkleStepU64Index {
     }
 }
 
-impl Procedure for MerkleStepU64Index {
-    fn rust_shadow(
-        &self,
-        stack: &mut Vec<BFieldElement>,
-        _memory: &mut std::collections::HashMap<BFieldElement, BFieldElement>,
-        nondeterminism: &NonDeterminism,
-        _public_input: &[BFieldElement],
-        _sponge: &mut Option<Tip5>,
-    ) -> Vec<BFieldElement> {
-        let stack_digest: Digest = Digest::new([
-            stack.pop().unwrap(),
-            stack.pop().unwrap(),
-            stack.pop().unwrap(),
-            stack.pop().unwrap(),
-            stack.pop().unwrap(),
-        ]);
-        let ap_digest: Digest = nondeterminism.digests[0];
-
-        let leaf_index_lo: u32 = stack.pop().unwrap().try_into().unwrap();
-        let leaf_index_hi: u32 = stack.pop().unwrap().try_into().unwrap();
-        let leaf_index: u64 = ((leaf_index_hi as u64) << 32) | (leaf_index_lo as u64);
-        let stack_digest_is_left_sibling = leaf_index % 2 == 0;
-        let (left_digest, right_digest) = if stack_digest_is_left_sibling {
-            (stack_digest, ap_digest)
-        } else {
-            (ap_digest, stack_digest)
-        };
-        let parent_digest = Tip5::hash_pair(left_digest, right_digest);
-
-        let parent_index = leaf_index / 2;
-        stack.push(BFieldElement::new(parent_index >> 32));
-        stack.push(BFieldElement::new(parent_index & u32::MAX as u64));
-
-        push_encodable(stack, &parent_digest);
-
-        vec![]
-    }
-
-    fn pseudorandom_initial_state(
-        &self,
-        seed: [u8; 32],
-        bench_case: Option<BenchmarkCase>,
-    ) -> ProcedureInitialState {
-        let mut rng = StdRng::from_seed(seed);
-
-        let (stack, nondeterminism) = match bench_case {
-            Some(BenchmarkCase::CommonCase) => self.prepare_stack_and_non_determinism(1 << 33),
-            Some(BenchmarkCase::WorstCase) => self.prepare_stack_and_non_determinism(1 << 63),
-            None => self.prepare_stack_and_non_determinism(rng.gen()),
-        };
-
-        ProcedureInitialState {
-            stack,
-            nondeterminism,
-            public_input: vec![],
-            sponge: None,
-        }
-    }
-}
-
-impl MerkleStepU64Index {
-    fn prepare_stack_and_non_determinism(
-        &self,
-        leaf_index: u64,
-    ) -> (Vec<BFieldElement>, NonDeterminism) {
-        let mut init_stack = empty_stack();
-        init_stack.push(BFieldElement::new(leaf_index >> 32));
-        init_stack.push(BFieldElement::new(leaf_index & u32::MAX as u64));
-
-        let digest: Digest = random();
-        for elem in digest.values() {
-            init_stack.push(elem);
-        }
-
-        (
-            init_stack,
-            NonDeterminism::default().with_digests(vec![random()]),
-        )
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use itertools::Itertools;
-
     use super::*;
-    use crate::traits::procedure::ShadowedProcedure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::empty_stack;
+    use crate::test_prelude::*;
+
+    impl Procedure for MerkleStepU64Index {
+        fn rust_shadow(
+            &self,
+            stack: &mut Vec<BFieldElement>,
+            _: &mut HashMap<BFieldElement, BFieldElement>,
+            nondeterminism: &NonDeterminism,
+            _: &[BFieldElement],
+            _: &mut Option<Tip5>,
+        ) -> Vec<BFieldElement> {
+            let stack_digest = pop_encodable::<Digest>(stack);
+            let ap_digest = nondeterminism.digests[0];
+
+            let leaf_index = pop_encodable::<u64>(stack);
+            let stack_digest_is_left_sibling = leaf_index % 2 == 0;
+            let (left_digest, right_digest) = if stack_digest_is_left_sibling {
+                (stack_digest, ap_digest)
+            } else {
+                (ap_digest, stack_digest)
+            };
+            let parent_digest = Tip5::hash_pair(left_digest, right_digest);
+
+            let parent_index = leaf_index / 2;
+
+            push_encodable(stack, &parent_index);
+            push_encodable(stack, &parent_digest);
+
+            vec![]
+        }
+
+        fn pseudorandom_initial_state(
+            &self,
+            seed: [u8; 32],
+            bench_case: Option<BenchmarkCase>,
+        ) -> ProcedureInitialState {
+            let mut rng = StdRng::from_seed(seed);
+
+            let (stack, nondeterminism) = match bench_case {
+                Some(BenchmarkCase::CommonCase) => self.prepare_stack_and_non_determinism(1 << 33),
+                Some(BenchmarkCase::WorstCase) => self.prepare_stack_and_non_determinism(1 << 63),
+                None => self.prepare_stack_and_non_determinism(rng.gen()),
+            };
+
+            ProcedureInitialState {
+                stack,
+                nondeterminism,
+                public_input: vec![],
+                sponge: None,
+            }
+        }
+    }
+
+    impl MerkleStepU64Index {
+        fn prepare_stack_and_non_determinism(
+            &self,
+            leaf_index: u64,
+        ) -> (Vec<BFieldElement>, NonDeterminism) {
+            let mut init_stack = empty_stack();
+            init_stack.push(BFieldElement::new(leaf_index >> 32));
+            init_stack.push(BFieldElement::new(leaf_index & u32::MAX as u64));
+
+            let digest: Digest = random();
+            for elem in digest.values() {
+                init_stack.push(elem);
+            }
+
+            (
+                init_stack,
+                NonDeterminism::default().with_digests(vec![random()]),
+            )
+        }
+    }
 
     #[test]
     fn prop() {

@@ -1,15 +1,14 @@
 use rand::prelude::*;
 use triton_vm::prelude::*;
-use triton_vm::twenty_first::prelude::U32s;
+use twenty_first::prelude::U32s;
 
-use crate::data_type::DataType;
 use crate::empty_stack;
-use crate::library::Library;
+use crate::prelude::*;
 use crate::push_encodable;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::InitVmState;
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct ShiftRight;
 
 impl DeprecatedSnippet for ShiftRight {

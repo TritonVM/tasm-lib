@@ -2,12 +2,11 @@ use std::collections::HashMap;
 
 use num::Zero;
 use num_traits::ConstOne;
-use rand::thread_rng;
 use triton_vm::prelude::*;
 use twenty_first::math::other::random_elements;
 
-use crate::data_type::DataType;
 use crate::list::LIST_METADATA_SIZE;
+use crate::prelude::*;
 
 /// Load a list from memory returning each element as a list of `BFieldElement`s.
 pub fn load_list_unstructured(
@@ -75,7 +74,7 @@ pub fn insert_random_list(
     list_length: usize,
     memory: &mut HashMap<BFieldElement, BFieldElement>,
 ) {
-    let list = element_type.random_list(&mut thread_rng(), list_length);
+    let list = element_type.random_list(&mut rand::thread_rng(), list_length);
     let indexed_list = list
         .into_iter()
         .enumerate()

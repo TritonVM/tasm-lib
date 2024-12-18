@@ -1,8 +1,6 @@
 use triton_vm::prelude::*;
 
-use crate::data_type::DataType;
-use crate::library::Library;
-use crate::traits::basic_snippet::BasicSnippet;
+use crate::prelude::*;
 
 /// Return own program digest. Must be called with a clean stack.
 ///
@@ -10,7 +8,7 @@ use crate::traits::basic_snippet::BasicSnippet;
 /// Must be called as the first function in the program, as
 /// it assumes that the bottom of the stack (stack[15..=11])
 /// contains the digest of the running program
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct OwnProgramDigest;
 
 impl BasicSnippet for OwnProgramDigest {

@@ -18,7 +18,6 @@ use crate::traits::rust_shadow::RustShadow;
 use crate::InitVmState;
 use crate::RustShadowOutputState;
 
-#[allow(dead_code)]
 pub fn test_rust_equivalence_multiple_deprecated<T: DeprecatedSnippet>(
     snippet_struct: &T,
     export_snippet: bool,
@@ -49,7 +48,6 @@ pub fn test_rust_equivalence_multiple_deprecated<T: DeprecatedSnippet>(
     vm_output_states
 }
 
-#[allow(dead_code)]
 pub fn test_rust_equivalence_given_execution_state_deprecated<T: DeprecatedSnippet>(
     snippet_struct: &T,
     execution_state: InitVmState,

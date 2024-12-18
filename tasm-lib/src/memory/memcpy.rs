@@ -9,7 +9,7 @@ use crate::empty_stack;
 use crate::structure::tasm_object::DEFAULT_MAX_DYN_FIELD_SIZE;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct MemCpy; // TODO: add field `static_length : Option<usize>` to avoid loop
 
 impl MemCpy {

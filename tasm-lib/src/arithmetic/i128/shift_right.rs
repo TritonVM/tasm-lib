@@ -3,9 +3,7 @@ use triton_vm::prelude::*;
 use crate::arithmetic::u32::isu32::Isu32;
 use crate::arithmetic::u32::shiftleft::Shiftleft;
 use crate::arithmetic::u32::shiftright::Shiftright;
-use crate::data_type::DataType;
-use crate::library::Library;
-use crate::prelude::BasicSnippet;
+use crate::prelude::*;
 
 /// Right-shift for 128-bit integers AKA [right-shift for `i128`][shr].
 ///
@@ -244,20 +242,9 @@ impl BasicSnippet for ShiftRight {
 }
 
 #[cfg(test)]
-mod test {
-    use itertools::Itertools;
-    use proptest_arbitrary_interop::arb;
-    use rand::prelude::*;
-    use test_strategy::proptest;
-
+mod tests {
     use super::*;
-    use crate::pop_encodable;
-    use crate::push_encodable;
-    use crate::snippet_bencher::BenchmarkCase;
-    use crate::test_helpers::test_rust_equivalence_given_complete_state;
-    use crate::traits::closure::Closure;
-    use crate::traits::closure::ShadowedClosure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     impl ShiftRight {
         fn assert_expected_shift_behavior(&self, arg: i128, shamt: u32) {
@@ -324,8 +311,7 @@ mod test {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::traits::closure::ShadowedClosure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
     fn benchmark() {

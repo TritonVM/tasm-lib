@@ -2,13 +2,13 @@ use num_traits::One;
 use rand::prelude::*;
 use triton_vm::prelude::*;
 
-use crate::data_type::DataType;
 use crate::list::contiguous_list::get_length::DummyOuterDataStructure;
 use crate::list::contiguous_list::get_length::GetLength;
 use crate::list::new::New;
 use crate::list::set::Set;
 use crate::list::set_length::SetLength;
 use crate::memory::dyn_malloc;
+use crate::prelude::*;
 use crate::rust_shadowing_helper_functions;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 
@@ -41,7 +41,7 @@ impl DeprecatedSnippet for GetPointerList {
         0
     }
 
-    fn function_code(&self, library: &mut crate::library::Library) -> String {
+    fn function_code(&self, library: &mut Library) -> String {
         let entrypoint = self.entrypoint_name();
 
         let data_type = DataType::VoidPointer;

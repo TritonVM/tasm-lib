@@ -1,8 +1,6 @@
 use triton_vm::prelude::*;
 
-use crate::data_type::DataType;
-use crate::library::Library;
-use crate::traits::basic_snippet::BasicSnippet;
+use crate::prelude::*;
 
 pub struct ComputeTerminalFromDigestInitialIsOne;
 
@@ -92,17 +90,11 @@ impl BasicSnippet for ComputeTerminalFromDigestInitialIsOne {
 
 #[cfg(test)]
 mod tests {
-    use rand::prelude::*;
     use triton_vm::air::cross_table_argument::CrossTableArg;
     use triton_vm::air::cross_table_argument::EvalArg;
 
     use super::*;
-    use crate::pop_encodable;
-    use crate::push_encodable;
-    use crate::snippet_bencher::BenchmarkCase;
-    use crate::traits::closure::Closure;
-    use crate::traits::closure::ShadowedClosure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     impl Closure for ComputeTerminalFromDigestInitialIsOne {
         type Args = (XFieldElement, Digest);
@@ -128,8 +120,7 @@ mod tests {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::traits::closure::ShadowedClosure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
     fn benchmark() {

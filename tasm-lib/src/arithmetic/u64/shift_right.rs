@@ -2,7 +2,6 @@ use std::collections::HashMap;
 
 use triton_vm::prelude::*;
 
-use crate::data_type::DataType;
 use crate::prelude::*;
 use crate::traits::basic_snippet::Reviewer;
 use crate::traits::basic_snippet::SignOffFingerprint;
@@ -146,19 +145,8 @@ impl BasicSnippet for ShiftRight {
 
 #[cfg(test)]
 mod tests {
-    use rand::prelude::*;
-    use test_strategy::proptest;
-
     use super::*;
-    use crate::pop_encodable;
-    use crate::push_encodable;
-    use crate::snippet_bencher::BenchmarkCase;
-    use crate::test_helpers::test_assertion_failure;
-    use crate::test_helpers::test_rust_equivalence_given_complete_state;
-    use crate::traits::closure::Closure;
-    use crate::traits::closure::ShadowedClosure;
-    use crate::traits::rust_shadow::RustShadow;
-    use crate::InitVmState;
+    use crate::test_prelude::*;
 
     impl ShiftRight {
         pub fn assert_expected_shift_right_behavior(&self, shift_amount: u32, arg: u64) {
@@ -234,8 +222,7 @@ mod tests {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::traits::closure::ShadowedClosure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
     fn benchmark() {

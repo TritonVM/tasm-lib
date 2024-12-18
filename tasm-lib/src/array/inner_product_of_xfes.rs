@@ -1,9 +1,7 @@
 use triton_vm::prelude::*;
 
 use crate::data_type::ArrayType;
-use crate::data_type::DataType;
-use crate::library::Library;
-use crate::traits::basic_snippet::BasicSnippet;
+use crate::prelude::*;
 
 pub struct InnerProductOfXfes {
     pub length: usize,
@@ -69,24 +67,14 @@ impl BasicSnippet for InnerProductOfXfes {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-
-    use itertools::Itertools;
     use num::Zero;
     use num_traits::ConstZero;
-    use rand::prelude::*;
-    use triton_vm::twenty_first::math::b_field_element::BFieldElement;
-    use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
+    use twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
     use super::*;
     use crate::rust_shadowing_helper_functions::array::insert_as_array;
     use crate::rust_shadowing_helper_functions::array::insert_random_array;
-    use crate::snippet_bencher::BenchmarkCase;
-    use crate::test_helpers::test_rust_equivalence_given_complete_state;
-    use crate::traits::function::Function;
-    use crate::traits::function::FunctionInitialState;
-    use crate::traits::function::ShadowedFunction;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     impl Function for InnerProductOfXfes {
         fn rust_shadow(
@@ -267,8 +255,7 @@ mod benches {
     use triton_vm::table::master_table::MasterTable;
 
     use super::*;
-    use crate::traits::function::ShadowedFunction;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
     fn inner_product_xfes_bench_100() {

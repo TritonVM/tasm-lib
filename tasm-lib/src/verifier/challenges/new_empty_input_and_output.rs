@@ -3,12 +3,10 @@ use triton_vm::air::challenge_id::ChallengeId;
 use triton_vm::air::cross_table_argument::CrossTableArg;
 use triton_vm::air::cross_table_argument::EvalArg;
 use triton_vm::prelude::*;
-use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
+use twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
-use crate::data_type::DataType;
 use crate::hashing::algebraic_hasher::sample_scalars_static_length_static_pointer::SampleScalarsStaticLengthStaticPointer;
-use crate::library::Library;
-use crate::traits::basic_snippet::BasicSnippet;
+use crate::prelude::*;
 use crate::verifier::challenges::shared::challenges_data_type;
 use crate::verifier::eval_arg::compute_terminal_const_sized_static_symbols::ComputeTerminalConstSizedStaticSymbols;
 use crate::verifier::eval_arg::compute_terminal_from_digest::ComputeTerminalFromDigestInitialIsOne;
@@ -156,18 +154,11 @@ impl BasicSnippet for NewEmptyInputAndOutput {
 
 #[cfg(test)]
 mod tests {
-    use itertools::Itertools;
-    use rand::prelude::*;
     use triton_vm::challenges::Challenges;
 
     use super::*;
-    use crate::prelude::Tip5;
     use crate::rust_shadowing_helper_functions::array::insert_as_array;
-    use crate::traits::basic_snippet::BasicSnippet;
-    use crate::traits::procedure::Procedure;
-    use crate::traits::procedure::ProcedureInitialState;
-    use crate::traits::procedure::ShadowedProcedure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
     use crate::verifier::challenges::shared;
 
     impl Procedure for NewEmptyInputAndOutput {
@@ -175,23 +166,17 @@ mod tests {
             &self,
             stack: &mut Vec<BFieldElement>,
             memory: &mut std::collections::HashMap<BFieldElement, BFieldElement>,
-            _nondeterminism: &NonDeterminism,
-            _public_input: &[BFieldElement],
+            _: &NonDeterminism,
+            _: &[BFieldElement],
             sponge: &mut Option<Tip5>,
         ) -> Vec<BFieldElement> {
             let sponge = sponge.as_mut().expect("sponge must be initialized");
-            let program_digest = Digest::new([
-                stack.pop().unwrap(),
-                stack.pop().unwrap(),
-                stack.pop().unwrap(),
-                stack.pop().unwrap(),
-                stack.pop().unwrap(),
-            ]);
+            let program_digest = pop_encodable(stack);
 
             let claim = Claim::new(program_digest);
             let challenges = sponge.sample_scalars(self.num_of_fiat_shamir_challenges);
             let challenges = Challenges::new(challenges, &claim);
-            println!(
+            dbg!(
                 "Rust-shadowing challenges: {}",
                 challenges.challenges.iter().join("\n")
             );
@@ -210,7 +195,7 @@ mod tests {
         fn pseudorandom_initial_state(
             &self,
             seed: [u8; 32],
-            _bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
+            _: Option<BenchmarkCase>,
         ) -> ProcedureInitialState {
             let mut rng = StdRng::from_seed(seed);
             let program_digest: Digest = rng.gen();
@@ -243,12 +228,11 @@ mod benches {
     use triton_vm::challenges::Challenges;
 
     use super::*;
-    use crate::traits::procedure::ShadowedProcedure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
     use crate::verifier::challenges::shared;
 
     #[test]
-    fn bench_for_challenges_calc_for_recufier() {
+    fn benchmark() {
         const NUM_OF_CLAIM_DERIVED_CHALLENGES: usize = 4;
         ShadowedProcedure::new(NewEmptyInputAndOutput {
             num_of_claim_derived_challenges: 4,

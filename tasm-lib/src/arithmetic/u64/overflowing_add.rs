@@ -1,9 +1,7 @@
 use std::collections::HashMap;
 use triton_vm::prelude::*;
 
-use crate::data_type::DataType;
-use crate::library::Library;
-use crate::traits::basic_snippet::BasicSnippet;
+use crate::prelude::*;
 use crate::traits::basic_snippet::Reviewer;
 use crate::traits::basic_snippet::SignOffFingerprint;
 
@@ -91,16 +89,8 @@ impl BasicSnippet for OverflowingAdd {
 
 #[cfg(test)]
 pub mod tests {
-    use itertools::Itertools;
-    use rand::prelude::*;
-
     use super::*;
-    use crate::pop_encodable;
-    use crate::push_encodable;
-    use crate::snippet_bencher::BenchmarkCase;
-    use crate::traits::closure::Closure;
-    use crate::traits::closure::ShadowedClosure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     impl OverflowingAdd {
         pub fn corner_case_points() -> Vec<u64> {
@@ -155,11 +145,10 @@ pub mod tests {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::traits::closure::ShadowedClosure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
-    fn u64_overflowing_add_bench() {
+    fn benchmark() {
         ShadowedClosure::new(OverflowingAdd).bench()
     }
 }

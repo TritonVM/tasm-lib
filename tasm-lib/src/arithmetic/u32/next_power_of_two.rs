@@ -2,9 +2,7 @@ use std::collections::HashMap;
 
 use triton_vm::prelude::*;
 
-use crate::data_type::DataType;
-use crate::library::Library;
-use crate::traits::basic_snippet::BasicSnippet;
+use crate::prelude::*;
 use crate::traits::basic_snippet::Reviewer;
 use crate::traits::basic_snippet::SignOffFingerprint;
 
@@ -117,17 +115,8 @@ impl BasicSnippet for NextPowerOfTwo {
 
 #[cfg(test)]
 mod tests {
-    use rand::prelude::*;
-
     use super::*;
-    use crate::pop_encodable;
-    use crate::push_encodable;
-    use crate::snippet_bencher::BenchmarkCase;
-    use crate::test_helpers::test_assertion_failure;
-    use crate::traits::closure::Closure;
-    use crate::traits::closure::ShadowedClosure;
-    use crate::traits::rust_shadow::RustShadow;
-    use crate::InitVmState;
+    use crate::test_prelude::*;
 
     impl Closure for NextPowerOfTwo {
         type Args = u32;
@@ -186,11 +175,10 @@ mod tests {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::traits::closure::ShadowedClosure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
-    fn npo2_u32_bench() {
+    fn benchmark() {
         ShadowedClosure::new(NextPowerOfTwo).bench()
     }
 }

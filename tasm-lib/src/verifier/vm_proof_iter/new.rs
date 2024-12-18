@@ -1,8 +1,6 @@
 use triton_vm::prelude::*;
 
-use crate::data_type::DataType;
-use crate::memory::dyn_malloc::DynMalloc;
-use crate::traits::basic_snippet::BasicSnippet;
+use crate::prelude::*;
 use crate::verifier::stark_verify::NUM_PROOF_ITEMS_EXCLUDING_FRI;
 use crate::verifier::stark_verify::NUM_PROOF_ITEMS_PER_FRI_ROUND;
 use crate::verifier::vm_proof_iter::shared::vm_proof_iter_type;
@@ -12,6 +10,7 @@ use crate::verifier::vm_proof_iter::shared::vm_proof_iter_type;
 /// A `VmProofIter` points to the next proof item in memory to be read in
 /// verifying a proof. It also counts how many proof items have been read and
 /// records the starting point and indicated length of the proof.
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct New;
 
 impl New {
@@ -41,7 +40,7 @@ impl BasicSnippet for New {
         "tasmlib_verifier_vm_proof_iter_new".to_owned()
     }
 
-    fn code(&self, library: &mut crate::library::Library) -> Vec<LabelledInstruction> {
+    fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
         let entrypoint = self.entrypoint();
         let dyn_malloc = library.import(Box::new(DynMalloc));
 
@@ -136,26 +135,14 @@ impl BasicSnippet for New {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-
     use arbitrary::Arbitrary;
     use arbitrary::Unstructured;
-    use rand::rngs::StdRng;
-    use rand::Rng;
-    use rand::RngCore;
-    use rand::SeedableRng;
     use triton_vm::proof_item::ProofItem;
     use triton_vm::proof_stream::ProofStream;
 
     use super::*;
-    use crate::memory::encode_to_memory;
-    use crate::prelude::TasmObject;
     use crate::rust_shadowing_helper_functions;
-    use crate::snippet_bencher::BenchmarkCase;
-    use crate::traits::function::Function;
-    use crate::traits::function::FunctionInitialState;
-    use crate::traits::function::ShadowedFunction;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
     use crate::verifier::vm_proof_iter::shared::vm_proof_iter_struct::VmProofIter;
 
     #[test]

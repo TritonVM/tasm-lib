@@ -1,11 +1,9 @@
 use triton_vm::prelude::*;
-use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
+use twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
-use crate::data_type::DataType;
-use crate::library::Library;
-use crate::traits::basic_snippet::BasicSnippet;
+use crate::prelude::*;
 
-/// Calculate the sum of the `BFieldElement`s in a list
+/// Calculate the sum of the `XFieldElement`s in a list
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash)]
 #[allow(dead_code)]
 struct SumOfXfes;
@@ -183,21 +181,13 @@ impl BasicSnippet for SumOfXfes {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-
-    use itertools::Itertools;
-    use rand::prelude::*;
-    use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
+    use twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
     use super::*;
     use crate::rust_shadowing_helper_functions::list::insert_random_list;
     use crate::rust_shadowing_helper_functions::list::load_list_with_copy_elements;
-    use crate::snippet_bencher::BenchmarkCase;
     use crate::test_helpers::test_rust_equivalence_given_complete_state;
-    use crate::traits::function::Function;
-    use crate::traits::function::FunctionInitialState;
-    use crate::traits::function::ShadowedFunction;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     impl Function for SumOfXfes {
         fn rust_shadow(
@@ -223,7 +213,7 @@ mod tests {
             bench_case: Option<BenchmarkCase>,
         ) -> FunctionInitialState {
             let mut rng = StdRng::from_seed(seed);
-            let list_pointer = BFieldElement::new(rng.gen());
+            let list_pointer = rng.gen();
             let list_length = match bench_case {
                 Some(BenchmarkCase::CommonCase) => 104,
                 Some(BenchmarkCase::WorstCase) => 1004,
@@ -312,11 +302,10 @@ mod tests {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::traits::function::ShadowedFunction;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
-    fn sum_xfes_bench() {
+    fn benchmark() {
         ShadowedFunction::new(SumOfXfes).bench();
     }
 }

@@ -5,9 +5,8 @@ use num::One;
 use rand::prelude::*;
 use triton_vm::prelude::*;
 
-use crate::data_type::DataType;
 use crate::empty_stack;
-use crate::library::Library;
+use crate::prelude::*;
 use crate::rust_shadowing_helper_functions::list::untyped_insert_random_list;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::InitVmState;
@@ -54,7 +53,7 @@ impl DeprecatedSnippet for Length {
         0
     }
 
-    fn function_code(&self, _library: &mut Library) -> String {
+    fn function_code(&self, _: &mut Library) -> String {
         let entry_point = self.entrypoint_name();
         // BEFORE: _ *list
         // AFTER:  _ list_length_u32

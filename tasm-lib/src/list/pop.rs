@@ -5,9 +5,8 @@ use num::One;
 use rand::prelude::*;
 use triton_vm::prelude::*;
 
-use crate::data_type::DataType;
 use crate::empty_stack;
-use crate::library::Library;
+use crate::prelude::*;
 use crate::rust_shadowing_helper_functions::list::untyped_insert_random_list;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::InitVmState;
@@ -182,7 +181,6 @@ fn prepare_state(element_type: &DataType) -> InitVmState {
 #[cfg(test)]
 mod tests {
     use num::Zero;
-    use rand::prelude::*;
 
     use super::*;
     use crate::test_helpers::test_rust_equivalence_given_input_values_deprecated;

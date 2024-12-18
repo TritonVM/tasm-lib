@@ -5,14 +5,11 @@ use triton_vm::proof_item::ProofItemVariant;
 use triton_vm::table::AuxiliaryRow;
 use triton_vm::table::MainRow;
 use triton_vm::table::QuotientSegments;
-use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
+use twenty_first::math::x_field_element::EXTENSION_DEGREE;
 use twenty_first::prelude::Polynomial;
 
-use crate::data_type::DataType;
 use crate::hashing::sponge_hasher::pad_and_absorb_all::PadAndAbsorbAll;
-use crate::library::Library;
-use crate::structure::tasm_object::TasmObject;
-use crate::traits::basic_snippet::BasicSnippet;
+use crate::prelude::*;
 
 const MAX_SIZE_FOR_DYNAMICALLY_SIZED_PROOF_ITEMS: u32 = 1u32 << 22;
 
@@ -370,36 +367,24 @@ impl BasicSnippet for DequeueNextAs {
 }
 
 #[cfg(test)]
-mod test {
-    use std::collections::HashMap;
-
+mod tests {
     use arbitrary::Arbitrary;
     use arbitrary::Unstructured;
-    use itertools::Itertools;
     use num_traits::One;
     use num_traits::Zero;
-    use proptest_arbitrary_interop::arb;
-    use rand::prelude::*;
     use strum::IntoEnumIterator;
-    use test_strategy::proptest;
     use triton_vm::proof_item::ProofItem;
     use triton_vm::proof_stream::ProofStream;
     use triton_vm::table::master_table::MasterMainTable;
     use triton_vm::table::master_table::MasterTable;
-    use triton_vm::twenty_first::math::polynomial::Polynomial;
-    use triton_vm::twenty_first::prelude::Sponge;
+    use twenty_first::prelude::*;
 
     use super::*;
     use crate::empty_stack;
     use crate::execute_with_terminal_state;
-    use crate::memory::encode_to_memory;
     use crate::rust_shadowing_helper_functions::dyn_malloc::dynamic_allocator;
-    use crate::snippet_bencher::BenchmarkCase;
     use crate::structure::tasm_object::decode_from_memory_with_size;
-    use crate::test_helpers::test_rust_equivalence_given_complete_state;
-    use crate::traits::procedure::Procedure;
-    use crate::traits::procedure::ProcedureInitialState;
-    use crate::traits::procedure::ShadowedProcedure;
+    use crate::test_prelude::*;
     use crate::verifier::vm_proof_iter::shared::vm_proof_iter_struct::VmProofIter;
 
     #[derive(Debug)]

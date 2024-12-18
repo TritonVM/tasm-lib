@@ -1,6 +1,5 @@
 use triton_vm::prelude::*;
 
-use crate::data_type::DataType;
 use crate::prelude::*;
 
 /// Test Less-Than for `U128`s.
@@ -71,20 +70,10 @@ impl BasicSnippet for Lt {
 }
 
 #[cfg(test)]
-mod test {
-    use itertools::Itertools;
-    use rand::prelude::*;
-    use test_strategy::proptest;
-
+mod tests {
     use super::*;
-    use crate::pop_encodable;
-    use crate::push_encodable;
-    use crate::snippet_bencher::BenchmarkCase;
     use crate::test_helpers::test_rust_equivalence_given_execution_state;
-    use crate::traits::closure::Closure;
-    use crate::traits::closure::ShadowedClosure;
-    use crate::traits::rust_shadow::RustShadow;
-    use crate::InitVmState;
+    use crate::test_prelude::*;
 
     impl Closure for Lt {
         type Args = (u128, u128);
@@ -165,11 +154,10 @@ mod test {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::traits::closure::ShadowedClosure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
-    fn lt_u128_benchmark() {
+    fn benchmark() {
         ShadowedClosure::new(Lt).bench()
     }
 }

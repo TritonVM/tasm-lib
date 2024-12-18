@@ -3,7 +3,6 @@ use std::collections::HashMap;
 use triton_vm::prelude::*;
 
 use crate::arithmetic::u64::overflowing_sub::OverflowingSub;
-use crate::data_type::DataType;
 use crate::prelude::*;
 use crate::traits::basic_snippet::Reviewer;
 use crate::traits::basic_snippet::SignOffFingerprint;
@@ -28,7 +27,7 @@ use crate::traits::basic_snippet::SignOffFingerprint;
 /// - the output is properly [`BFieldCodec`] encoded
 ///
 /// [sub]: u64::wrapping_sub
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct WrappingSub;
 
 impl BasicSnippet for WrappingSub {
@@ -72,12 +71,7 @@ impl BasicSnippet for WrappingSub {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::pop_encodable;
-    use crate::push_encodable;
-    use crate::snippet_bencher::BenchmarkCase;
-    use crate::traits::closure::Closure;
-    use crate::traits::closure::ShadowedClosure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     impl Closure for WrappingSub {
         type Args = <OverflowingSub as Closure>::Args;
@@ -111,8 +105,7 @@ mod tests {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::traits::closure::ShadowedClosure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
     fn benchmark() {

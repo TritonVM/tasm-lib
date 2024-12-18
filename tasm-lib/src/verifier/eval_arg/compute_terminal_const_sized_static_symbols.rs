@@ -1,7 +1,6 @@
 use itertools::Itertools;
 use triton_vm::prelude::*;
 
-use crate::data_type::DataType;
 use crate::data_type::Literal;
 use crate::prelude::*;
 
@@ -95,27 +94,18 @@ impl<const N: usize> BasicSnippet for ComputeTerminalConstSizedStaticSymbols<N> 
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-
     use num::One;
     use num::Zero;
     use proptest_arbitrary_interop::arb;
-    use rand::prelude::*;
     use test_strategy::proptest;
     use triton_vm::air::cross_table_argument::CrossTableArg;
     use triton_vm::air::cross_table_argument::EvalArg;
 
     use super::*;
-    use crate::pop_encodable;
-    use crate::push_encodable;
     use crate::rust_shadowing_helper_functions::array::insert_as_array;
     use crate::rust_shadowing_helper_functions::list::list_insert;
-    use crate::snippet_bencher::BenchmarkCase;
     use crate::test_helpers::tasm_final_state;
-    use crate::traits::closure::Closure;
-    use crate::traits::closure::ShadowedClosure;
-    use crate::traits::function::ShadowedFunction;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
     use crate::verifier::eval_arg::compute_terminal_const_sized_dynamic_symbols_reversed::ComputeTerminalConstSizedDynamicSymbolsReversed;
     use crate::verifier::eval_arg::compute_terminal_dyn_sized_dynamic_symbols::ComputeTerminalDynSizedDynamicSymbols;
     use crate::verifier::eval_arg::compute_terminal_from_digest::ComputeTerminalFromDigestInitialIsOne;
@@ -410,19 +400,13 @@ mod tests {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::traits::closure::ShadowedClosure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
-    fn compute_terminal_lookup_table() {
-        // Don't make any of these parameters random, as that will generate a new benchmark file
+    fn benchmark() {
         ShadowedClosure::new(ComputeTerminalConstSizedStaticSymbols::<256> {
-            symbols: [BFieldElement::new(100); 256],
-            initial: XFieldElement::new([
-                BFieldElement::new(1 << 35),
-                BFieldElement::new(1 << 4),
-                BFieldElement::new(1 << 44),
-            ]),
+            symbols: bfe_array![100; 256],
+            initial: xfe!([1_u64 << 35, 1 << 4, 1_u64 << 44]),
         })
         .bench()
     }

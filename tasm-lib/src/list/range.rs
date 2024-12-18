@@ -1,13 +1,13 @@
 use std::collections::HashMap;
 
 use itertools::Itertools;
-use tasm_lib::list::LIST_METADATA_SIZE;
 use triton_vm::prelude::*;
 
-use crate::data_type::DataType;
 use crate::empty_stack;
 use crate::list::new::New;
 use crate::list::set_length::SetLength;
+use crate::list::LIST_METADATA_SIZE;
+use crate::prelude::DataType;
 use crate::rust_shadowing_helper_functions;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::InitVmState;

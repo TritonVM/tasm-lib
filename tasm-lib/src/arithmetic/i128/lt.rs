@@ -1,10 +1,7 @@
-use triton_vm::isa::triton_asm;
-use triton_vm::prelude::LabelledInstruction;
+use triton_vm::prelude::*;
 
 use crate::arithmetic;
-use crate::data_type::DataType;
-use crate::library::Library;
-use crate::prelude::BasicSnippet;
+use crate::prelude::*;
 
 /// Less-than operator for `i128`
 ///
@@ -83,28 +80,12 @@ impl BasicSnippet for Lt {
 mod tests {
     use std::collections::HashSet;
 
-    use itertools::Itertools;
-    use proptest_arbitrary_interop::arb;
-    use rand::random;
-    use rand::rngs::StdRng;
-    use rand::Rng;
-    use rand::SeedableRng;
-    use test_strategy::proptest;
     use triton_vm::error::InstructionError;
     use triton_vm::error::OpStackError;
-    use triton_vm::prelude::BFieldElement;
-    use triton_vm::vm::NonDeterminism;
 
     use super::*;
-    use crate::pop_encodable;
-    use crate::push_encodable;
-    use crate::snippet_bencher::BenchmarkCase;
     use crate::test_helpers::negative_test;
-    use crate::test_helpers::test_rust_equivalence_given_complete_state;
-    use crate::traits::closure::Closure;
-    use crate::traits::closure::ShadowedClosure;
-    use crate::traits::rust_shadow::RustShadow;
-    use crate::InitVmState;
+    use crate::test_prelude::*;
 
     impl Closure for Lt {
         type Args = (i128, i128);
@@ -234,11 +215,10 @@ mod tests {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::traits::closure::ShadowedClosure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
-    fn lt_i128_benchmark() {
+    fn benchmark() {
         ShadowedClosure::new(Lt).bench();
     }
 }

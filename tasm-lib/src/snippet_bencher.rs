@@ -45,7 +45,6 @@ impl BenchmarkResult {
     }
 }
 
-#[allow(dead_code)]
 pub fn benchmark_snippet_deprecated<T: DeprecatedSnippet>(snippet: T) -> Vec<NamedBenchmarkResult> {
     let mut benchmarks = Vec::with_capacity(2);
 
@@ -67,7 +66,6 @@ pub fn benchmark_snippet_deprecated<T: DeprecatedSnippet>(snippet: T) -> Vec<Nam
     benchmarks
 }
 
-#[allow(dead_code)]
 pub fn write_benchmarks(benchmarks: Vec<NamedBenchmarkResult>) {
     let mut path = PathBuf::new();
     path.push("benchmarks");
@@ -86,7 +84,6 @@ pub fn write_benchmarks(benchmarks: Vec<NamedBenchmarkResult>) {
     to_writer_pretty(output, &benchmarks).expect("write json to file");
 }
 
-#[allow(dead_code)]
 pub fn bench_and_write<T: DeprecatedSnippet>(snippet: T) {
     write_benchmarks(benchmark_snippet_deprecated(snippet));
 }

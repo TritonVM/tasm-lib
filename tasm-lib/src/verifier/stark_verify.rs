@@ -7,7 +7,7 @@ use triton_vm::table::master_table::MasterAuxTable;
 use triton_vm::table::master_table::MasterMainTable;
 use triton_vm::table::master_table::MasterTable;
 use triton_vm::table::NUM_QUOTIENT_SEGMENTS;
-use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
+use twenty_first::math::x_field_element::EXTENSION_DEGREE;
 use twenty_first::prelude::MerkleTreeInclusionProof;
 
 use super::master_table::air_constraint_evaluation::AirConstraintEvaluation;
@@ -17,12 +17,10 @@ use crate::array::horner_evaluation::HornerEvaluation;
 use crate::array::inner_product_of_three_rows_with_weights::InnerProductOfThreeRowsWithWeights;
 use crate::array::inner_product_of_three_rows_with_weights::MainElementType;
 use crate::array::inner_product_of_xfes::InnerProductOfXfes;
-use crate::data_type::DataType;
 use crate::field;
 use crate::hashing::algebraic_hasher::sample_scalar_one::SampleScalarOne;
 use crate::hashing::algebraic_hasher::sample_scalars_static_length_dyn_malloc::SampleScalarsStaticLengthDynMalloc;
-use crate::library::Library;
-use crate::traits::basic_snippet::BasicSnippet;
+use crate::prelude::*;
 use crate::verifier::challenges;
 use crate::verifier::claim::instantiate_fiat_shamir_with_claim::InstantiateFiatShamirWithClaim;
 use crate::verifier::claim::shared::claim_type;
@@ -51,8 +49,7 @@ pub(crate) const NUM_PROOF_ITEMS_EXCLUDING_FRI: usize = 15;
 /// Stack signature:
 ///  - BEFORE: _ *claim *proof
 ///  - AFTER:  _
-#[allow(dead_code)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct StarkVerify {
     stark: Stark,
     memory_layout: MemoryLayout,
@@ -1484,7 +1481,7 @@ pub mod tests {
         let stark_snippet = StarkVerify::new_with_dynamic_layout(stark);
 
         let mut library = Library::new();
-        let stark_verify = library.import(Box::new(stark_snippet.clone()));
+        let stark_verify = library.import(Box::new(stark_snippet));
         let proof1 = field!(TwoProofs::proof1);
         let proof2 = field!(TwoProofs::proof2);
         let claim1 = field!(TwoProofs::claim1);

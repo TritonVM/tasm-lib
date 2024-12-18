@@ -2,11 +2,9 @@ use triton_vm::prelude::*;
 
 use super::leaf_index_to_mt_index_and_peak_index::MmrLeafIndexToMtIndexAndPeakIndex;
 use crate::arithmetic::u64::eq::Eq;
-use crate::data_type::DataType;
 use crate::hashing::merkle_step_u64_index::MerkleStepU64Index;
-use crate::library::Library;
 use crate::list::get::Get;
-use crate::traits::basic_snippet::BasicSnippet;
+use crate::prelude::*;
 
 /// Verify that a digest is a leaf in the MMR accumulator. Takes both authentication path and
 /// leaf index from secret-in. Crashes the VM if the authentication fails.
@@ -105,24 +103,8 @@ impl BasicSnippet for MmrVerifyFromSecretInSecretLeafIndex {
 }
 
 #[cfg(test)]
-mod benches {
-    use super::*;
-    use crate::traits::procedure::ShadowedProcedure;
-    use crate::traits::rust_shadow::RustShadow;
-
-    #[test]
-    fn verify_from_secret_in_benchmark() {
-        ShadowedProcedure::new(MmrVerifyFromSecretInSecretLeafIndex).bench();
-    }
-}
-
-#[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-
-    use itertools::Itertools;
     use num::One;
-    use rand::prelude::*;
     use tasm_lib::test_helpers::test_assertion_failure;
     use twenty_first::math::other::random_elements;
     use twenty_first::util_types::mmr::mmr_accumulator::util::mmra_with_mps;
@@ -132,14 +114,9 @@ mod tests {
     use twenty_first::util_types::mmr::shared_basic::leaf_index_to_mt_index_and_peak_index;
 
     use super::*;
-    use crate::prelude::Tip5;
     use crate::rust_shadowing_helper_functions;
-    use crate::snippet_bencher::BenchmarkCase;
     use crate::test_helpers::test_rust_equivalence_given_complete_state;
-    use crate::traits::procedure::Procedure;
-    use crate::traits::procedure::ProcedureInitialState;
-    use crate::traits::procedure::ShadowedProcedure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
     fn prop() {
@@ -552,5 +529,16 @@ mod tests {
                 ..Default::default()
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use crate::test_prelude::*;
+
+    #[test]
+    fn benchmark() {
+        ShadowedProcedure::new(MmrVerifyFromSecretInSecretLeafIndex).bench();
     }
 }

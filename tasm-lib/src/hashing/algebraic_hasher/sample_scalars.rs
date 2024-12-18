@@ -1,14 +1,13 @@
 use triton_vm::prelude::*;
-use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
+use twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
-use crate::data_type::DataType;
 use crate::hashing::squeeze_repeatedly::SqueezeRepeatedly;
 use crate::list::new::New;
 use crate::list::set_length::SetLength;
-use crate::traits::basic_snippet::BasicSnippet;
+use crate::prelude::*;
 
 /// Squeeze the sponge to sample a given number of `XFieldElement`s.
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct SampleScalars;
 
 impl BasicSnippet for SampleScalars {
@@ -27,7 +26,7 @@ impl BasicSnippet for SampleScalars {
         "tasmlib_hashing_algebraic_hasher_sample_scalars".to_string()
     }
 
-    fn code(&self, library: &mut crate::library::Library) -> Vec<LabelledInstruction> {
+    fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
         assert_eq!(10, tip5::RATE, "Code assumes Tip5's RATE is 10");
         assert_eq!(3, EXTENSION_DEGREE, "Code assumes extension degree 3");
 
@@ -80,34 +79,23 @@ impl BasicSnippet for SampleScalars {
 }
 
 #[cfg(test)]
-mod test {
-    use std::collections::HashMap;
-
-    use itertools::Itertools;
-    use rand::prelude::*;
-    use triton_vm::twenty_first::prelude::*;
+mod tests {
+    use twenty_first::prelude::*;
 
     use super::*;
     use crate::empty_stack;
     use crate::memory::dyn_malloc::DYN_MALLOC_FIRST_ADDRESS;
-    use crate::memory::encode_to_memory;
-    use crate::prelude::Tip5;
     use crate::rust_shadowing_helper_functions;
-    use crate::snippet_bencher::BenchmarkCase;
     use crate::test_helpers::tasm_final_state;
-    use crate::traits::basic_snippet::BasicSnippet;
-    use crate::traits::procedure::Procedure;
-    use crate::traits::procedure::ProcedureInitialState;
-    use crate::traits::procedure::ShadowedProcedure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     impl Procedure for SampleScalars {
         fn rust_shadow(
             &self,
             stack: &mut Vec<BFieldElement>,
             memory: &mut HashMap<BFieldElement, BFieldElement>,
-            _nondeterminism: &NonDeterminism,
-            _public_input: &[BFieldElement],
+            _: &NonDeterminism,
+            _: &[BFieldElement],
             sponge: &mut Option<Tip5>,
         ) -> Vec<BFieldElement> {
             let sponge = sponge.as_mut().expect("sponge must be initialized");
@@ -144,7 +132,7 @@ mod test {
         fn pseudorandom_initial_state(
             &self,
             seed: [u8; 32],
-            bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
+            bench_case: Option<BenchmarkCase>,
         ) -> ProcedureInitialState {
             let mut rng = StdRng::from_seed(seed);
             let num_scalars = match bench_case {
@@ -254,11 +242,10 @@ mod test {
 #[cfg(test)]
 mod bench {
     use super::*;
-    use crate::traits::procedure::ShadowedProcedure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
-    fn bench() {
+    fn benchmark() {
         ShadowedProcedure::new(SampleScalars).bench();
     }
 }

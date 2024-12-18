@@ -1,17 +1,13 @@
-use triton_vm::prelude::LabelledInstruction;
 use triton_vm::prelude::*;
-use triton_vm::stark::Stark;
 
 use crate::arithmetic::bfe::primitive_root_of_unity::PrimitiveRootOfUnity;
 use crate::arithmetic::u32::next_power_of_two::NextPowerOfTwo;
-use crate::data_type::DataType;
-use crate::library::Library;
-use crate::memory::dyn_malloc::DynMalloc;
-use crate::traits::basic_snippet::BasicSnippet;
+use crate::prelude::*;
 use crate::verifier::fri::verify::fri_verify_type;
 
 /// Mimics Triton-VM's FRI parameter-derivation method, but doesn't allow for a FRI-domain length
 /// of 2^32 bc the domain length is stored in a single word/a `u32`.
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct DeriveFriFromStark {
     pub stark: Stark,
 }
@@ -88,7 +84,7 @@ impl BasicSnippet for DeriveFriFromStark {
         "tasmlib_verifier_fri_derive_from_stark".to_owned()
     }
 
-    fn code(&self, library: &mut crate::library::Library) -> Vec<LabelledInstruction> {
+    fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
         let entrypoint = self.entrypoint();
         let derive_fri_field_values = self.derive_fri_field_values(library);
         let dyn_malloc = library.import(Box::new(DynMalloc));
@@ -117,20 +113,9 @@ impl BasicSnippet for DeriveFriFromStark {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-
-    use proptest_arbitrary_interop::arb;
-    use rand::prelude::*;
-    use test_strategy::proptest;
-
     use super::*;
-    use crate::memory::encode_to_memory;
     use crate::rust_shadowing_helper_functions;
-    use crate::snippet_bencher::BenchmarkCase;
-    use crate::traits::function::Function;
-    use crate::traits::function::FunctionInitialState;
-    use crate::traits::function::ShadowedFunction;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
     use crate::verifier::fri::verify::FriVerify;
 
     #[test]

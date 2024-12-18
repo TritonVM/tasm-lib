@@ -1,10 +1,9 @@
 use triton_vm::prelude::*;
 
-use crate::data_type::DataType;
 use crate::prelude::*;
 
 /// A u32 `pow` that behaves like Rustc's `pow` method on `u32`, crashing in case of overflow.
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct Safepow;
 
 impl BasicSnippet for Safepow {
@@ -143,18 +142,8 @@ impl BasicSnippet for Safepow {
 
 #[cfg(test)]
 mod tests {
-    use rand::prelude::*;
-
     use super::*;
-    use crate::pop_encodable;
-    use crate::push_encodable;
-    use crate::snippet_bencher::BenchmarkCase;
-    use crate::test_helpers::test_assertion_failure;
-    use crate::test_helpers::test_rust_equivalence_given_complete_state;
-    use crate::traits::closure::Closure;
-    use crate::traits::closure::ShadowedClosure;
-    use crate::traits::rust_shadow::RustShadow;
-    use crate::InitVmState;
+    use crate::test_prelude::*;
 
     impl Closure for Safepow {
         type Args = (u32, u32);
@@ -283,11 +272,10 @@ mod tests {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::traits::closure::ShadowedClosure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
-    fn u32_pow_bench() {
+    fn benchmark() {
         ShadowedClosure::new(Safepow).bench()
     }
 }

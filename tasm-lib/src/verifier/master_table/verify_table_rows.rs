@@ -5,13 +5,10 @@ use triton_vm::table::master_table::MasterAuxTable;
 use triton_vm::table::master_table::MasterMainTable;
 use triton_vm::table::master_table::MasterTable;
 use triton_vm::table::NUM_QUOTIENT_SEGMENTS;
-use triton_vm::twenty_first::math::tip5::Digest;
-use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
+use twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
-use crate::data_type::DataType;
 use crate::hashing::algebraic_hasher::hash_static_size::HashStaticSize;
-use crate::library::Library;
-use crate::traits::basic_snippet::BasicSnippet;
+use crate::prelude::*;
 
 #[derive(Debug, Copy, Clone, Display, EnumIter)]
 pub enum ColumnType {
@@ -206,27 +203,14 @@ impl BasicSnippet for VerifyTableRows {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-
-    use itertools::Itertools;
-    use rand::prelude::*;
-    use triton_vm::twenty_first::math::other::random_elements;
-    use triton_vm::twenty_first::math::tip5::RATE;
-    use triton_vm::twenty_first::util_types::merkle_tree::CpuParallel;
-    use triton_vm::twenty_first::util_types::merkle_tree::MerkleTree;
-    use triton_vm::twenty_first::util_types::merkle_tree::MerkleTreeInclusionProof;
-    use triton_vm::twenty_first::util_types::sponge::Sponge;
-    use twenty_first::prelude::MerkleTreeMaker;
+    use twenty_first::math::other::random_elements;
+    use twenty_first::math::tip5::RATE;
+    use twenty_first::prelude::*;
 
     use super::*;
     use crate::memory::encode_to_memory;
-    use crate::prelude::Tip5;
     use crate::rust_shadowing_helper_functions::list::list_insert;
-    use crate::snippet_bencher::BenchmarkCase;
-    use crate::traits::procedure::Procedure;
-    use crate::traits::procedure::ProcedureInitialState;
-    use crate::traits::procedure::ShadowedProcedure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
     fn verify_table_pbt_main() {
@@ -381,7 +365,7 @@ mod tests {
         fn pseudorandom_initial_state(
             &self,
             seed: [u8; 32],
-            bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
+            bench_case: Option<BenchmarkCase>,
         ) -> ProcedureInitialState {
             let mut rng = StdRng::from_seed(seed);
             let merkle_tree_height = match bench_case {
@@ -466,8 +450,7 @@ mod tests {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::traits::procedure::ShadowedProcedure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
     fn verify_table_bench_main() {

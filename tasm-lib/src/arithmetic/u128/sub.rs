@@ -2,11 +2,10 @@ use std::collections::HashMap;
 
 use rand::prelude::*;
 use triton_vm::prelude::*;
-use triton_vm::twenty_first::prelude::U32s;
+use twenty_first::prelude::U32s;
 
-use crate::data_type::DataType;
 use crate::empty_stack;
-use crate::library::Library;
+use crate::prelude::*;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::InitVmState;
 

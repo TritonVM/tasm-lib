@@ -1,11 +1,8 @@
-use triton_vm::prelude::triton_asm;
-use triton_vm::prelude::LabelledInstruction;
+use triton_vm::prelude::*;
 
-use crate::data_type::DataType;
-use crate::library::Library;
-use crate::traits::basic_snippet::BasicSnippet;
+use crate::prelude::*;
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct XfeModPowU32Generic;
 
 impl BasicSnippet for XfeModPowU32Generic {
@@ -145,19 +142,12 @@ impl BasicSnippet for XfeModPowU32Generic {
 
 #[cfg(test)]
 pub mod tests {
-    use rand::prelude::*;
-    use triton_vm::prelude::*;
-    use triton_vm::twenty_first::math::traits::ModPowU32;
+    use twenty_first::math::traits::ModPowU32;
 
     use super::*;
     use crate::empty_stack;
     use crate::execute_with_terminal_state;
-    use crate::pop_encodable;
-    use crate::push_encodable;
-    use crate::snippet_bencher::BenchmarkCase;
-    use crate::traits::closure::Closure;
-    use crate::traits::closure::ShadowedClosure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     impl Closure for XfeModPowU32Generic {
         type Args = (u32, XFieldElement);
@@ -232,11 +222,10 @@ pub mod tests {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::traits::closure::ShadowedClosure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
-    fn xfe_mod_pow_benchmark() {
+    fn benchmark() {
         ShadowedClosure::new(XfeModPowU32Generic).bench();
     }
 }

@@ -1,12 +1,11 @@
 use triton_vm::prelude::*;
 
-use crate::data_type::DataType;
 use crate::field;
-use crate::library::Library;
-use crate::traits::basic_snippet::BasicSnippet;
+use crate::prelude::*;
 use crate::verifier::fri::verify::FriVerify;
 
-pub struct NumberOfRounds {}
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
+pub struct NumberOfRounds;
 
 impl BasicSnippet for NumberOfRounds {
     fn inputs(&self) -> Vec<(DataType, String)> {
@@ -63,23 +62,14 @@ impl BasicSnippet for NumberOfRounds {
 }
 
 #[cfg(test)]
-mod test {
-    use std::collections::HashMap;
-
-    use rand::prelude::*;
+mod tests {
     use triton_vm::arithmetic_domain::ArithmeticDomain;
     use triton_vm::fri::Fri;
-    use triton_vm::twenty_first::math::traits::PrimitiveRootOfUnity;
+    use twenty_first::math::traits::PrimitiveRootOfUnity;
 
     use super::*;
     use crate::memory::dyn_malloc::DYN_MALLOC_ADDRESS;
-    use crate::memory::encode_to_memory;
-    use crate::prelude::TasmObject;
-    use crate::snippet_bencher::BenchmarkCase;
-    use crate::traits::function::Function;
-    use crate::traits::function::FunctionInitialState;
-    use crate::traits::function::ShadowedFunction;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     impl Function for NumberOfRounds {
         fn rust_shadow(

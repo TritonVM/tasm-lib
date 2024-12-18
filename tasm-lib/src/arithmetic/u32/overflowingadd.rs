@@ -1,9 +1,8 @@
 use triton_vm::prelude::*;
 
-use crate::data_type::DataType;
 use crate::prelude::*;
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct Overflowingadd;
 
 impl BasicSnippet for Overflowingadd {
@@ -38,16 +37,8 @@ impl BasicSnippet for Overflowingadd {
 
 #[cfg(test)]
 mod tests {
-    use rand::prelude::*;
-
     use super::*;
-    use crate::pop_encodable;
-    use crate::push_encodable;
-    use crate::snippet_bencher::BenchmarkCase;
-    use crate::test_helpers::test_rust_equivalence_given_complete_state;
-    use crate::traits::closure::Closure;
-    use crate::traits::closure::ShadowedClosure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     impl Closure for Overflowingadd {
         type Args = (u32, u32);
@@ -109,11 +100,10 @@ mod tests {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::traits::closure::ShadowedClosure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
-    fn u32_overflowing_add_bench() {
+    fn benchmark() {
         ShadowedClosure::new(Overflowingadd).bench()
     }
 }

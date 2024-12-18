@@ -2,7 +2,6 @@ use std::collections::HashMap;
 
 use triton_vm::prelude::*;
 
-use crate::data_type::DataType;
 use crate::prelude::*;
 use crate::traits::basic_snippet::Reviewer;
 use crate::traits::basic_snippet::SignOffFingerprint;
@@ -28,7 +27,7 @@ use crate::traits::basic_snippet::SignOffFingerprint;
 /// - the output is properly [`BFieldCodec`] encoded
 ///
 /// [sub]: u64::overflowing_sub
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct OverflowingSub;
 
 impl OverflowingSub {
@@ -132,16 +131,8 @@ impl BasicSnippet for OverflowingSub {
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use itertools::Itertools;
-    use rand::prelude::*;
-
     use super::*;
-    use crate::pop_encodable;
-    use crate::push_encodable;
-    use crate::snippet_bencher::BenchmarkCase;
-    use crate::traits::closure::Closure;
-    use crate::traits::closure::ShadowedClosure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     impl OverflowingSub {
         pub fn edge_case_values() -> Vec<u64> {
@@ -205,8 +196,7 @@ pub(crate) mod tests {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::traits::closure::ShadowedClosure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
     fn benchmark() {

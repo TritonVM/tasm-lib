@@ -1,13 +1,10 @@
-use triton_vm::prelude::LabelledInstruction;
 use triton_vm::prelude::*;
-use triton_vm::twenty_first::math::tip5::RATE;
+use twenty_first::math::tip5::RATE;
 
 use crate::data_type::ArrayType;
-use crate::data_type::DataType;
-use crate::library::Library;
-use crate::traits::basic_snippet::BasicSnippet;
+use crate::prelude::*;
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct Absorb;
 
 impl BasicSnippet for Absorb {
@@ -31,16 +28,16 @@ impl BasicSnippet for Absorb {
 
     fn code(&self, _library: &mut Library) -> Vec<LabelledInstruction> {
         assert_eq!(10, RATE, "Code assumes RATE is 10");
-        let entrypoint = self.entrypoint();
+
         triton_asm!(
-            {entrypoint}:
+            {self.entrypoint()}:
                 // _ *input
 
                 push 0
                 push 0
                 push 0
                 push 0
-                swap 4
+                pick 4
                 // _ 0 0 0 0 *input
 
                 sponge_absorb_mem
@@ -76,24 +73,15 @@ impl BasicSnippet for Absorb {
 }
 
 #[cfg(test)]
-mod test {
-    use std::collections::HashMap;
-
+mod tests {
     use arbitrary::Arbitrary;
     use arbitrary::Unstructured;
-    use itertools::Itertools;
-    use rand::prelude::*;
-    use triton_vm::twenty_first::math::other::random_elements;
-    use triton_vm::twenty_first::prelude::Sponge;
+    use twenty_first::math::other::random_elements;
+    use twenty_first::prelude::Sponge;
 
     use super::*;
     use crate::empty_stack;
-    use crate::prelude::Tip5;
-    use crate::snippet_bencher::BenchmarkCase;
-    use crate::traits::procedure::Procedure;
-    use crate::traits::procedure::ProcedureInitialState;
-    use crate::traits::procedure::ShadowedProcedure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     fn init_memory_and_stack() -> (HashMap<BFieldElement, BFieldElement>, Vec<BFieldElement>) {
         let array_pointer: BFieldElement = random();
@@ -169,11 +157,10 @@ mod test {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::traits::procedure::ShadowedProcedure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
-    fn bench() {
-        ShadowedProcedure::new(Absorb {}).bench();
+    fn benchmark() {
+        ShadowedProcedure::new(Absorb).bench();
     }
 }

@@ -3,9 +3,8 @@ use std::collections::HashMap;
 use triton_vm::prelude::*;
 
 use super::InputSource;
-use crate::data_type::DataType;
 use crate::empty_stack;
-use crate::traits::basic_snippet::BasicSnippet;
+use crate::prelude::*;
 use crate::traits::procedure::Procedure;
 use crate::traits::procedure::ProcedureInitialState;
 
@@ -87,10 +86,9 @@ impl Procedure for ReadInput {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::*;
-    use crate::traits::procedure::ShadowedProcedure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
     fn test() {
@@ -112,11 +110,10 @@ mod test {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::traits::procedure::ShadowedProcedure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
-    fn bench_for_digest_reading() {
+    fn benchmark() {
         ShadowedProcedure::new(ReadInput {
             data_type: DataType::Digest,
             input_source: InputSource::StdIn,

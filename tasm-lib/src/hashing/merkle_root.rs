@@ -1,26 +1,10 @@
-use std::collections::HashMap;
-
-use itertools::Itertools;
-use num_traits::Zero;
-use rand::prelude::*;
 use triton_vm::prelude::tip5::Digest;
 use triton_vm::prelude::*;
-use twenty_first::util_types::merkle_tree::CpuParallel;
-use twenty_first::util_types::merkle_tree::MerkleTree;
 
-use crate::data_type::DataType;
-use crate::library::Library;
-use crate::memory::dyn_malloc::DynMalloc;
-use crate::memory::encode_to_memory;
-use crate::rust_shadowing_helper_functions::dyn_malloc::dynamic_allocator;
-use crate::snippet_bencher::BenchmarkCase;
-use crate::structure::tasm_object::TasmObject;
-use crate::traits::basic_snippet::BasicSnippet;
-use crate::traits::function::Function;
-use crate::traits::function::FunctionInitialState;
+use crate::prelude::*;
 
 /// Compute the Merkle root of a slice of `Digest`s
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct MerkleRoot;
 
 impl BasicSnippet for MerkleRoot {
@@ -196,84 +180,87 @@ impl BasicSnippet for MerkleRoot {
         )
     }
 }
+#[cfg(test)]
+mod tests {
+    use num_traits::Zero;
+    use twenty_first::util_types::merkle_tree::CpuParallel;
+    use twenty_first::util_types::merkle_tree::MerkleTree;
 
-impl Function for MerkleRoot {
-    fn rust_shadow(
-        &self,
-        stack: &mut Vec<BFieldElement>,
-        memory: &mut HashMap<BFieldElement, BFieldElement>,
-    ) {
-        let leafs_pointer = stack.pop().unwrap();
-        let leafs = *Vec::<Digest>::decode_from_memory(memory, leafs_pointer).unwrap();
-        let mt = MerkleTree::new::<CpuParallel>(&leafs).unwrap();
+    use super::*;
+    use crate::rust_shadowing_helper_functions::dyn_malloc::dynamic_allocator;
+    use crate::test_prelude::*;
 
-        // Write entire Merkle tree to memory, because that's what the VM does
-        let pointer = dynamic_allocator(memory);
-        let num_non_leaf_nodes = leafs.len();
+    impl MerkleRoot {
+        fn init_state(
+            &self,
+            leafs: Vec<Digest>,
+            digests_pointer: BFieldElement,
+        ) -> FunctionInitialState {
+            let mut memory = HashMap::<BFieldElement, BFieldElement>::new();
+            encode_to_memory(&mut memory, digests_pointer, &leafs);
+            let mut stack = self.init_stack_for_isolated_run();
+            stack.push(digests_pointer);
 
-        // skip dummy digest at index 0
-        for (node_index, node) in (0..num_non_leaf_nodes).zip(mt.nodes()).skip(1) {
-            let node_address = pointer + bfe!(node_index as u32) * bfe!(Digest::LEN as u32);
-            encode_to_memory(memory, node_address, node);
+            FunctionInitialState { stack, memory }
+        }
+    }
+
+    impl Function for MerkleRoot {
+        fn rust_shadow(
+            &self,
+            stack: &mut Vec<BFieldElement>,
+            memory: &mut HashMap<BFieldElement, BFieldElement>,
+        ) {
+            let leafs_pointer = stack.pop().unwrap();
+            let leafs = *Vec::<Digest>::decode_from_memory(memory, leafs_pointer).unwrap();
+            let mt = MerkleTree::new::<CpuParallel>(&leafs).unwrap();
+
+            // Write entire Merkle tree to memory, because that's what the VM does
+            let pointer = dynamic_allocator(memory);
+            let num_non_leaf_nodes = leafs.len();
+
+            // skip dummy digest at index 0
+            for (node_index, node) in (0..num_non_leaf_nodes).zip(mt.nodes()).skip(1) {
+                let node_address = pointer + bfe!(node_index as u32) * bfe!(Digest::LEN as u32);
+                encode_to_memory(memory, node_address, node);
+            }
+
+            stack.extend(mt.root().reversed().values());
         }
 
-        stack.extend(mt.root().reversed().values());
+        fn pseudorandom_initial_state(
+            &self,
+            seed: [u8; 32],
+            bench_case: Option<BenchmarkCase>,
+        ) -> FunctionInitialState {
+            let mut rng = StdRng::from_seed(seed);
+            let num_leafs = match bench_case {
+                Some(BenchmarkCase::CommonCase) => 512,
+                Some(BenchmarkCase::WorstCase) => 1024,
+                None => 1 << rng.gen_range(0..=8),
+            };
+
+            let digests_pointer = rng.gen();
+
+            let leafs = (0..num_leafs).map(|_| rng.gen::<Digest>()).collect_vec();
+
+            self.init_state(leafs, digests_pointer)
+        }
+
+        fn corner_case_initial_states(&self) -> Vec<FunctionInitialState> {
+            let height_0_a = self.init_state(vec![Digest::default()], BFieldElement::zero());
+            let height_0_b = self.init_state(
+                vec![Digest::new([bfe!(6), bfe!(5), bfe!(4), bfe!(3), bfe!(2)])],
+                bfe!(1u64 << 44),
+            );
+            let height_1 = self.init_state(
+                vec![Digest::default(), Digest::default()],
+                BFieldElement::zero(),
+            );
+
+            vec![height_0_a, height_0_b, height_1]
+        }
     }
-
-    fn pseudorandom_initial_state(
-        &self,
-        seed: [u8; 32],
-        bench_case: Option<BenchmarkCase>,
-    ) -> FunctionInitialState {
-        let mut rng = StdRng::from_seed(seed);
-        let num_leafs = match bench_case {
-            Some(BenchmarkCase::CommonCase) => 512,
-            Some(BenchmarkCase::WorstCase) => 1024,
-            None => 1 << rng.gen_range(0..=8),
-        };
-
-        let digests_pointer = rng.gen();
-
-        let leafs = (0..num_leafs).map(|_| rng.gen::<Digest>()).collect_vec();
-
-        self.init_state(leafs, digests_pointer)
-    }
-
-    fn corner_case_initial_states(&self) -> Vec<FunctionInitialState> {
-        let height_0_a = self.init_state(vec![Digest::default()], BFieldElement::zero());
-        let height_0_b = self.init_state(
-            vec![Digest::new([bfe!(6), bfe!(5), bfe!(4), bfe!(3), bfe!(2)])],
-            bfe!(1u64 << 44),
-        );
-        let height_1 = self.init_state(
-            vec![Digest::default(), Digest::default()],
-            BFieldElement::zero(),
-        );
-
-        vec![height_0_a, height_0_b, height_1]
-    }
-}
-
-impl MerkleRoot {
-    fn init_state(
-        &self,
-        leafs: Vec<Digest>,
-        digests_pointer: BFieldElement,
-    ) -> FunctionInitialState {
-        let mut memory = HashMap::<BFieldElement, BFieldElement>::new();
-        encode_to_memory(&mut memory, digests_pointer, &leafs);
-        let mut stack = self.init_stack_for_isolated_run();
-        stack.push(digests_pointer);
-
-        FunctionInitialState { stack, memory }
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use super::MerkleRoot;
-    use crate::traits::function::ShadowedFunction;
-    use crate::traits::rust_shadow::RustShadow;
 
     #[test]
     fn test() {
@@ -283,12 +270,11 @@ mod test {
 
 #[cfg(test)]
 mod benches {
-    use super::MerkleRoot;
-    use crate::traits::function::ShadowedFunction;
-    use crate::traits::rust_shadow::RustShadow;
+    use super::*;
+    use crate::test_prelude::*;
 
     #[test]
-    fn merkle_root_bench() {
+    fn benchmark() {
         ShadowedFunction::new(MerkleRoot).bench()
     }
 }

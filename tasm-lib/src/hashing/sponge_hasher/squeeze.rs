@@ -1,11 +1,8 @@
 use triton_vm::prelude::*;
-use triton_vm::twenty_first::math::tip5::RATE;
+use twenty_first::math::tip5::RATE;
 
 use crate::data_type::ArrayType;
-use crate::data_type::DataType;
-use crate::library::Library;
-use crate::memory::dyn_malloc::DynMalloc;
-use crate::traits::basic_snippet::BasicSnippet;
+use crate::prelude::*;
 
 /// Squeeze the sponge and return an array of `[RATE]` elements
 ///
@@ -66,25 +63,17 @@ impl BasicSnippet for Squeeze {
 }
 
 #[cfg(test)]
-mod test {
-    use std::collections::HashMap;
-
+mod tests {
     use arbitrary::Arbitrary;
     use arbitrary::Unstructured;
-    use rand::prelude::*;
-    use triton_vm::twenty_first::prelude::Sponge;
+    use twenty_first::prelude::Sponge;
 
     use super::*;
     use crate::empty_stack;
     use crate::memory::dyn_malloc;
     use crate::memory::dyn_malloc::DYN_MALLOC_ADDRESS;
-    use crate::prelude::Tip5;
     use crate::rust_shadowing_helper_functions;
-    use crate::snippet_bencher::BenchmarkCase;
-    use crate::traits::procedure::Procedure;
-    use crate::traits::procedure::ProcedureInitialState;
-    use crate::traits::procedure::ShadowedProcedure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     impl Procedure for Squeeze {
         fn rust_shadow(
@@ -142,11 +131,10 @@ mod test {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::traits::procedure::ShadowedProcedure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
-    fn bench() {
+    fn benchmark() {
         ShadowedProcedure::new(Squeeze).bench();
     }
 }

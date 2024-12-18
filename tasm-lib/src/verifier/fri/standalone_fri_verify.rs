@@ -9,7 +9,7 @@ use crate::memory::encode_to_memory;
 use crate::memory::FIRST_NON_DETERMINISTICALLY_INITIALIZED_MEMORY_ADDRESS;
 use crate::traits::compiled_program::CompiledProgram;
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 struct StandaloneFriVerify {
     seed: [u8; 32],
 }
@@ -88,8 +88,7 @@ impl CompiledProgram for StandaloneFriVerify {
         for sti in intermediate_state.stack_excess {
             invocation_code.push(triton_instr!(push sti.value()));
         }
-        #[allow(unused_variables)] // used in macro
-        invocation_code.append(&mut triton_asm!(call {
+        invocation_code.extend(triton_asm!(call {
             fri_verify_entrypoint
         }));
         invocation_code.push(triton_instr!(halt));

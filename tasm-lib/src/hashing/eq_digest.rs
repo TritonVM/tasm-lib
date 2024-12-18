@@ -3,10 +3,9 @@ use std::collections::HashMap;
 use rand::prelude::*;
 use triton_vm::prelude::*;
 
-use crate::data_type::DataType;
 use crate::empty_stack;
-use crate::library::Library;
 use crate::prelude::Digest;
+use crate::prelude::*;
 use crate::push_encodable;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::InitVmState;

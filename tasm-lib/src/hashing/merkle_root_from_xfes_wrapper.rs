@@ -1,9 +1,7 @@
-use tip5::Digest;
 use triton_vm::prelude::*;
 
-use crate::data_type::DataType;
 use crate::hashing::merkle_root_from_xfes_static_size::MerkleRootFromXfesStaticSize;
-use crate::traits::basic_snippet::BasicSnippet;
+use crate::prelude::*;
 
 /// Calculate a Merkle root from a list of X-field elements. List must have
 /// length 256, 512, or 1024.
@@ -24,7 +22,7 @@ impl BasicSnippet for MerkleRootFromXfesWrapper {
         "tasmlib_hashing_merkle_root_from_xfes_wrapper".to_owned()
     }
 
-    fn code(&self, library: &mut crate::library::Library) -> Vec<LabelledInstruction> {
+    fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
         let entrypoint = self.entrypoint();
         let list_length_alloc = library.kmalloc(1);
 
@@ -111,22 +109,11 @@ impl BasicSnippet for MerkleRootFromXfesWrapper {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-
-    use itertools::Itertools;
-    use rand::prelude::*;
-    use test_strategy::proptest;
-    use triton_vm::twenty_first::prelude::*;
+    use twenty_first::prelude::*;
 
     use super::*;
     use crate::library::STATIC_MEMORY_FIRST_ADDRESS;
-    use crate::memory::encode_to_memory;
-    use crate::prelude::TasmObject;
-    use crate::snippet_bencher::BenchmarkCase;
-    use crate::traits::function::Function;
-    use crate::traits::function::FunctionInitialState;
-    use crate::traits::function::ShadowedFunction;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[proptest(cases = 4)]
     fn merkle_root_from_xfes_wrapper_pbt_pbt() {
@@ -137,7 +124,7 @@ mod tests {
         fn rust_shadow(
             &self,
             stack: &mut Vec<BFieldElement>,
-            memory: &mut std::collections::HashMap<BFieldElement, BFieldElement>,
+            memory: &mut HashMap<BFieldElement, BFieldElement>,
         ) {
             let leafs_pointer = stack.pop().unwrap();
             let xfes = *Vec::<XFieldElement>::decode_from_memory(memory, leafs_pointer).unwrap();
@@ -216,11 +203,10 @@ mod tests {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::traits::function::ShadowedFunction;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
-    fn merkle_root_wrapper_bench() {
+    fn benchmark() {
         ShadowedFunction::new(MerkleRootFromXfesWrapper).bench();
     }
 }

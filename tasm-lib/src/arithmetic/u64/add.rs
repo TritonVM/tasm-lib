@@ -3,8 +3,7 @@ use tasm_lib::prelude::BasicSnippet;
 use triton_vm::prelude::*;
 
 use crate::arithmetic;
-use crate::data_type::DataType;
-use crate::library::Library;
+use crate::prelude::*;
 use crate::traits::basic_snippet::Reviewer;
 use crate::traits::basic_snippet::SignOffFingerprint;
 
@@ -71,22 +70,10 @@ impl BasicSnippet for Add {
 
 #[cfg(test)]
 mod tests {
-    use itertools::Itertools;
-    use proptest::prop_assume;
-    use rand::prelude::*;
-    use test_strategy::proptest;
-
     use super::*;
     use crate::arithmetic::u64::overflowing_add::OverflowingAdd;
-    use crate::pop_encodable;
-    use crate::push_encodable;
-    use crate::snippet_bencher::BenchmarkCase;
-    use crate::test_helpers::test_assertion_failure;
     use crate::test_helpers::test_rust_equivalence_given_execution_state;
-    use crate::traits::closure::Closure;
-    use crate::traits::closure::ShadowedClosure;
-    use crate::traits::rust_shadow::RustShadow;
-    use crate::InitVmState;
+    use crate::test_prelude::*;
 
     impl Closure for Add {
         type Args = <OverflowingAdd as Closure>::Args;
@@ -143,11 +130,10 @@ mod tests {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::traits::closure::ShadowedClosure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
-    fn bench() {
+    fn benchmark() {
         ShadowedClosure::new(Add).bench()
     }
 }

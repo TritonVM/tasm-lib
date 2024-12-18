@@ -1,13 +1,11 @@
 use triton_vm::prelude::LabelledInstruction;
 use triton_vm::prelude::*;
 use triton_vm::table::master_table::MasterAuxTable;
-use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
+use triton_vm::table::ConstraintType;
+use twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
-use crate::data_type::DataType;
-use crate::library::Library;
-use crate::traits::basic_snippet::BasicSnippet;
+use crate::prelude::*;
 use crate::verifier::master_table::air_constraint_evaluation::AirConstraintEvaluation;
-use crate::verifier::master_table::zerofiers_inverse::ConstraintType;
 use crate::verifier::master_table::zerofiers_inverse::ZerofiersInverse;
 
 /// Takes an AIR evaluation and divides out the zerofiers.
@@ -153,9 +151,9 @@ mod tests {
 
     use itertools::Itertools;
     use rand::prelude::*;
-    use triton_vm::twenty_first::math::traits::Inverse;
-    use triton_vm::twenty_first::math::traits::ModPowU32;
-    use triton_vm::twenty_first::math::traits::PrimitiveRootOfUnity;
+    use twenty_first::math::traits::Inverse;
+    use twenty_first::math::traits::ModPowU32;
+    use twenty_first::math::traits::PrimitiveRootOfUnity;
 
     use super::*;
     use crate::empty_stack;
@@ -333,15 +331,11 @@ mod bench {
     use std::collections::HashMap;
 
     use itertools::Itertools;
-    use rand::prelude::*;
     use twenty_first::math::traits::PrimitiveRootOfUnity;
 
     use super::*;
     use crate::empty_stack;
-    use crate::traits::function::Function;
-    use crate::traits::function::FunctionInitialState;
-    use crate::traits::function::ShadowedFunction;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
     fn bench_divide_out_zerofiers() {
@@ -351,8 +345,8 @@ mod bench {
     impl Function for DivideOutZerofiers {
         fn rust_shadow(
             &self,
-            _stack: &mut Vec<BFieldElement>,
-            _memory: &mut HashMap<BFieldElement, BFieldElement>,
+            _: &mut Vec<BFieldElement>,
+            _: &mut HashMap<BFieldElement, BFieldElement>,
         ) {
             // Never called as we do a more manual test.
             // The more manual test is done bc we don't want to
@@ -364,7 +358,7 @@ mod bench {
         fn pseudorandom_initial_state(
             &self,
             seed: [u8; 32],
-            _bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
+            _: Option<BenchmarkCase>,
         ) -> FunctionInitialState {
             // Used for benchmarking
             let mut rng = StdRng::from_seed(seed);

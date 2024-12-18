@@ -1,8 +1,6 @@
 use triton_vm::prelude::*;
 
-use crate::data_type::DataType;
-use crate::library::Library;
-use crate::traits::basic_snippet::BasicSnippet;
+use crate::prelude::*;
 
 pub struct Square;
 
@@ -35,19 +33,11 @@ impl BasicSnippet for Square {
 
 #[cfg(test)]
 mod tests {
-    use itertools::Itertools;
-    use rand::prelude::*;
-    use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
+    use twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
     use super::*;
     use crate::arithmetic::xfe::mod_pow_u32_generic::XfeModPowU32Generic;
-    use crate::pop_encodable;
-    use crate::push_encodable;
-    use crate::snippet_bencher::BenchmarkCase;
-    use crate::test_helpers::test_rust_equivalence_given_complete_state;
-    use crate::traits::closure::Closure;
-    use crate::traits::closure::ShadowedClosure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     impl Closure for Square {
         type Args = XFieldElement;
@@ -122,11 +112,10 @@ mod tests {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::traits::closure::ShadowedClosure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
-    fn xfe_square_benchmark() {
+    fn benchmark() {
         ShadowedClosure::new(Square).bench();
     }
 }

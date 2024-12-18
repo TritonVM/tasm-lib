@@ -2,11 +2,9 @@ use triton_vm::prelude::*;
 
 use super::leaf_index_to_mt_index_and_peak_index::MmrLeafIndexToMtIndexAndPeakIndex;
 use crate::arithmetic::u64::eq::Eq;
-use crate::data_type::DataType;
 use crate::hashing::merkle_step_u64_index::MerkleStepU64Index;
-use crate::library::Library;
 use crate::list::get::Get;
-use crate::traits::basic_snippet::BasicSnippet;
+use crate::prelude::*;
 
 /// Verify that a digest is a leaf in the MMR accumulator. Takes both authentication path from
 /// secret-in. Crashes the VM if the authentication fails.
@@ -92,12 +90,6 @@ impl BasicSnippet for MmrVerifyFromSecretInLeafIndexOnStack {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-
-    use proptest_arbitrary_interop::arb;
-    use rand::prelude::*;
-    use tasm_lib::test_helpers::test_assertion_failure;
-    use test_strategy::proptest;
     use twenty_first::math::other::random_elements;
     use twenty_first::util_types::mmr::mmr_accumulator::util::mmra_with_mps;
     use twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
@@ -106,151 +98,8 @@ mod tests {
     use twenty_first::util_types::mmr::shared_basic::leaf_index_to_mt_index_and_peak_index;
 
     use super::*;
-    use crate::prelude::Tip5;
     use crate::rust_shadowing_helper_functions;
-    use crate::snippet_bencher::BenchmarkCase;
-    use crate::traits::procedure::Procedure;
-    use crate::traits::procedure::ProcedureInitialState;
-    use crate::traits::procedure::ShadowedProcedure;
-    use crate::traits::rust_shadow::RustShadow;
-
-    #[test]
-    fn prop() {
-        ShadowedProcedure::new(MmrVerifyFromSecretInLeafIndexOnStack).test();
-    }
-
-    #[proptest(cases = 32)]
-    fn negative_test_bad_leaf_index(
-        #[strategy(0_u64..1 << 62)] leaf_count: u64,
-        #[strategy(0_u64..#leaf_count)] real_leaf_index: u64,
-        #[strategy(0..#leaf_count)]
-        #[filter(#real_leaf_index != #bad_leaf_index)]
-        bad_leaf_index: u64,
-        #[strategy(arb())] leaf: Digest,
-        #[strategy(arb())] peaks_pointer: BFieldElement,
-    ) {
-        let (mmr, mps) = mmra_with_mps(leaf_count, vec![(real_leaf_index, leaf)]);
-        let auth_path = mps[0].authentication_path.clone();
-
-        // Extend the auth path to ensure that execution does not run out of digests in non-
-        // determinism since this would result in another error code in TVM than the one we intend
-        // to get: vector assertion error.
-        let padded_auth_path = [auth_path.clone(), random_elements(64)].concat();
-        let init_state = MmrVerifyFromSecretInLeafIndexOnStack.prepare_state(
-            &mmr,
-            peaks_pointer,
-            bad_leaf_index,
-            leaf,
-            padded_auth_path,
-        );
-
-        test_assertion_failure(
-            &ShadowedProcedure::new(MmrVerifyFromSecretInLeafIndexOnStack),
-            init_state.into(),
-            &[10],
-        );
-
-        // Sanity check
-        assert!(!MmrMembershipProof::new(auth_path).verify(
-            bad_leaf_index,
-            leaf,
-            &mmr.peaks(),
-            mmr.num_leafs()
-        ));
-    }
-
-    impl Procedure for MmrVerifyFromSecretInLeafIndexOnStack {
-        fn rust_shadow(
-            &self,
-            stack: &mut Vec<BFieldElement>,
-            memory: &mut HashMap<BFieldElement, BFieldElement>,
-            nondeterminism: &NonDeterminism,
-            _public_input: &[BFieldElement],
-            _sponge: &mut Option<Tip5>,
-        ) -> Vec<BFieldElement> {
-            let leaf_index_lo: u32 = stack.pop().unwrap().try_into().unwrap();
-            let leaf_index_hi: u32 = stack.pop().unwrap().try_into().unwrap();
-            let leaf_index = ((leaf_index_hi as u64) << 32) + leaf_index_lo as u64;
-
-            let leaf_count_lo: u32 = stack.pop().unwrap().try_into().unwrap();
-            let leaf_count_hi: u32 = stack.pop().unwrap().try_into().unwrap();
-            let leaf_count: u64 = ((leaf_count_hi as u64) << 32) + leaf_count_lo as u64;
-
-            let mut leaf_digest = Digest::default();
-            for elem in leaf_digest.0.iter_mut() {
-                *elem = stack.pop().unwrap();
-            }
-
-            let peaks_pointer = stack.pop().unwrap();
-            let peaks_count: u64 = memory[&peaks_pointer].value();
-            let mut peaks: Vec<Digest> = vec![];
-            for i in 0..peaks_count {
-                let digest = Digest::new(
-                    rust_shadowing_helper_functions::list::list_get(
-                        peaks_pointer,
-                        i as usize,
-                        memory,
-                        Digest::LEN,
-                    )
-                    .try_into()
-                    .unwrap(),
-                );
-                peaks.push(digest);
-            }
-
-            let (mut mt_index, _peak_index) =
-                leaf_index_to_mt_index_and_peak_index(leaf_index, leaf_count);
-
-            let mut auth_path: Vec<Digest> = vec![];
-            let mut i = 0;
-            while mt_index != 1 {
-                auth_path.push(nondeterminism.digests[i]);
-                mt_index /= 2;
-                i += 1;
-            }
-
-            let valid_mp = MmrMembershipProof::new(auth_path).verify(
-                leaf_index,
-                leaf_digest,
-                &peaks,
-                leaf_count,
-            );
-
-            assert!(valid_mp, "MMR leaf must authenticate against peak");
-
-            vec![]
-        }
-
-        fn pseudorandom_initial_state(
-            &self,
-            seed: [u8; 32],
-            bench_case: Option<BenchmarkCase>,
-        ) -> ProcedureInitialState {
-            let mut rng = StdRng::from_seed(seed);
-
-            let (leaf_count, leaf_index) = match bench_case {
-                Some(BenchmarkCase::CommonCase) => (1u64 << 32, 1 << 31),
-                Some(BenchmarkCase::WorstCase) => (1u64 << 62, 1 << 61),
-                None => {
-                    let leaf_count = rng.gen_range(0..(1 << 62));
-                    let leaf_index = rng.gen_range(0..leaf_count);
-
-                    (leaf_count, leaf_index)
-                }
-            };
-
-            let peaks_pointer: BFieldElement = rng.gen();
-            let valid_leaf: Digest = random();
-            let (mmr, mps) = mmra_with_mps(leaf_count, vec![(leaf_index, valid_leaf)]);
-            self.prepare_state(
-                &mmr,
-                peaks_pointer,
-                leaf_index,
-                valid_leaf,
-                mps[0].authentication_path.clone(),
-            )
-        }
-    }
+    use crate::test_prelude::*;
 
     impl MmrVerifyFromSecretInLeafIndexOnStack {
         fn prepare_state(
@@ -309,16 +158,130 @@ mod tests {
             }
         }
     }
+
+    impl Procedure for MmrVerifyFromSecretInLeafIndexOnStack {
+        fn rust_shadow(
+            &self,
+            stack: &mut Vec<BFieldElement>,
+            memory: &mut HashMap<BFieldElement, BFieldElement>,
+            nondeterminism: &NonDeterminism,
+            _: &[BFieldElement],
+            _: &mut Option<Tip5>,
+        ) -> Vec<BFieldElement> {
+            let leaf_index = pop_encodable(stack);
+            let leaf_count = pop_encodable(stack);
+            let leaf_digest = pop_encodable(stack);
+            let peaks_pointer = pop_encodable(stack);
+
+            let peaks = Vec::<Digest>::decode_from_memory(memory, peaks_pointer).unwrap();
+
+            let (mut mt_index, _peak_index) =
+                leaf_index_to_mt_index_and_peak_index(leaf_index, leaf_count);
+
+            let mut auth_path: Vec<Digest> = vec![];
+            let mut i = 0;
+            while mt_index != 1 {
+                auth_path.push(nondeterminism.digests[i]);
+                mt_index /= 2;
+                i += 1;
+            }
+
+            let valid_mp = MmrMembershipProof::new(auth_path).verify(
+                leaf_index,
+                leaf_digest,
+                &peaks,
+                leaf_count,
+            );
+
+            assert!(valid_mp, "MMR leaf must authenticate against peak");
+
+            vec![]
+        }
+
+        fn pseudorandom_initial_state(
+            &self,
+            seed: [u8; 32],
+            bench_case: Option<BenchmarkCase>,
+        ) -> ProcedureInitialState {
+            let mut rng = StdRng::from_seed(seed);
+
+            let (leaf_count, leaf_index) = match bench_case {
+                Some(BenchmarkCase::CommonCase) => (1u64 << 32, 1 << 31),
+                Some(BenchmarkCase::WorstCase) => (1u64 << 62, 1 << 61),
+                None => {
+                    let leaf_count = rng.gen_range(0..(1 << 62));
+                    let leaf_index = rng.gen_range(0..leaf_count);
+
+                    (leaf_count, leaf_index)
+                }
+            };
+
+            let peaks_pointer: BFieldElement = rng.gen();
+            let valid_leaf: Digest = random();
+            let (mmr, mps) = mmra_with_mps(leaf_count, vec![(leaf_index, valid_leaf)]);
+            self.prepare_state(
+                &mmr,
+                peaks_pointer,
+                leaf_index,
+                valid_leaf,
+                mps[0].authentication_path.clone(),
+            )
+        }
+    }
+
+    #[test]
+    fn rust_shadow() {
+        ShadowedProcedure::new(MmrVerifyFromSecretInLeafIndexOnStack).test();
+    }
+
+    #[proptest(cases = 32)]
+    fn negative_test_bad_leaf_index(
+        #[strategy(0_u64..1 << 62)] leaf_count: u64,
+        #[strategy(0_u64..#leaf_count)] real_leaf_index: u64,
+        #[strategy(0..#leaf_count)]
+        #[filter(#real_leaf_index != #bad_leaf_index)]
+        bad_leaf_index: u64,
+        #[strategy(arb())] leaf: Digest,
+        #[strategy(arb())] peaks_pointer: BFieldElement,
+    ) {
+        let (mmr, mps) = mmra_with_mps(leaf_count, vec![(real_leaf_index, leaf)]);
+        let auth_path = mps[0].authentication_path.clone();
+
+        // Extend the auth path to ensure that execution does not run out of digests in non-
+        // determinism since this would result in another error code in TVM than the one we intend
+        // to get: vector assertion error.
+        let padded_auth_path = [auth_path.clone(), random_elements(64)].concat();
+        let init_state = MmrVerifyFromSecretInLeafIndexOnStack.prepare_state(
+            &mmr,
+            peaks_pointer,
+            bad_leaf_index,
+            leaf,
+            padded_auth_path,
+        );
+
+        test_assertion_failure(
+            &ShadowedProcedure::new(MmrVerifyFromSecretInLeafIndexOnStack),
+            init_state.into(),
+            &[10],
+        );
+
+        // Sanity check
+        assert!(!MmrMembershipProof::new(auth_path).verify(
+            bad_leaf_index,
+            leaf,
+            &mmr.peaks(),
+            mmr.num_leafs()
+        ));
+    }
 }
 
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::traits::procedure::ShadowedProcedure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
-    fn verify_from_secret_in_benchmark() {
+    fn benchmark() {
         ShadowedProcedure::new(MmrVerifyFromSecretInLeafIndexOnStack).bench();
     }
 }

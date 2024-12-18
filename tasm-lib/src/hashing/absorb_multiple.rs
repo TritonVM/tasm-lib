@@ -1,20 +1,9 @@
-use std::collections::HashMap;
-
-use itertools::Itertools;
-use rand::prelude::*;
 use triton_vm::prelude::*;
-use triton_vm::twenty_first::prelude::Sponge;
 
-use crate::data_type::DataType;
-use crate::empty_stack;
-use crate::prelude::Tip5;
-use crate::snippet_bencher::BenchmarkCase;
-use crate::traits::basic_snippet::BasicSnippet;
-use crate::traits::procedure::Procedure;
-use crate::traits::procedure::ProcedureInitialState;
+use crate::prelude::*;
 
 /// Absorb a sequence of field elements stored in memory, into the Sponge.
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct AbsorbMultiple;
 
 impl BasicSnippet for AbsorbMultiple {
@@ -33,7 +22,7 @@ impl BasicSnippet for AbsorbMultiple {
         "tasmlib_hashing_absorb_multiple".to_string()
     }
 
-    fn code(&self, _library: &mut crate::library::Library) -> Vec<LabelledInstruction> {
+    fn code(&self, _: &mut Library) -> Vec<LabelledInstruction> {
         let entrypoint = self.entrypoint();
         let hash_all_full_chunks = format!("{entrypoint}_hash_all_full_chunks");
         let pad_varnum_zeros = format!("{entrypoint}_pad_varnum_zeros");
@@ -138,121 +127,123 @@ impl BasicSnippet for AbsorbMultiple {
     }
 }
 
-impl Procedure for AbsorbMultiple {
-    fn rust_shadow(
-        &self,
-        stack: &mut Vec<BFieldElement>,
-        memory: &mut HashMap<BFieldElement, BFieldElement>,
-        _nondeterminism: &NonDeterminism,
-        _public_input: &[BFieldElement],
-        sponge: &mut Option<Tip5>,
-    ) -> Vec<BFieldElement> {
-        // read arguments
-        let length = stack.pop().unwrap().value() as usize;
-        let address = stack.pop().unwrap();
-
-        // read sequence from memory
-        let mut sequence = vec![];
-        for i in 0..length {
-            sequence.push(
-                memory
-                    .get(&(address + BFieldElement::new(i as u64)))
-                    .copied()
-                    .unwrap(),
-            )
-        }
-
-        let sponge = sponge.as_mut().expect("sponge must be initialized");
-        sponge.pad_and_absorb_all(&sequence);
-
-        // output empty
-        vec![]
-    }
-
-    fn pseudorandom_initial_state(
-        &self,
-        seed: [u8; 32],
-        bench_case: Option<BenchmarkCase>,
-    ) -> ProcedureInitialState {
-        let mut rng = StdRng::from_seed(seed);
-
-        // sample address
-        let address = BFieldElement::new(rng.next_u64() % (1 << 20));
-
-        // sample sequence
-        let length = match bench_case {
-            Some(BenchmarkCase::CommonCase) => 102,
-            Some(BenchmarkCase::WorstCase) => 2002,
-            None => rng.next_u32() % 30,
-        };
-
-        let sequence = (0..length)
-            .map(|_| rng.gen::<BFieldElement>())
-            .collect_vec();
-
-        // write to memory
-        let mut memory = HashMap::new();
-        for (i, s) in sequence.into_iter().enumerate() {
-            memory.insert(address + BFieldElement::new(i as u64), s);
-        }
-        let nondeterminism = NonDeterminism::default().with_ram(memory);
-
-        // leave address and length on stack
-        let mut stack = empty_stack();
-        stack.push(address);
-        stack.push(BFieldElement::new(length as u64));
-
-        let vm_hasher_state = Tip5 { state: rng.gen() };
-
-        ProcedureInitialState {
-            stack,
-            nondeterminism,
-            public_input: vec![],
-            sponge: Some(vm_hasher_state),
-        }
-    }
-
-    fn corner_case_initial_states(&self) -> Vec<ProcedureInitialState> {
-        vec![
-            Self::corner_case_initial_state_for_num_words(0),
-            Self::corner_case_initial_state_for_num_words(1),
-            Self::corner_case_initial_state_for_num_words(2),
-            Self::corner_case_initial_state_for_num_words(5),
-            Self::corner_case_initial_state_for_num_words(9),
-            Self::corner_case_initial_state_for_num_words(10),
-            Self::corner_case_initial_state_for_num_words(11),
-        ]
-    }
-}
-
-impl AbsorbMultiple {
-    fn corner_case_initial_state_for_num_words(num_words: u32) -> ProcedureInitialState {
-        let list_address = BFieldElement::new(0);
-        let list_length = BFieldElement::from(num_words);
-        let sequence = vec![BFieldElement::new(2); num_words as usize];
-
-        let stack = [empty_stack(), vec![list_address, list_length]].concat();
-        let ram: HashMap<_, _> = sequence
-            .into_iter()
-            .enumerate()
-            .map(|(i, bfe)| (BFieldElement::from(i as u32), bfe))
-            .collect();
-        let nondeterminism = NonDeterminism::default().with_ram(ram);
-
-        ProcedureInitialState {
-            stack,
-            nondeterminism,
-            public_input: vec![],
-            sponge: Some(Tip5::default()),
-        }
-    }
-}
-
 #[cfg(test)]
-mod test {
-    use super::AbsorbMultiple;
-    use crate::traits::procedure::ShadowedProcedure;
-    use crate::traits::rust_shadow::RustShadow;
+mod tests {
+    use twenty_first::prelude::Sponge;
+
+    use super::*;
+    use crate::empty_stack;
+    use crate::test_prelude::*;
+
+    impl Procedure for AbsorbMultiple {
+        fn rust_shadow(
+            &self,
+            stack: &mut Vec<BFieldElement>,
+            memory: &mut HashMap<BFieldElement, BFieldElement>,
+            _: &NonDeterminism,
+            _: &[BFieldElement],
+            sponge: &mut Option<Tip5>,
+        ) -> Vec<BFieldElement> {
+            // read arguments
+            let length = stack.pop().unwrap().value() as usize;
+            let address = stack.pop().unwrap();
+
+            // read sequence from memory
+            let mut sequence = vec![];
+            for i in 0..length {
+                sequence.push(
+                    memory
+                        .get(&(address + BFieldElement::new(i as u64)))
+                        .copied()
+                        .unwrap(),
+                )
+            }
+
+            let sponge = sponge.as_mut().expect("sponge must be initialized");
+            sponge.pad_and_absorb_all(&sequence);
+
+            // output empty
+            vec![]
+        }
+
+        fn pseudorandom_initial_state(
+            &self,
+            seed: [u8; 32],
+            bench_case: Option<BenchmarkCase>,
+        ) -> ProcedureInitialState {
+            let mut rng = StdRng::from_seed(seed);
+
+            // sample address
+            let address = BFieldElement::new(rng.next_u64() % (1 << 20));
+
+            // sample sequence
+            let length = match bench_case {
+                Some(BenchmarkCase::CommonCase) => 102,
+                Some(BenchmarkCase::WorstCase) => 2002,
+                None => rng.next_u32() % 30,
+            };
+
+            let sequence = (0..length)
+                .map(|_| rng.gen::<BFieldElement>())
+                .collect_vec();
+
+            // write to memory
+            let mut memory = HashMap::new();
+            for (i, s) in sequence.into_iter().enumerate() {
+                memory.insert(address + BFieldElement::new(i as u64), s);
+            }
+            let nondeterminism = NonDeterminism::default().with_ram(memory);
+
+            // leave address and length on stack
+            let mut stack = empty_stack();
+            stack.push(address);
+            stack.push(BFieldElement::new(length as u64));
+
+            let vm_hasher_state = Tip5 { state: rng.gen() };
+
+            ProcedureInitialState {
+                stack,
+                nondeterminism,
+                public_input: vec![],
+                sponge: Some(vm_hasher_state),
+            }
+        }
+
+        fn corner_case_initial_states(&self) -> Vec<ProcedureInitialState> {
+            vec![
+                Self::corner_case_initial_state_for_num_words(0),
+                Self::corner_case_initial_state_for_num_words(1),
+                Self::corner_case_initial_state_for_num_words(2),
+                Self::corner_case_initial_state_for_num_words(5),
+                Self::corner_case_initial_state_for_num_words(9),
+                Self::corner_case_initial_state_for_num_words(10),
+                Self::corner_case_initial_state_for_num_words(11),
+            ]
+        }
+    }
+
+    impl AbsorbMultiple {
+        fn corner_case_initial_state_for_num_words(num_words: u32) -> ProcedureInitialState {
+            let list_address = BFieldElement::new(0);
+            let list_length = BFieldElement::from(num_words);
+            let sequence = vec![BFieldElement::new(2); num_words as usize];
+
+            let stack = [empty_stack(), vec![list_address, list_length]].concat();
+            let ram: HashMap<_, _> = sequence
+                .into_iter()
+                .enumerate()
+                .map(|(i, bfe)| (BFieldElement::from(i as u32), bfe))
+                .collect();
+            let nondeterminism = NonDeterminism::default().with_ram(ram);
+
+            ProcedureInitialState {
+                stack,
+                nondeterminism,
+                public_input: vec![],
+                sponge: Some(Tip5::default()),
+            }
+        }
+    }
 
     #[test]
     fn test() {
@@ -262,9 +253,8 @@ mod test {
 
 #[cfg(test)]
 mod benches {
-    use super::AbsorbMultiple;
-    use crate::traits::procedure::ShadowedProcedure;
-    use crate::traits::rust_shadow::RustShadow;
+    use super::*;
+    use crate::test_prelude::*;
 
     #[test]
     fn benchmark() {

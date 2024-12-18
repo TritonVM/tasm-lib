@@ -3,9 +3,7 @@ use std::collections::HashMap;
 use triton_vm::prelude::*;
 
 use crate::arithmetic::u64::lt::Lt;
-use crate::data_type::DataType;
-use crate::library::Library;
-use crate::traits::basic_snippet::BasicSnippet;
+use crate::prelude::*;
 use crate::traits::basic_snippet::Reviewer;
 use crate::traits::basic_snippet::SignOffFingerprint;
 
@@ -94,16 +92,8 @@ impl BasicSnippet for LtPreserveArgs {
 
 #[cfg(test)]
 mod tests {
-    use test_strategy::proptest;
-
     use super::*;
-    use crate::pop_encodable;
-    use crate::push_encodable;
-    use crate::snippet_bencher::BenchmarkCase;
-    use crate::test_helpers::test_rust_equivalence_given_complete_state;
-    use crate::traits::closure::Closure;
-    use crate::traits::closure::ShadowedClosure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     impl LtPreserveArgs {
         pub fn assert_expected_lt_behavior(&self, left: u64, right: u64) {
@@ -164,8 +154,7 @@ mod tests {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::traits::closure::ShadowedClosure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
     fn benchmark() {

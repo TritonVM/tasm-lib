@@ -3,7 +3,6 @@ use std::collections::HashMap;
 use triton_vm::prelude::*;
 use twenty_first::math::traits::PrimitiveRootOfUnity as PRU;
 
-use crate::data_type::DataType;
 use crate::prelude::*;
 use crate::traits::basic_snippet::Reviewer;
 use crate::traits::basic_snippet::SignOffFingerprint;
@@ -21,7 +20,7 @@ use crate::traits::basic_snippet::SignOffFingerprint;
 ///
 /// - the root is a primitive root of the given order for the field with
 ///   [`BFieldElement::P`] elements
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct PrimitiveRootOfUnity;
 
 impl BasicSnippet for PrimitiveRootOfUnity {
@@ -188,21 +187,10 @@ impl BasicSnippet for PrimitiveRootOfUnity {
 #[cfg(test)]
 mod tests {
     use num_traits::Zero;
-    use proptest::prelude::*;
-    use rand::prelude::*;
-    use test_strategy::proptest;
-    use triton_vm::prelude::*;
 
     use super::*;
     use crate::empty_stack;
-    use crate::pop_encodable;
-    use crate::snippet_bencher::BenchmarkCase;
-    use crate::test_helpers::test_assertion_failure;
-    use crate::test_helpers::test_rust_equivalence_given_complete_state;
-    use crate::traits::closure::Closure;
-    use crate::traits::closure::ShadowedClosure;
-    use crate::traits::rust_shadow::RustShadow;
-    use crate::InitVmState;
+    use crate::test_prelude::*;
 
     impl Closure for PrimitiveRootOfUnity {
         type Args = u64;
@@ -321,11 +309,10 @@ mod tests {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::traits::closure::ShadowedClosure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
-    fn bfe_primitive_root_of_unity_bench() {
+    fn benchmark() {
         ShadowedClosure::new(PrimitiveRootOfUnity).bench()
     }
 }

@@ -1,10 +1,7 @@
-use triton_vm::prelude::triton_asm;
-use triton_vm::prelude::LabelledInstruction;
+use triton_vm::prelude::*;
 
-use crate::data_type::DataType;
-use crate::library::Library;
 use crate::list::LIST_METADATA_SIZE;
-use crate::traits::basic_snippet::BasicSnippet;
+use crate::prelude::*;
 
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct PadAndAbsorbAll;
@@ -33,11 +30,10 @@ impl BasicSnippet for PadAndAbsorbAll {
                 read_mem 1
                 // _ length (*input_list - 1)
 
-                push {LIST_METADATA_SIZE + 1}
-                add
+                addi {LIST_METADATA_SIZE + 1}
                 // _ length *first_element
 
-                swap 1
+                pick 1
                 // _ *first_element length
 
                 call {hash_absorb_snippet_subroutine}
@@ -49,25 +45,16 @@ impl BasicSnippet for PadAndAbsorbAll {
 }
 
 #[cfg(test)]
-mod test {
-    use std::collections::HashMap;
-
+mod tests {
     use arbitrary::Arbitrary;
     use arbitrary::Unstructured;
-    use itertools::Itertools;
-    use rand::prelude::*;
     use triton_vm::prelude::*;
-    use triton_vm::twenty_first::prelude::Sponge;
+    use twenty_first::prelude::Sponge;
 
     use super::*;
     use crate::empty_stack;
-    use crate::prelude::Tip5;
     use crate::rust_shadowing_helper_functions::list::insert_random_list;
-    use crate::snippet_bencher::BenchmarkCase;
-    use crate::traits::procedure::Procedure;
-    use crate::traits::procedure::ProcedureInitialState;
-    use crate::traits::procedure::ShadowedProcedure;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     impl PadAndAbsorbAll {
         fn init_memory_and_stack(

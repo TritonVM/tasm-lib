@@ -1,8 +1,7 @@
 use triton_vm::prelude::*;
-use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
+use twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
-use crate::data_type::DataType;
-use crate::traits::basic_snippet::BasicSnippet;
+use crate::prelude::*;
 
 /// Verify Merkle authentication paths in a FRI context.
 ///
@@ -127,27 +126,15 @@ impl BasicSnippet for VerifyFriAuthenticationPaths {
 }
 
 #[cfg(test)]
-mod test {
-    use std::collections::HashMap;
-
-    use itertools::Itertools;
-    use proptest::prop_assume;
+mod tests {
     use rand::distributions::Standard;
-    use rand::prelude::*;
     use strum::EnumIter;
     use strum::IntoEnumIterator;
-    use tasm_lib::test_helpers::test_assertion_failure;
-    use test_strategy::proptest;
-    use triton_vm::twenty_first::prelude::*;
+    use twenty_first::prelude::*;
 
     use super::*;
-    use crate::prelude::Digest;
     use crate::rust_shadowing_helper_functions;
-    use crate::snippet_bencher::BenchmarkCase;
-    use crate::traits::algorithm::Algorithm;
-    use crate::traits::algorithm::AlgorithmInitialState;
-    use crate::traits::algorithm::ShadowedAlgorithm;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[derive(Clone, Debug, EnumIter, Copy)]
     enum IndexType {
@@ -172,20 +159,14 @@ mod test {
             memory: &mut HashMap<BFieldElement, BFieldElement>,
             nondeterminism: &NonDeterminism,
         ) {
-            // read arguments from stack
-            let root = Digest::new([
-                stack.pop().unwrap(),
-                stack.pop().unwrap(),
-                stack.pop().unwrap(),
-                stack.pop().unwrap(),
-                stack.pop().unwrap(),
-            ]);
-            let idx_last_elem = stack.pop().unwrap();
-            let idx_end_condition = stack.pop().unwrap();
-            let leaf_last_element_pointer = stack.pop().unwrap();
-            let xor_bitflag: u32 = stack.pop().unwrap().try_into().unwrap();
-            let dom_len_minus_one: u32 = stack.pop().unwrap().try_into().unwrap();
-            let dom_len: u32 = dom_len_minus_one + 1;
+            let root = pop_encodable(stack);
+            let idx_last_elem = pop_encodable(stack);
+            let idx_end_condition = pop_encodable(stack);
+            let leaf_last_element_pointer = pop_encodable(stack);
+            let xor_bitflag = pop_encodable::<u32>(stack);
+            let dom_len_minus_one = pop_encodable::<u32>(stack);
+
+            let dom_len = dom_len_minus_one + 1;
             let tree_height: usize = dom_len.ilog2().try_into().unwrap();
 
             let mut auth_path_counter = 0;
@@ -454,11 +435,10 @@ mod test {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::traits::algorithm::ShadowedAlgorithm;
-    use crate::traits::rust_shadow::RustShadow;
+    use crate::test_prelude::*;
 
     #[test]
-    fn vap4lail_benchmark() {
+    fn benchmark() {
         ShadowedAlgorithm::new(VerifyFriAuthenticationPaths).bench();
     }
 }
