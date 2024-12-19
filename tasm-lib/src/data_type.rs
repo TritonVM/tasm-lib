@@ -661,3 +661,81 @@ mod tests {
         prop_assert!(<[[Digest; INNER_LEN]; OUTER_LEN]>::decode(&array).is_ok());
     }
 }
+
+/// Test [`DataType::compare`] by wrapping it in [`BasicSnippet`] and
+/// implementing [`RustShadow`] for it.
+#[cfg(test)]
+mod compare_literals {
+    use super::*;
+    use crate::prelude::*;
+    use crate::test_prelude::*;
+
+    macro_rules! comparison_snippet {
+        ($name:ident for tasm_ty $tasm_ty:ident and rust_ty $rust_ty:ident) => {
+            #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
+            struct $name;
+
+            impl BasicSnippet for $name {
+                fn inputs(&self) -> Vec<(DataType, String)> {
+                    ["left", "right"]
+                        .map(|s| (DataType::$tasm_ty, s.to_string()))
+                        .to_vec()
+                }
+
+                fn outputs(&self) -> Vec<(DataType, String)> {
+                    vec![(DataType::Bool, "are_eq".to_string())]
+                }
+
+                fn entrypoint(&self) -> String {
+                    let ty = stringify!($tasm_ty);
+                    format!("tasmlib_test_compare_{ty}")
+                }
+
+                fn code(&self, _: &mut Library) -> Vec<LabelledInstruction> {
+                    triton_asm!({self.entrypoint()}: {&DataType::$tasm_ty.compare()} return)
+                }
+            }
+
+            impl Closure for $name {
+                type Args = ($rust_ty, $rust_ty);
+
+                fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
+                    let (right, left) = pop_encodable::<Self::Args>(stack);
+                    push_encodable(stack, &(left == right));
+                }
+
+                fn pseudorandom_args(
+                    &self,
+                    seed: [u8; 32],
+                    _: Option<BenchmarkCase>
+                ) -> Self::Args {
+                    // almost certainly different arguments, comparison gives `false`
+                    StdRng::from_seed(seed).gen()
+                }
+
+                fn corner_case_args(&self) -> Vec<Self::Args> {
+                    // identical arguments, comparison gives `true`
+                    vec![Self::Args::default()]
+                }
+            }
+        };
+    }
+
+    // stack size == 1
+    comparison_snippet!(CompareBfes for tasm_ty Bfe and rust_ty BFieldElement);
+
+    // stack size > 1
+    comparison_snippet!(CompareDigests for tasm_ty Digest and rust_ty Digest);
+
+    #[test]
+    fn test() {
+        ShadowedClosure::new(CompareBfes).test();
+        ShadowedClosure::new(CompareDigests).test();
+    }
+
+    #[test]
+    fn bench() {
+        ShadowedClosure::new(CompareBfes).bench();
+        ShadowedClosure::new(CompareDigests).bench();
+    }
+}
