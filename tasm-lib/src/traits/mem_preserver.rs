@@ -68,11 +68,11 @@ impl From<MemPreserverInitialState> for InitVmState {
     }
 }
 
-pub struct ShadowedMemPreserver<T: MemPreserver + 'static> {
+pub struct ShadowedMemPreserver<T: MemPreserver> {
     mem_preserver: T,
 }
 
-impl<T: MemPreserver + 'static> ShadowedMemPreserver<T> {
+impl<T: MemPreserver> ShadowedMemPreserver<T> {
     pub fn new(mem_preserver: T) -> Self {
         Self { mem_preserver }
     }
@@ -80,7 +80,7 @@ impl<T: MemPreserver + 'static> ShadowedMemPreserver<T> {
 
 impl<T> RustShadow for ShadowedMemPreserver<T>
 where
-    T: MemPreserver + 'static,
+    T: MemPreserver,
 {
     fn inner(&self) -> &dyn BasicSnippet {
         &self.mem_preserver

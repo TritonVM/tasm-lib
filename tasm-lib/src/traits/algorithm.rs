@@ -84,11 +84,11 @@ impl From<AlgorithmInitialState> for InitVmState {
     }
 }
 
-pub struct ShadowedAlgorithm<T: Algorithm + 'static> {
+pub struct ShadowedAlgorithm<T: Algorithm> {
     algorithm: T,
 }
 
-impl<T: Algorithm + 'static> ShadowedAlgorithm<T> {
+impl<T: Algorithm> ShadowedAlgorithm<T> {
     pub fn new(algorithm: T) -> Self {
         Self { algorithm }
     }
@@ -96,7 +96,7 @@ impl<T: Algorithm + 'static> ShadowedAlgorithm<T> {
 
 impl<T> RustShadow for ShadowedAlgorithm<T>
 where
-    T: Algorithm + 'static,
+    T: Algorithm,
 {
     fn inner(&self) -> &dyn BasicSnippet {
         &self.algorithm

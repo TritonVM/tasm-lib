@@ -49,17 +49,17 @@ pub trait Closure: BasicSnippet {
     }
 }
 
-pub struct ShadowedClosure<C: Closure + 'static> {
+pub struct ShadowedClosure<C: Closure> {
     closure: C,
 }
 
-impl<C: Closure + 'static> ShadowedClosure<C> {
+impl<C: Closure> ShadowedClosure<C> {
     pub fn new(closure: C) -> Self {
         Self { closure }
     }
 }
 
-impl<C: Closure + 'static> RustShadow for ShadowedClosure<C> {
+impl<C: Closure> RustShadow for ShadowedClosure<C> {
     fn inner(&self) -> &dyn BasicSnippet {
         &self.closure
     }

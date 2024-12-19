@@ -256,7 +256,7 @@ pub(crate) mod tests {
         }
     }
 
-    impl<S: DeprecatedSnippet + Clone + 'static> RustShadow for DeprecatedSnippetWrapper<S> {
+    impl<S: DeprecatedSnippet + Clone> RustShadow for DeprecatedSnippetWrapper<S> {
         fn inner(&self) -> &dyn BasicSnippet {
             &self.deprecated_snippet
         }

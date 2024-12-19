@@ -63,11 +63,11 @@ impl From<AccessorInitialState> for InitVmState {
     }
 }
 
-pub struct ShadowedAccessor<T: Accessor + 'static> {
+pub struct ShadowedAccessor<T: Accessor> {
     accessor: T,
 }
 
-impl<T: Accessor + 'static> ShadowedAccessor<T> {
+impl<T: Accessor> ShadowedAccessor<T> {
     pub fn new(accessor: T) -> Self {
         Self { accessor }
     }
@@ -75,7 +75,7 @@ impl<T: Accessor + 'static> ShadowedAccessor<T> {
 
 impl<T> RustShadow for ShadowedAccessor<T>
 where
-    T: Accessor + 'static,
+    T: Accessor,
 {
     fn inner(&self) -> &dyn BasicSnippet {
         &self.accessor

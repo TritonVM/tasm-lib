@@ -66,17 +66,17 @@ impl From<FunctionInitialState> for InitVmState {
     }
 }
 
-pub struct ShadowedFunction<F: Function + 'static> {
+pub struct ShadowedFunction<F: Function> {
     function: F,
 }
 
-impl<F: Function + 'static> ShadowedFunction<F> {
+impl<F: Function> ShadowedFunction<F> {
     pub fn new(function: F) -> Self {
         Self { function }
     }
 }
 
-impl<P: Function + 'static> ShadowedFunction<P> {
+impl<P: Function> ShadowedFunction<P> {
     fn test_initial_state(&self, state: FunctionInitialState) {
         let FunctionInitialState { stack, memory } = state;
 
@@ -99,7 +99,7 @@ impl<P: Function + 'static> ShadowedFunction<P> {
 
 impl<F> RustShadow for ShadowedFunction<F>
 where
-    F: Function + 'static,
+    F: Function,
 {
     fn inner(&self) -> &dyn BasicSnippet {
         &self.function

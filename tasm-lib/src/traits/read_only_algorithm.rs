@@ -64,11 +64,11 @@ impl From<ReadOnlyAlgorithmInitialState> for InitVmState {
     }
 }
 
-pub struct ShadowedReadOnlyAlgorithm<T: ReadOnlyAlgorithm + 'static> {
+pub struct ShadowedReadOnlyAlgorithm<T: ReadOnlyAlgorithm> {
     algorithm: T,
 }
 
-impl<T: ReadOnlyAlgorithm + 'static> ShadowedReadOnlyAlgorithm<T> {
+impl<T: ReadOnlyAlgorithm> ShadowedReadOnlyAlgorithm<T> {
     pub fn new(algorithm: T) -> Self {
         Self { algorithm }
     }
@@ -76,7 +76,7 @@ impl<T: ReadOnlyAlgorithm + 'static> ShadowedReadOnlyAlgorithm<T> {
 
 impl<T> RustShadow for ShadowedReadOnlyAlgorithm<T>
 where
-    T: ReadOnlyAlgorithm + 'static,
+    T: ReadOnlyAlgorithm,
 {
     fn inner(&self) -> &dyn BasicSnippet {
         &self.algorithm

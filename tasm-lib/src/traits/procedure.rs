@@ -73,17 +73,17 @@ impl From<ProcedureInitialState> for InitVmState {
     }
 }
 
-pub struct ShadowedProcedure<P: Procedure + 'static> {
+pub struct ShadowedProcedure<P: Procedure> {
     procedure: P,
 }
 
-impl<P: Procedure + 'static> ShadowedProcedure<P> {
+impl<P: Procedure> ShadowedProcedure<P> {
     pub fn new(procedure: P) -> Self {
         Self { procedure }
     }
 }
 
-impl<P: Procedure + 'static> RustShadow for ShadowedProcedure<P> {
+impl<P: Procedure> RustShadow for ShadowedProcedure<P> {
     fn inner(&self) -> &dyn BasicSnippet {
         &self.procedure
     }
@@ -150,7 +150,7 @@ impl<P: Procedure + 'static> RustShadow for ShadowedProcedure<P> {
     }
 }
 
-impl<P: Procedure + 'static> ShadowedProcedure<P> {
+impl<P: Procedure> ShadowedProcedure<P> {
     fn test_initial_state(&self, state: ProcedureInitialState) {
         test_rust_equivalence_given_complete_state(
             self,

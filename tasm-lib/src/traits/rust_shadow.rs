@@ -2,8 +2,7 @@ use std::collections::HashMap;
 
 use triton_vm::prelude::*;
 
-use super::basic_snippet::BasicSnippet;
-use crate::prelude::Tip5;
+use crate::prelude::*;
 
 pub trait RustShadow {
     fn inner(&self) -> &dyn BasicSnippet;
