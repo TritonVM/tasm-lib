@@ -112,7 +112,8 @@ pub fn push_encodable<T: BFieldCodec>(stack: &mut Vec<BFieldElement>, value: &T)
 /// Panics if
 /// - the generic type has [dynamic length](BFieldCodec::static_length)
 /// - the stack does not contain enough elements
-#[cfg(test)]
+/// - the top of the stack does not correspond to a [`BFieldCodec`] encoded
+///   element of type `T`
 pub(crate) fn pop_encodable<T: BFieldCodec>(stack: &mut Vec<BFieldElement>) -> T {
     let len = T::static_length().unwrap();
     let limbs = (0..len).map(|_| stack.pop().unwrap()).collect_vec();
