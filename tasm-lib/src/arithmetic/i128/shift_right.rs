@@ -244,6 +244,7 @@ impl BasicSnippet for ShiftRight {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_helpers::tasm_final_state;
     use crate::test_prelude::*;
 
     impl ShiftRight {
@@ -307,28 +308,26 @@ mod tests {
             .for_each(|(arg, shamt)| ShiftRight.assert_expected_shift_behavior(arg, shamt));
     }
 
+    /// Shifting right by 127 must produce either 0xff..f, or 0x00..0, depending on
+    /// the sign of the i128-argument.
     #[proptest(cases = 50)]
-    fn shifting_right_by_127_is_zero_or_minus_1(#[strategy(arb())] arg: i128) {
-        // Verify an assumption about this snippet used downstream in neptune-core:
-        // That shifting right by 127 produces either 0xff..f, or 0x00..0, depending
-        // on the sign of the i128-argument.
-        let mut initial_stack = ShiftRight.init_stack_for_isolated_run();
-        push_encodable(&mut initial_stack, &arg);
-        push_encodable(&mut initial_stack, &127u32);
-        let mut expected_stack = ShiftRight.init_stack_for_isolated_run();
-        let expected_result = if arg.is_positive() { 0i128 } else { -1i128 };
-        push_encodable(&mut expected_stack, &expected_result);
-        test_rust_equivalence_given_complete_state(
+    fn shifting_right_by_127_is_zero_or_minus_1(arg: i128) {
+        let mut final_state = tasm_final_state(
             &ShadowedClosure::new(ShiftRight),
-            &initial_stack,
+            &ShiftRight.set_up_test_stack((arg, 127)),
             &[],
-            &NonDeterminism::default(),
+            NonDeterminism::default(),
             &None,
-            Some(&expected_stack),
         );
 
-        let set_bits = expected_result.count_ones();
-        assert!(set_bits == 0 && !arg.is_negative() || set_bits == i128::BITS && arg.is_negative());
+        let final_stack = &mut final_state.op_stack.stack;
+        let num_bits_in_result = pop_encodable::<i128>(final_stack).count_ones();
+
+        if arg.is_positive() {
+            prop_assert_eq!(0, num_bits_in_result);
+        } else {
+            prop_assert_eq!(i128::BITS, num_bits_in_result);
+        }
     }
 }
 
