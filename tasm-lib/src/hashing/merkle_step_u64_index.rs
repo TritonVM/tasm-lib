@@ -184,3 +184,14 @@ mod tests {
         }
     }
 }
+
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use crate::test_prelude::*;
+
+    #[test]
+    fn benchmark() {
+        ShadowedProcedure::new(MerkleStepU64Index).bench();
+    }
+}
