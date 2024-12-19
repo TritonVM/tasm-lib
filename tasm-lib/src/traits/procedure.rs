@@ -8,12 +8,7 @@ use crate::prelude::Tip5;
 use crate::snippet_bencher::write_benchmarks;
 use crate::snippet_bencher::BenchmarkCase;
 use crate::snippet_bencher::NamedBenchmarkResult;
-use crate::test_helpers::rust_final_state;
-use crate::test_helpers::tasm_final_state;
-use crate::test_helpers::verify_memory_equivalence;
-use crate::test_helpers::verify_sponge_equivalence;
-use crate::test_helpers::verify_stack_equivalence;
-use crate::test_helpers::verify_stack_growth;
+use crate::test_helpers::test_rust_equivalence_given_complete_state;
 use crate::traits::basic_snippet::BasicSnippet;
 use crate::traits::rust_shadow::RustShadow;
 use crate::InitVmState;
@@ -157,32 +152,13 @@ impl<P: Procedure + 'static> RustShadow for ShadowedProcedure<P> {
 
 impl<P: Procedure + 'static> ShadowedProcedure<P> {
     fn test_initial_state(&self, state: ProcedureInitialState) {
-        let ProcedureInitialState {
-            stack,
-            nondeterminism,
-            public_input,
-            sponge,
-        } = state;
-
-        let rust = rust_final_state(self, &stack, &public_input, &nondeterminism, &sponge);
-
-        // run tvm
-        let tasm = tasm_final_state(self, &stack, &public_input, nondeterminism, &sponge);
-
-        assert_eq!(
-            rust.public_output, tasm.public_output,
-            "Rust shadowing and VM std out must agree"
+        test_rust_equivalence_given_complete_state(
+            self,
+            &state.stack,
+            &state.public_input,
+            &state.nondeterminism,
+            &state.sponge,
+            None,
         );
-
-        verify_stack_growth(self, &stack, &tasm.op_stack.stack);
-
-        verify_stack_equivalence(
-            "Rust-shadow",
-            &rust.stack,
-            "TVM execution",
-            &tasm.op_stack.stack,
-        );
-        verify_memory_equivalence("Rust-shadow", &rust.ram, "TVM execution", &tasm.ram);
-        verify_sponge_equivalence(&rust.sponge, &tasm.sponge);
     }
 }
