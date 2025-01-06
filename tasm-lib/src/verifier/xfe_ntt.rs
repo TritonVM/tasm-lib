@@ -23,8 +23,9 @@ impl BasicSnippet for XfeNtt {
 
     fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
         let entrypoint = self.entrypoint();
-        let tasm_arithmetic_u32_leadingzeros =
-            library.import(Box::new(crate::arithmetic::u32::leadingzeros::Leadingzeros));
+        let tasm_arithmetic_u32_leadingzeros = library.import(Box::new(
+            crate::arithmetic::u32::leading_zeros::LeadingZeros,
+        ));
         #[allow(non_snake_case)]
         let tasm_list_length___xfe =
             library.import(Box::new(crate::list::length::Length::new(DataType::Xfe)));

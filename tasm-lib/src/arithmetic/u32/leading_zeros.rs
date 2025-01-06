@@ -1,6 +1,5 @@
 use triton_vm::prelude::*;
 
-use crate::arithmetic::u32::leading_zeros::LeadingZeros as U32LeadingZeroes;
 use crate::prelude::*;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
@@ -8,7 +7,7 @@ pub struct LeadingZeros;
 
 impl BasicSnippet for LeadingZeros {
     fn inputs(&self) -> Vec<(DataType, String)> {
-        vec![(DataType::U64, "arg".to_string())]
+        vec![(DataType::U32, "arg".to_string())]
     }
 
     fn outputs(&self) -> Vec<(DataType, String)> {
@@ -16,46 +15,32 @@ impl BasicSnippet for LeadingZeros {
     }
 
     fn entrypoint(&self) -> String {
-        "tasmlib_arithmetic_u64_leading_zeros".to_string()
+        "tasmlib_arithmetic_u32_leading_zeros".to_string()
     }
 
-    fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
-        let leading_zeros_u32 = library.import(Box::new(U32LeadingZeroes));
-
+    fn code(&self, _: &mut Library) -> Vec<LabelledInstruction> {
         let entrypoint = self.entrypoint();
-        let hi_is_zero_label = format!("{entrypoint}_hi_is_zero");
+        let non_zero_label = format!("{entrypoint}_non_zero");
 
-        triton_asm!(
-            // BEFORE: _ value_hi value_lo
-            // AFTER:  _ (leading_zeros as u32)
+        triton_asm! {
+            // BEFORE: _ value
+            // AFTER:  _ (leading zeros in value)
             {entrypoint}:
-                pick 1
-                call {leading_zeros_u32}
-                // _ value_lo leading_zeros_value_hi
-
                 dup 0
-                push 32
-                eq
                 skiz
-                    call {hi_is_zero_label}
+                  call {non_zero_label}
 
-                // _ temp leading_zeros
-
-                pick 1
-                pop 1
-                return
-
-            {hi_is_zero_label}:
-                // _ value_lo 32
-
-                pick 1
-                call {leading_zeros_u32}
-                // _ 32 leading_zeros_value_lo
-
+                push -1
+                mul
                 addi 32
-                // _ 32 leading_zeros
+
                 return
-        )
+
+            {non_zero_label}:
+                log_2_floor
+                addi 1
+                return
+        }
     }
 }
 
@@ -65,7 +50,7 @@ mod tests {
     use crate::test_prelude::*;
 
     impl Closure for LeadingZeros {
-        type Args = u64;
+        type Args = u32;
 
         fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
             let arg = pop_encodable::<Self::Args>(stack);
@@ -78,18 +63,14 @@ mod tests {
             bench_case: Option<BenchmarkCase>,
         ) -> Self::Args {
             match bench_case {
-                Some(BenchmarkCase::CommonCase) => 1 << 31,
-                Some(BenchmarkCase::WorstCase) => 1 << 62,
+                Some(BenchmarkCase::CommonCase) => 1 << 15,
+                Some(BenchmarkCase::WorstCase) => u32::MAX,
                 None => StdRng::from_seed(seed).gen(),
             }
         }
 
         fn corner_case_args(&self) -> Vec<Self::Args> {
-            let small = 0..10;
-            let medium = (27..35).map(|i| 1 << i);
-            let large = (0..10).map(|i| u64::MAX - i);
-
-            small.chain(medium).chain(large).collect()
+            vec![0, 1, 2, 3, 1 << 28, 1 << 29, 1 << 30, 1 << 31, u32::MAX]
         }
     }
 

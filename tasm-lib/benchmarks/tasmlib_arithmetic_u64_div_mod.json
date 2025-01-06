@@ -13,10 +13,10 @@
   {
     "name": "tasmlib_arithmetic_u64_div_mod",
     "benchmark_result": {
-      "clock_cycle_count": 8020,
+      "clock_cycle_count": 8016,
       "hash_table_height": 522,
       "u32_table_height": 10526,
-      "op_stack_table_height": 5390,
+      "op_stack_table_height": 5382,
       "ram_table_height": 142
     },
     "case": "WorstCase"

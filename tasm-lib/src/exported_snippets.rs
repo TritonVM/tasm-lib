@@ -76,7 +76,7 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn BasicSnippet> {
         "tasmlib_arithmetic_u32_shiftright" => Box::new(u32::shiftright::Shiftright),
         "tasmlib_arithmetic_u32_shiftleft" => Box::new(u32::shiftleft::Shiftleft),
         "tasmlib_arithmetic_u32_or" => Box::new(u32::or::Or),
-        "tasmlib_arithmetic_u32_leadingzeros" => Box::new(u32::leadingzeros::Leadingzeros),
+        "tasmlib_arithmetic_u32_leading_zeros" => Box::new(u32::leading_zeros::LeadingZeros),
         "tasmlib_arithmetic_u32_safepow" => Box::new(u32::safepow::Safepow),
         "tasmlib_arithmetic_u32_overflowingadd" => Box::new(u32::overflowingadd::Overflowingadd),
 

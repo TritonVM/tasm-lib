@@ -2,10 +2,10 @@
   {
     "name": "tasmlib_verifier_xfe_ntt",
     "benchmark_result": {
-      "clock_cycle_count": 116763,
-      "hash_table_height": 222,
+      "clock_cycle_count": 116761,
+      "hash_table_height": 216,
       "u32_table_height": 10855,
-      "op_stack_table_height": 111550,
+      "op_stack_table_height": 111546,
       "ram_table_height": 13729
     },
     "case": "CommonCase"
@@ -13,10 +13,10 @@
   {
     "name": "tasmlib_verifier_xfe_ntt",
     "benchmark_result": {
-      "clock_cycle_count": 257114,
-      "hash_table_height": 222,
+      "clock_cycle_count": 257112,
+      "hash_table_height": 216,
       "u32_table_height": 24122,
-      "op_stack_table_height": 245974,
+      "op_stack_table_height": 245970,
       "ram_table_height": 30529
     },
     "case": "WorstCase"
