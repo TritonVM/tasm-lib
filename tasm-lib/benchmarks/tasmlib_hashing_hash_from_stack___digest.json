@@ -2,8 +2,8 @@
   {
     "name": "tasmlib_hashing_hash_from_stack___digest",
     "benchmark_result": {
-      "clock_cycle_count": 26,
-      "hash_table_height": 43,
+      "clock_cycle_count": 22,
+      "hash_table_height": 37,
       "u32_table_height": 0,
       "op_stack_table_height": 30,
       "ram_table_height": 0
@@ -13,8 +13,8 @@
   {
     "name": "tasmlib_hashing_hash_from_stack___digest",
     "benchmark_result": {
-      "clock_cycle_count": 26,
-      "hash_table_height": 43,
+      "clock_cycle_count": 22,
+      "hash_table_height": 37,
       "u32_table_height": 0,
       "op_stack_table_height": 30,
       "ram_table_height": 0
