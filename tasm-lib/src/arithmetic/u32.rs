@@ -10,3 +10,4 @@ pub mod safepow;
 pub mod safesub;
 pub mod shiftleft;
 pub mod shiftright;
+pub mod trailing_zeros;
