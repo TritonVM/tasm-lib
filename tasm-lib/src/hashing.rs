@@ -9,6 +9,7 @@ pub mod merkle_root_from_xfes_generic;
 pub mod merkle_root_from_xfes_static_size;
 pub mod merkle_root_from_xfes_wrapper;
 pub(crate) mod merkle_root_static_size;
+pub mod merkle_step_mem_u64_index;
 pub mod merkle_step_u64_index;
 pub mod merkle_verify;
 pub mod reverse_digest;

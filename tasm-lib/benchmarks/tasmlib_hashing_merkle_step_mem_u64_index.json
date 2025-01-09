@@ -1,0 +1,24 @@
+[
+  {
+    "name": "tasmlib_hashing_merkle_step_mem_u64_index",
+    "benchmark_result": {
+      "clock_cycle_count": 13,
+      "hash_table_height": 24,
+      "u32_table_height": 7,
+      "op_stack_table_height": 4,
+      "ram_table_height": 5
+    },
+    "case": "CommonCase"
+  },
+  {
+    "name": "tasmlib_hashing_merkle_step_mem_u64_index",
+    "benchmark_result": {
+      "clock_cycle_count": 13,
+      "hash_table_height": 24,
+      "u32_table_height": 37,
+      "op_stack_table_height": 4,
+      "ram_table_height": 5
+    },
+    "case": "WorstCase"
+  }
+]
