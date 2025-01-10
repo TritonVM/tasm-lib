@@ -1,236 +1,201 @@
-use rand::prelude::*;
+use std::collections::HashMap;
+
 use triton_vm::prelude::*;
-use twenty_first::prelude::U32s;
 
-use crate::empty_stack;
+use crate::arithmetic::u64::shift_right::ShiftRight;
 use crate::prelude::*;
-use crate::push_encodable;
-use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::InitVmState;
+use crate::traits::basic_snippet::Reviewer;
+use crate::traits::basic_snippet::SignOffFingerprint;
 
-#[derive(Clone, Debug)]
+/// [Shift left][shl] for unsigned 64-bit integers.
+///
+/// # Behavior
+///
+/// ```text
+/// BEFORE: _ [arg: u64] shift_amount
+/// AFTER:  _ [result: u64]
+/// ```
+///
+/// # Preconditions
+///
+/// - input argument `arg` is properly [`BFieldCodec`] encoded
+/// - input argument `shift_amount` is in `0..64`
+///
+/// # Postconditions
+///
+/// - the output is the input argument `arg` bit-shifted to the left by
+///   input argument `shift_amount`
+/// - the output is properly [`BFieldCodec`] encoded
+///
+/// [shl]: core::ops::Shl
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct ShiftLeft;
 
-impl DeprecatedSnippet for ShiftLeft {
-    fn entrypoint_name(&self) -> String {
+impl ShiftLeft {
+    pub const SHIFT_AMOUNT_TOO_BIG_ERROR_ID: i128 = 370;
+}
+
+impl BasicSnippet for ShiftLeft {
+    fn inputs(&self) -> Vec<(DataType, String)> {
+        ShiftRight.inputs()
+    }
+
+    fn outputs(&self) -> Vec<(DataType, String)> {
+        ShiftRight.outputs()
+    }
+
+    fn entrypoint(&self) -> String {
         "tasmlib_arithmetic_u64_shift_left".to_string()
     }
 
-    fn input_field_names(&self) -> Vec<String> {
-        vec![
-            "value_hi".to_string(),
-            "value_lo".to_string(),
-            "shift_amount".to_string(),
-        ]
-    }
+    fn code(&self, _: &mut Library) -> Vec<LabelledInstruction> {
+        let entrypoint = self.entrypoint();
+        let handle_hi_shift = format!("{entrypoint}_handle_hi_shift");
 
-    fn input_types(&self) -> Vec<DataType> {
-        vec![DataType::U64, DataType::U32]
-    }
-
-    fn output_field_names(&self) -> Vec<String> {
-        vec![
-            "shifted_value_hi".to_string(),
-            "shifted_value_lo".to_string(),
-        ]
-    }
-
-    fn output_types(&self) -> Vec<DataType> {
-        vec![DataType::U64]
-    }
-
-    fn stack_diff(&self) -> isize {
-        -1
-    }
-
-    fn function_code(&self, _library: &mut Library) -> String {
-        let entrypoint = self.entrypoint_name();
-        format!(
-            "
-            // BEFORE: _ value_hi value_lo shift
-            // AFTER:  _ (value << shift)_hi (value << shift)_lo
+        triton_asm!(
+            // BEFORE: _ arg_hi arg_lo shift
+            // AFTER:  _ (arg<< shift)_hi (arg<< shift)_lo
             {entrypoint}:
-                // Bounds check: Verify that shift amount is less than 64.
+                /* bounds check */
                 push 64
                 dup 1
                 lt
-                assert
-                // _ value_hi value_lo shift
+                assert error_id {Self::SHIFT_AMOUNT_TOO_BIG_ERROR_ID}
+                // _ arg_hi arg_lo shift
 
-                // If shift amount is greater than 32, we need to special-case!
+                /* special case: shift amount is greater than 32 */
                 dup 0
                 push 32
                 lt
-                // _ value_hi value_lo shift (shift > 32)
+                // _ arg_hi arg_lo shift (shift > 32)
 
-                skiz
-                    call {entrypoint}_handle_hi_shift
-                // _ value_hi value_lo shift
+                skiz call {handle_hi_shift}
+                // _ arg_hi arg_lo shift
+                // where 32 <= shift < 64
 
                 push 2
                 pow
-                // _ value_hi value_lo (2 ^ shift)
+                // _ arg_hi arg_lo (2^shift)
 
-                swap 2 dup 2
-                // _ (2 ^ shift) value_lo value_hi (2 ^ shift)
-
+                pick 2
+                dup 1
                 mul
-                // _ (2 ^ shift) value_lo (value_hi << shift)_bfe
+                // _ arg_lo (2^shift) (arg_hi << shift)_bfe
 
                 split
-                swap 1
+                place 3
                 pop 1
-                // _ (2 ^ shift) value_lo (value_hi << shift)
+                // _ (arg_hi << shift) arg_lo (2^shift)
 
-                swap 2
                 mul
-                // _ (value_hi << shift) (value_lo << shift)_bfe
-
                 split
-                // _ (value_hi << shift) carry (value_lo << shift)_lo
+                // _ (arg_hi << shift) carry (arg_lo << shift)
 
-                swap 2
-                // _ (value_lo << shift)_lo carry (value_hi << shift)
-
+                place 2
                 add
-                // _ (value_lo << shift)_lo (value << shift)_hi
-
-                swap 1
-                // _ (value << shift)_hi (value << shift)_lo
+                pick 1
+                // _ (arg << shift)_hi (arg_lo << shift)
 
                 return
 
-            // start: _ value_hi value_lo shift
-            // end: _ (value << 32)_hi (value << 32)_lo (shift - 32)
-            {entrypoint}_handle_hi_shift:
-                push -32
-                add
-                // _ value_hi value_lo (shift - 32)
+            // BEFORE: _ arg_hi arg_lo shift
+            // AFTER:  _ (arg<< 32)_hi (arg<< 32)_lo (shift - 32)
+            {handle_hi_shift}:
+                addi -32
+                // _ arg_hi arg_lo (shift - 32)
 
-                swap 2 swap 1 push 32
-                // _ (shift - 32) value_hi value_lo 32
-
-                call {entrypoint}
-                // _ (shift - 32) (value << 32)_hi (value << 32)_lo
-
-                swap 1 swap 2
-                // _ (value << 32)_hi (value << 32)_lo (shift - 32)
+                pick 2
+                pop 1
+                push 0
+                place 1
+                // _ arg_lo         0            (shift - 32)
+                // _ (arg<< 32)_hi (arg<< 32)_lo (shift - 32)
 
                 return
-            "
         )
     }
 
-    fn crash_conditions(&self) -> Vec<String> {
-        vec![
-            "Shift amount is 64 or greater".to_string(),
-            "inputs are not valid u32s".to_string(),
-        ]
+    fn sign_offs(&self) -> HashMap<Reviewer, SignOffFingerprint> {
+        let mut sign_offs = HashMap::new();
+        sign_offs.insert(Reviewer("ferdinand"), 0x46e8b1129fe7b87c.into());
+        sign_offs
     }
-
-    fn gen_input_states(&self) -> Vec<InitVmState> {
-        let mut rng = thread_rng();
-        let mut ret = vec![];
-        for _ in 0..3 {
-            for i in 0..64 {
-                ret.push(prepare_state((rng.next_u32() as u64) * 2, i));
-            }
-        }
-
-        ret
-    }
-
-    fn common_case_input_state(&self) -> InitVmState {
-        prepare_state(0x642, 15)
-    }
-
-    fn worst_case_input_state(&self) -> InitVmState {
-        prepare_state(0x123456789abcdef, 33)
-    }
-
-    fn rust_shadowing(
-        &self,
-        stack: &mut Vec<BFieldElement>,
-        _std_in: Vec<BFieldElement>,
-        _secret_in: Vec<BFieldElement>,
-        _memory: &mut std::collections::HashMap<BFieldElement, BFieldElement>,
-    ) {
-        // Find shift amount
-        let shift_amount: u32 = stack.pop().unwrap().try_into().unwrap();
-
-        // Original value
-        let a_lo: u32 = stack.pop().unwrap().try_into().unwrap();
-        let a_hi: u32 = stack.pop().unwrap().try_into().unwrap();
-        let a = ((a_hi as u64) << 32) + a_lo as u64;
-
-        let ret = a << shift_amount;
-        stack.push((ret >> 32).into());
-        stack.push((ret & u32::MAX as u64).into());
-    }
-}
-
-fn prepare_state(value: u64, shift_amount: u32) -> InitVmState {
-    let value = U32s::<2>::try_from(value).unwrap();
-    let mut init_stack = empty_stack();
-    push_encodable(&mut init_stack, &value);
-    init_stack.push(BFieldElement::new(shift_amount as u64));
-    InitVmState::with_stack(init_stack)
 }
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-
     use super::*;
-    use crate::test_helpers::test_rust_equivalence_given_input_values_deprecated;
-    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
+    use crate::test_prelude::*;
 
-    #[test]
-    fn shift_left_u64_test() {
-        test_rust_equivalence_multiple_deprecated(&ShiftLeft, true);
+    impl ShiftLeft {
+        pub fn assert_expected_behavior(&self, shift_amount: u32, arg: u64) {
+            let initial_stack = self.set_up_test_stack((arg, shift_amount));
+
+            let mut expected_stack = initial_stack.clone();
+            self.rust_shadow(&mut expected_stack);
+
+            test_rust_equivalence_given_complete_state(
+                &ShadowedClosure::new(Self),
+                &initial_stack,
+                &[],
+                &NonDeterminism::default(),
+                &None,
+                Some(&expected_stack),
+            );
+        }
     }
 
-    #[test]
-    fn shift_left_simple_test() {
-        prop_left_left(8, 2);
-    }
+    impl Closure for ShiftLeft {
+        type Args = (u64, u32);
 
-    #[test]
-    fn shift_left_max_values_test() {
-        for i in 0..64 {
-            prop_left_left(u64::MAX, i);
+        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
+            let (arg, shift_amount) = pop_encodable::<Self::Args>(stack);
+            assert!(shift_amount < 64);
+            push_encodable(stack, &(arg << shift_amount));
+        }
+
+        fn pseudorandom_args(
+            &self,
+            seed: [u8; 32],
+            bench_case: Option<BenchmarkCase>,
+        ) -> Self::Args {
+            let mut rng = StdRng::from_seed(seed);
+
+            match bench_case {
+                Some(BenchmarkCase::CommonCase) => (0x642, 15),
+                Some(BenchmarkCase::WorstCase) => (0x123456789abcdef, 33),
+                None => (rng.gen(), rng.gen_range(0..64)),
+            }
+        }
+
+        fn corner_case_args(&self) -> Vec<Self::Args> {
+            (0..64).map(|i| (1, i)).collect()
         }
     }
 
     #[test]
-    #[should_panic]
-    fn shift_beyond_limit() {
-        let mut init_stack = empty_stack();
-        init_stack.push(BFieldElement::new(u32::MAX as u64));
-        init_stack.push(BFieldElement::new(u32::MAX as u64));
-        init_stack.push(64u64.into());
-        ShiftLeft.link_and_run_tasm_from_state_for_test(&mut InitVmState::with_stack(init_stack));
+    fn rust_shadow() {
+        ShadowedClosure::new(ShiftLeft).test()
     }
 
-    fn prop_left_left(value: u64, shift_amount: u32) {
-        let mut init_stack = empty_stack();
-        init_stack.push(BFieldElement::new(value >> 32));
-        init_stack.push(BFieldElement::new(value & u32::MAX as u64));
-        init_stack.push(BFieldElement::new(shift_amount as u64));
+    #[test]
+    fn edge_cases() {
+        for i in 0..64 {
+            ShiftLeft.assert_expected_behavior(i, u64::MAX);
+        }
+    }
 
-        let expected_u64 = value << shift_amount;
-        println!("{value} << {shift_amount} = {expected_u64}");
+    #[proptest]
+    fn property_test(arg: u64, #[strategy(0_u32..64)] shift_amount: u32) {
+        ShiftLeft.assert_expected_behavior(shift_amount, arg);
+    }
 
-        let mut expected_stack = empty_stack();
-        expected_stack.push((expected_u64 >> 32).into());
-        expected_stack.push((expected_u64 & u32::MAX as u64).into());
-
-        test_rust_equivalence_given_input_values_deprecated(
-            &ShiftLeft,
-            &init_stack,
-            &[],
-            HashMap::default(),
-            Some(&expected_stack),
+    #[proptest]
+    fn negative_property_test(arg: u64, #[strategy(64_u32..)] shift_amount: u32) {
+        test_assertion_failure(
+            &ShadowedClosure::new(ShiftLeft),
+            InitVmState::with_stack(ShiftLeft.set_up_test_stack((arg, shift_amount))),
+            &[ShiftLeft::SHIFT_AMOUNT_TOO_BIG_ERROR_ID],
         );
     }
 }
@@ -238,10 +203,10 @@ mod tests {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::snippet_bencher::bench_and_write;
+    use crate::test_prelude::*;
 
     #[test]
-    fn shift_left_u64_benchmark() {
-        bench_and_write(ShiftLeft);
+    fn benchmark() {
+        ShadowedClosure::new(ShiftLeft).bench();
     }
 }

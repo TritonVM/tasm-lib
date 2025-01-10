@@ -46,3 +46,4 @@ often.
 |  340..350 | [`u64::Sub`](arithmetic/u64/sub.rs)                                                         |
 |  350..360 | [`MmrLeafIndexToMtIndexAndPeakIndex`](mmr/leaf_index_to_mt_index_and_peak_index.rs)         |
 |  360..370 | [`u64::Pow2`](arithmetic/u64/pow2.rs)                                                       |
+|  370..380 | [`u64::ShiftLeft`](arithmetic/u64/shift_left.rs)                                            |
