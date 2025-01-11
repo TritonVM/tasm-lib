@@ -108,6 +108,51 @@ pub trait TasmStruct: TasmObject {
     /// [`get_field_with_size`](TasmObject::get_field_with_size) instead.
     #[doc(hidden)]
     fn get_field_start_with_jump_distance(field_name: &str) -> Vec<LabelledInstruction>;
+
+    /// Destructure a struct into the pointers to its fields.
+    ///
+    /// ```text
+    /// BEFORE: _ *struct
+    /// AFTER:  _ [pointers to all fields]
+    /// ```
+    ///
+    /// # Example
+    ///
+    /// The example below defines a struct `Foo` and encodes an instance of it into
+    /// memory. It then creates a Triton VM program to read and destructure the
+    /// `Foo` instance, extracting and outputting the `bar` field. Finally, it runs
+    /// the program and asserts that the extracted value matches the original `bar`
+    /// value.
+    ///
+    /// ```ignore // derive macro `BFieldCodec` does not behave nicely; todo
+    /// # use tasm_lib::prelude::*;
+    /// # use tasm_lib::triton_vm::prelude::*;
+    /// # use tasm_lib::memory::encode_to_memory;
+    /// #[derive(BFieldCodec, TasmObject)]
+    /// struct Foo {
+    ///     bar: u32,
+    ///     baz: XFieldElement,
+    /// }
+    ///
+    /// let foo = Foo { bar: 13, baz: xfe!(0) };
+    /// let foo_ptr = bfe!(42);
+    /// let mut non_determinism = NonDeterminism::default();
+    /// encode_to_memory(&mut non_determinism.ram, foo_ptr, &foo);
+    ///
+    /// let program = triton_program! {
+    ///     read_io 1               // _ *foo
+    ///     {&Foo::destructure()}   // _ *baz *bar
+    ///     read_mem 1              // _ *baz bar (*bar - 1)
+    ///     pop 1                   // _ *baz bar
+    ///     write_io 1              // _ *baz
+    ///     halt
+    /// };
+    ///
+    /// let output = VM::run(program, PublicInput::new(vec![foo_ptr]), non_determinism).unwrap();
+    /// let [bar] = output[..] else { panic!() };
+    /// assert_eq!(bfe!(foo.bar), bar);
+    /// ```
+    fn destructure() -> Vec<LabelledInstruction>;
 }
 
 pub fn decode_from_memory_with_size<T: BFieldCodec>(
@@ -888,6 +933,237 @@ mod tests {
             let final_state =
                 execute_with_terminal_state(program, &[], &stack, &nondeterminism, None).unwrap();
             final_state.op_stack.stack
+        }
+    }
+
+    #[cfg(test)]
+    mod destructure {
+        use super::*;
+
+        #[test]
+        fn unit_struct() {
+            #[derive(BFieldCodec, TasmObject)]
+            struct Empty {}
+
+            let sentinel = bfe!(0xdead_face_u64);
+            let program = triton_program! {
+                push {sentinel}         // _ s
+                push 0                  // _ s 0
+                {&Empty::destructure()} // _ s
+                push {sentinel}         // _ s s
+                eq                      // _ (s == s)
+                assert                  // _
+                halt
+            };
+            VM::run(program, PublicInput::default(), NonDeterminism::default()).unwrap();
+        }
+
+        mod one_field {
+            use super::*;
+
+            #[derive(Debug, Copy, Clone, BFieldCodec, TasmObject, Arbitrary)]
+            struct TupleStatic(u32);
+
+            #[derive(Debug, Clone, BFieldCodec, TasmObject, Arbitrary)]
+            struct TupleDynamic(Vec<u32>);
+
+            #[derive(Debug, Copy, Clone, BFieldCodec, TasmObject, Arbitrary)]
+            struct NamedStatic {
+                field: u32,
+            }
+
+            #[derive(Debug, Clone, BFieldCodec, TasmObject, Arbitrary)]
+            struct NamedDynamic {
+                field: Vec<u32>,
+            }
+
+            // This macro is a little bit cursed due to the `$post_process`. Since it is
+            // very limited in scope, I say it's better than duplicating essentially the
+            // same code four times. If you want to extend the scope of this macro, please
+            // re-design it.
+            macro_rules! one_field_test_case {
+                (fn $test_name:ident for $ty:ident: $f_name:tt $($post_process:tt)*) => {
+                    #[proptest]
+                    fn $test_name(
+                        #[strategy(arb())] foo: $ty,
+                        #[strategy(arb())] ptr: BFieldElement,
+                    ) {
+                        let program = triton_program! {
+                            push {ptr}
+                            {&$ty::destructure()}
+                            read_mem 1 pop 1 write_io 1
+                            halt
+                        };
+
+                        let mut non_determinism = NonDeterminism::default();
+                        encode_to_memory(&mut non_determinism.ram, ptr, &foo);
+
+                        let output = VM::run(program, PublicInput::default(), non_determinism);
+                        let [output] = output.unwrap()[..] else {
+                            return Err(TestCaseError::Fail("unexpected output".into()));
+                        };
+
+                        let $ty { $f_name: the_field } = foo;
+                        let expected = the_field$($post_process)*;
+                        prop_assert_eq!(bfe!(expected), output);
+                    }
+                };
+            }
+
+            one_field_test_case!( fn tuple_static  for TupleStatic:  0 );
+            one_field_test_case!( fn tuple_dynamic for TupleDynamic: 0.len() );
+            one_field_test_case!( fn named_static  for NamedStatic:  field );
+            one_field_test_case!( fn named_dynamic for NamedDynamic: field.len() );
+        }
+
+        mod two_fields {
+            use super::*;
+
+            #[derive(Debug, Copy, Clone, BFieldCodec, TasmObject, Arbitrary)]
+            struct TupleStatStat(u32, u32);
+
+            #[derive(Debug, Clone, BFieldCodec, TasmObject, Arbitrary)]
+            struct TupleStatDyn(u32, Vec<u32>);
+
+            #[derive(Debug, Clone, BFieldCodec, TasmObject, Arbitrary)]
+            struct TupleDynStat(Vec<u32>, u32);
+
+            #[derive(Debug, Clone, BFieldCodec, TasmObject, Arbitrary)]
+            struct TupleDynDyn(Vec<u32>, Vec<u32>);
+
+            #[derive(Debug, Copy, Clone, BFieldCodec, TasmObject, Arbitrary)]
+            struct NamedStatStat {
+                a: u32,
+                b: u32,
+            }
+
+            #[derive(Debug, Clone, BFieldCodec, TasmObject, Arbitrary)]
+            struct NamedStatDyn {
+                a: u32,
+                b: Vec<u32>,
+            }
+
+            #[derive(Debug, Clone, BFieldCodec, TasmObject, Arbitrary)]
+            struct NamedDynStat {
+                a: Vec<u32>,
+                b: u32,
+            }
+
+            #[derive(Debug, Clone, BFieldCodec, TasmObject, Arbitrary)]
+            struct NamedDynDyn {
+                a: Vec<u32>,
+                b: Vec<u32>,
+            }
+
+            // This macro is a little bit cursed due to the `$post_process`es. Since it is
+            // very limited in scope, I say it's better than duplicating essentially the
+            // same code eight times. If you want to extend the scope of this macro, please
+            // re-design it.
+            macro_rules! two_fields_test_case {
+                (fn $test_name:ident for $ty:ident:
+                    ($f_name_0:tt $($post_process_0:tt)*)
+                    ($f_name_1:tt $($post_process_1:tt)*)
+                ) => {
+                    #[proptest]
+                    fn $test_name(
+                        #[strategy(arb())] foo: $ty,
+                        #[strategy(arb())] ptr: BFieldElement,
+                    ) {
+                        let program = triton_program! {
+                            push {ptr}
+                            {&$ty::destructure()}
+                            read_mem 1 pop 1 write_io 1
+                            read_mem 1 pop 1 write_io 1
+                            halt
+                        };
+
+                        let mut non_determinism = NonDeterminism::default();
+                        encode_to_memory(&mut non_determinism.ram, ptr, &foo);
+
+                        let output = VM::run(program, PublicInput::default(), non_determinism);
+                        let [output_0, output_1] = output.unwrap()[..] else {
+                            return Err(TestCaseError::Fail("unexpected output".into()));
+                        };
+
+                        let $ty { $f_name_0: field_0, $f_name_1: field_1 } = foo;
+                        let expected_0 = field_0$($post_process_0)*;
+                        let expected_1 = field_1$($post_process_1)*;
+                        prop_assert_eq!(bfe!(expected_0), output_0);
+                        prop_assert_eq!(bfe!(expected_1), output_1);
+                    }
+                };
+            }
+
+            two_fields_test_case!( fn tuple_stat_stat for TupleStatStat: (0) (1) );
+            two_fields_test_case!( fn tuple_stat_dyn  for TupleStatDyn:  (0) (1.len()) );
+            two_fields_test_case!( fn tuple_dyn_stat  for TupleDynStat:  (0.len()) (1) );
+            two_fields_test_case!( fn tuple_dyn_dyn   for TupleDynDyn:   (0.len()) (1.len()) );
+            two_fields_test_case!( fn named_stat_stat for NamedStatStat: (a) (b) );
+            two_fields_test_case!( fn named_stat_dyn  for NamedStatDyn:  (a) (b.len()) );
+            two_fields_test_case!( fn named_dyn_stat  for NamedDynStat:  (a.len()) (b) );
+            two_fields_test_case!( fn named_dyn_dyn   for NamedDynDyn:   (a.len()) (b.len()) );
+        }
+
+        #[test]
+        fn all_static_dynamic_neighbor_combinations() {
+            /// A struct where all neighbor combinations of fields with
+            /// {static, dynamic}×{static, dynamic} sizes occur.
+            #[derive(Debug, BFieldCodec, TasmObject, Eq, PartialEq)]
+            struct Foo {
+                a: XFieldElement,
+                b: Vec<Digest>,
+                c: Vec<Vec<XFieldElement>>,
+                d: u128,
+                e: u64,
+            }
+
+            let foo = Foo {
+                a: xfe!([42, 43, 44]),
+                b: vec![Digest::new(bfe_array![45, 46, 47, 48, 49])],
+                c: vec![vec![], xfe_vec![[50, 51, 52]]],
+                d: 53 + (54 << 32) + (55 << 64) + (56 << 96),
+                e: 57 + (58 << 32),
+            };
+
+            let foo_encoding = bfe_vec![
+                /* e: 00..=01 */ 57, 58, //
+                /* d: 02..=05 */ 53, 54, 55, 56, //
+                /* c: 06..=14 */ 8, 2, 1, 0, 4, 1, 50, 51, 52, //
+                /* b: 15..=21 */ 6, 1, 45, 46, 47, 48, 49, //
+                /* a: 22..=24 */ 42, 43, 44 //
+            ];
+            debug_assert_eq!(foo_encoding, foo.encode(),);
+
+            let foo_ptr = bfe!(100);
+            let mut non_determinism = NonDeterminism::default();
+            encode_to_memory(&mut non_determinism.ram, foo_ptr, &foo);
+
+            let program = triton_program! {
+                read_io 1               // _ *foo
+                {&Foo::destructure()}   // _ *e *d *c *b *a
+                write_io 5              // _
+                halt
+            };
+
+            let input = PublicInput::new(vec![foo_ptr]);
+            let output = VM::run(program, input, non_determinism.clone()).unwrap();
+            let [a_ptr, b_ptr, c_ptr, d_ptr, e_ptr] = output[..] else {
+                panic!("expected 5 pointers");
+            };
+
+            assert_eq!(foo_ptr + bfe!(22), a_ptr);
+            assert_eq!(foo_ptr + bfe!(16), b_ptr);
+            assert_eq!(foo_ptr + bfe!(7), c_ptr);
+            assert_eq!(foo_ptr + bfe!(2), d_ptr);
+            assert_eq!(foo_ptr + bfe!(0), e_ptr);
+
+            let a = *XFieldElement::decode_from_memory(&non_determinism.ram, a_ptr).unwrap();
+            let b = *Vec::decode_from_memory(&non_determinism.ram, b_ptr).unwrap();
+            let c = *Vec::decode_from_memory(&non_determinism.ram, c_ptr).unwrap();
+            let d = *u128::decode_from_memory(&non_determinism.ram, d_ptr).unwrap();
+            let e = *u64::decode_from_memory(&non_determinism.ram, e_ptr).unwrap();
+            let foo_again = Foo { a, b, c, d, e };
+            assert_eq!(foo, foo_again);
         }
     }
 
