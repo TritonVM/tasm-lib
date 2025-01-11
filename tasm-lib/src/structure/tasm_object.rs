@@ -13,11 +13,15 @@ pub(super) type Result<T> = std::result::Result<T, Box<dyn Error + Send + Sync>>
 
 pub const DEFAULT_MAX_DYN_FIELD_SIZE: u32 = 1u32 << 28;
 
-/// This trait defines methods for dealing with custom-defined objects from within the VM,
-/// assuming those methods live in memory as they are encoded with [`BFieldCodec`].
+/// This trait defines methods for dealing with primitive types and
+/// custom-defined struct types from within the VM, assuming they live in memory
+/// as they are encoded with [`BFieldCodec`].
 ///
-/// The arguments referring to fields are strings. For structs with unnamed fields, the
-/// nth field name is implicitly `field_n`.
+/// ### Dyn-Compatibility
+///
+/// This trait is _not_ [dyn-compatible] (previously known as “object safe”).
+///
+/// [dyn-compatible]: https://doc.rust-lang.org/reference/items/traits.html#dyn-compatibility
 pub trait TasmObject: BFieldCodec {
     /// Maximum jump distance for encoded size and length indicators.
     /// The field getters will compare any length or size indicator read
@@ -27,6 +31,42 @@ pub trait TasmObject: BFieldCodec {
 
     fn label_friendly_name() -> String;
 
+    /// Return the size of `self` and crash if any contained size-indicator
+    /// is not valid.
+    ///
+    /// ```text
+    /// BEFORE: _ *object
+    /// AFTER:  _ calculated_size
+    /// ```
+    fn compute_size_and_assert_valid_size_indicator(
+        library: &mut Library,
+    ) -> Vec<LabelledInstruction>;
+
+    /// Decode as [`Self`].
+    fn decode_iter<Itr: Iterator<Item = BFieldElement>>(iterator: &mut Itr) -> Result<Box<Self>>;
+
+    fn decode_from_memory(
+        memory: &HashMap<BFieldElement, BFieldElement>,
+        address: BFieldElement,
+    ) -> Result<Box<Self>> {
+        let mut iterator = MemoryIter::new(memory, address);
+        Self::decode_iter(&mut iterator)
+    }
+}
+
+/// This trait defines methods for dealing with custom-defined struct types from
+/// within the VM, assuming they live in memory as they are encoded with
+/// [`BFieldCodec`].
+///
+/// The arguments referring to fields are strings. For structs with unnamed fields, the
+/// nth field name is implicitly `field_n`.
+///
+/// ### Dyn-Compatibility
+///
+/// This trait is _not_ [dyn-compatible] (previously known as “object safe”).
+///
+/// [dyn-compatible]: https://doc.rust-lang.org/reference/items/traits.html#dyn-compatibility
+pub trait TasmStruct: TasmObject {
     /// Returns tasm code that returns a pointer the field of the object, assuming:
     ///  - that a pointer to the said object lives on top of the stack;
     ///  - said object has a type that implements the TasmObject trait;
@@ -67,28 +107,6 @@ pub trait TasmObject: BFieldCodec {
     /// [`get_field`](TasmObject::get_field) or
     /// [`get_field_with_size`](TasmObject::get_field_with_size) instead.
     fn get_field_start_with_jump_distance(field_name: &str) -> Vec<LabelledInstruction>;
-
-    /// Return the size of a struct and crash if any contained size-indicator
-    /// is not valid.
-    ///
-    /// ```text
-    /// BEFORE: _ *object
-    /// AFTER:  _ calculated_size
-    /// ```
-    fn compute_size_and_assert_valid_size_indicator(
-        library: &mut Library,
-    ) -> Vec<LabelledInstruction>;
-
-    /// Decode as [`Self`].
-    fn decode_iter<Itr: Iterator<Item = BFieldElement>>(iterator: &mut Itr) -> Result<Box<Self>>;
-
-    fn decode_from_memory(
-        memory: &HashMap<BFieldElement, BFieldElement>,
-        address: BFieldElement,
-    ) -> Result<Box<Self>> {
-        let mut iterator = MemoryIter::new(memory, address);
-        Self::decode_iter(&mut iterator)
-    }
 }
 
 pub fn decode_from_memory_with_size<T: BFieldCodec>(
@@ -104,26 +122,26 @@ pub fn decode_from_memory_with_size<T: BFieldCodec>(
 }
 
 /// Convenience struct for converting between string literals and field name identifiers.
-pub trait TasmObjectFieldName {
-    fn tasm_object_field_name(&self) -> String;
+pub trait TasmStructFieldName {
+    fn tasm_struct_field_name(&self) -> String;
 }
 
-impl TasmObjectFieldName for &str {
-    fn tasm_object_field_name(&self) -> String {
+impl TasmStructFieldName for &str {
+    fn tasm_struct_field_name(&self) -> String {
         self.to_string()
     }
 }
 
-impl TasmObjectFieldName for i32 {
-    fn tasm_object_field_name(&self) -> String {
+impl TasmStructFieldName for i32 {
+    fn tasm_struct_field_name(&self) -> String {
         format!("field_{}", self)
     }
 }
 
 /// Convenience macro, so that we don't have to write
 /// ```ignore
-/// let field_f = <StructWithNamedFields as TasmObject>::get_field!("f");
-/// let field_0 = <StructWithUnnamedFields as TasmObject>::get_field!("field_0");
+/// let field_f = <StructWithNamedFields as TasmStruct>::get_field!("f");
+/// let field_0 = <StructWithUnnamedFields as TasmStruct>::get_field!("field_0");
 /// ```
 /// but instead
 /// ```ignore
@@ -136,22 +154,24 @@ impl TasmObjectFieldName for i32 {
 /// this, define a new type via `type Custom = Generic<T>` and use that instead.
 #[macro_export]
 macro_rules! field {
-    { $o : ident :: $e : ident } => {
-        <$o as $crate::structure::tasm_object::TasmObject>
-            ::get_field(& $crate::structure::tasm_object::TasmObjectFieldName::tasm_object_field_name(&stringify!($e))
+    ($o:ident::$e:ident) => {
+        <$o as $crate::structure::tasm_object::TasmStruct>::get_field(
+            &$crate::structure::tasm_object::TasmStructFieldName::tasm_struct_field_name(
+                &stringify!($e),
+            ),
         )
     };
-    { $o : ident :: $e : expr } => {
-        <$o as $crate::structure::tasm_object::TasmObject>
-            ::get_field(& $crate::structure::tasm_object::TasmObjectFieldName::tasm_object_field_name(&$e)
+    ($o:ident::$e:expr) => {
+        <$o as $crate::structure::tasm_object::TasmStruct>::get_field(
+            &$crate::structure::tasm_object::TasmStructFieldName::tasm_struct_field_name(&$e),
         )
     };
 }
 
 /// Convenience macro, so that we don't have to write
 /// ```ignore
-/// let field_f = <StructWithNamedFields as TasmObject>::get_field_with_size!("f");
-/// let field_0 = <StructWithUnnamedFields as TasmObject>::get_field_with_size!("field_0");
+/// let field_f = <StructWithNamedFields as TasmStruct>::get_field_with_size!("f");
+/// let field_0 = <StructWithUnnamedFields as TasmStruct>::get_field_with_size!("field_0");
 /// ```
 /// but instead
 /// ```ignore
@@ -164,16 +184,18 @@ macro_rules! field {
 /// this, define a new type via `type Custom = Generic<T>` and use that instead.
 #[macro_export]
 macro_rules! field_with_size {
-    { $o : ident :: $e : ident } => {
-        <$o as $crate::structure::tasm_object::TasmObject>
+    ($o:ident::$e:ident) => {
+        <$o as $crate::structure::tasm_object::TasmStruct>
             ::get_field_with_size(
-                & $crate::structure::tasm_object::TasmObjectFieldName::tasm_object_field_name(&stringify!($e))
+                &$crate::structure::tasm_object::TasmStructFieldName::tasm_struct_field_name(
+                    &stringify!($e)
+                )
             )
     };
-    { $o : ident :: $e : expr } => {
-        <$o as $crate::structure::tasm_object::TasmObject>
+    ($o:ident::$e:expr) => {
+        <$o as $crate::structure::tasm_object::TasmStruct>
             ::get_field_with_size(
-                & $crate::structure::tasm_object::TasmObjectFieldName::tasm_object_field_name(&$e)
+                &$crate::structure::tasm_object::TasmStructFieldName::tasm_object_field_name(&$e)
             )
     };
 }

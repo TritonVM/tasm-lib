@@ -17,7 +17,7 @@ use crate::push_encodable;
 ///
 /// This trait is [dyn-compatible] (previously known as “object safe”).
 ///
-/// [dyn-compatible]: https://doc.rust-lang.org/reference/items/traits.html#object-safety
+/// [dyn-compatible]: https://doc.rust-lang.org/reference/items/traits.html#dyn-compatibility
 pub trait BasicSnippet {
     fn inputs(&self) -> Vec<(DataType, String)>;
     fn outputs(&self) -> Vec<(DataType, String)>;

@@ -1,4 +1,5 @@
-//! This crate provides a derive macro for the `TasmObject` trait.
+//! This crate provides a derive macro for the `TasmObject` and `TasmStruct`
+//! traits.
 //!
 //! Example usage:
 //! ```no_compile
@@ -31,7 +32,7 @@ use proc_macro2::TokenStream;
 use quote::quote;
 use syn::DeriveInput;
 
-/// Derives `TasmObject` for structs.
+/// Derives both, `TasmObject` and `TasmStruct` for structs.
 #[proc_macro_derive(TasmObject, attributes(tasm_object))]
 pub fn tasm_object_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let ast = syn::parse(input).unwrap();
@@ -315,6 +316,30 @@ fn impl_tasm_object_derive_macro(ast: DeriveInput) -> TokenStream {
                 #name_as_string.to_owned()
             }
 
+            fn compute_size_and_assert_valid_size_indicator(
+                library: &mut crate::tasm_lib::library::Library
+            ) -> ::std::vec::Vec<crate::triton_vm::isa::instruction::LabelledInstruction> {
+                #integral_size_indicators_code
+            }
+
+            fn decode_iter<Itr: Iterator<Item=crate::BFieldElement>>(
+                iterator: &mut Itr
+            ) -> ::std::result::Result<
+                    ::std::boxed::Box<Self>,
+                    ::std::boxed::Box<
+                        dyn ::std::error::Error
+                        + ::core::marker::Send
+                        + ::core::marker::Sync
+                    >
+                >
+            {
+                #( #field_decoders )*
+                ::std::result::Result::Ok(::std::boxed::Box::new(#self_builder))
+            }
+        }
+
+        impl #impl_generics crate::tasm_lib::structure::tasm_object::TasmStruct
+        for #name #ty_generics #new_where_clause {
             fn get_field(
                 field_name: &str
             ) -> ::std::vec::Vec<crate::triton_vm::isa::instruction::LabelledInstruction> {
@@ -377,27 +402,6 @@ fn impl_tasm_object_derive_macro(ast: DeriveInput) -> TokenStream {
                     #( #field_starter_clauses ,)*
                     unknown_field_name => panic!("Cannot match on field name `{unknown_field_name}`."),
                 }
-            }
-
-            fn compute_size_and_assert_valid_size_indicator(
-                library: &mut crate::tasm_lib::library::Library
-            ) -> ::std::vec::Vec<crate::triton_vm::isa::instruction::LabelledInstruction> {
-                #integral_size_indicators_code
-            }
-
-            fn decode_iter<Itr: Iterator<Item=crate::BFieldElement>>(
-                iterator: &mut Itr
-            ) -> ::std::result::Result<
-                    ::std::boxed::Box<Self>,
-                    ::std::boxed::Box<
-                        dyn ::std::error::Error
-                        + ::core::marker::Send
-                        + ::core::marker::Sync
-                    >
-                >
-            {
-                #( #field_decoders )*
-                ::std::result::Result::Ok(::std::boxed::Box::new(#self_builder))
             }
         }
     };

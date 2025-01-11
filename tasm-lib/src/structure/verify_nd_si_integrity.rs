@@ -10,11 +10,11 @@ use crate::prelude::*;
 /// Crashes the VM if the structure in question is not entirely contained within
 /// the non-deterministic section of memory as defined in the memory layout.
 #[derive(Clone, Debug)]
-pub struct VerifyNdSiIntegrity<PreloadedData: TasmObject + BFieldCodec + Clone + Debug> {
+pub struct VerifyNdSiIntegrity<PreloadedData: TasmObject + Clone + Debug> {
     _phantom_data: PhantomData<PreloadedData>,
 }
 
-impl<T: TasmObject + BFieldCodec + Clone + Debug> Default for VerifyNdSiIntegrity<T> {
+impl<T: TasmObject + Clone + Debug> Default for VerifyNdSiIntegrity<T> {
     fn default() -> Self {
         Self {
             _phantom_data: PhantomData,
@@ -22,7 +22,7 @@ impl<T: TasmObject + BFieldCodec + Clone + Debug> Default for VerifyNdSiIntegrit
     }
 }
 
-impl<T: TasmObject + BFieldCodec + Clone + Debug> BasicSnippet for VerifyNdSiIntegrity<T> {
+impl<T: TasmObject + Clone + Debug> BasicSnippet for VerifyNdSiIntegrity<T> {
     fn inputs(&self) -> Vec<(DataType, String)> {
         vec![(DataType::VoidPointer, "*struct".to_owned())]
     }
@@ -106,7 +106,7 @@ mod tests {
 
     impl<T> Accessor for VerifyNdSiIntegrity<T>
     where
-        T: TasmObject + BFieldCodec + for<'a> Arbitrary<'a> + Debug + Clone,
+        T: TasmObject + for<'a> Arbitrary<'a> + Debug + Clone,
     {
         fn rust_shadow(
             &self,

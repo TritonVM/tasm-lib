@@ -6,8 +6,7 @@ use triton_vm::fri::AuthenticationStructure;
 use triton_vm::prelude::*;
 use triton_vm::proof_item::FriResponse;
 
-use crate::library::Library;
-use crate::prelude::TasmObject;
+use crate::prelude::*;
 use crate::twenty_first::prelude::MmrMembershipProof;
 use crate::twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
 use crate::twenty_first::util_types::mmr::mmr_successor_proof::MmrSuccessorProof;
@@ -22,18 +21,6 @@ macro_rules! derive_tasm_object_for {
                 stringify!($actual).to_string()
             }
 
-            fn get_field(field_name: &str) -> Vec<LabelledInstruction> {
-                $fake::get_field(field_name)
-            }
-
-            fn get_field_with_size(field_name: &str) -> Vec<LabelledInstruction> {
-                $fake::get_field_with_size(field_name)
-            }
-
-            fn get_field_start_with_jump_distance(field_name: &str) -> Vec<LabelledInstruction> {
-                $fake::get_field_start_with_jump_distance(field_name)
-            }
-
             fn compute_size_and_assert_valid_size_indicator(
                 library: &mut Library,
             ) -> Vec<LabelledInstruction> {
@@ -45,6 +32,20 @@ macro_rules! derive_tasm_object_for {
             ) -> Result<Box<Self>, Box<dyn core::error::Error + Send + Sync>> {
                 let $fake { $($field),* } = *$fake::decode_iter(iterator)?;
                 Ok(Box::new(Self { $($field),* }))
+            }
+        }
+
+        impl TasmStruct for $actual {
+            fn get_field(field_name: &str) -> Vec<LabelledInstruction> {
+                $fake::get_field(field_name)
+            }
+
+            fn get_field_with_size(field_name: &str) -> Vec<LabelledInstruction> {
+                $fake::get_field_with_size(field_name)
+            }
+
+            fn get_field_start_with_jump_distance(field_name: &str) -> Vec<LabelledInstruction> {
+                $fake::get_field_start_with_jump_distance(field_name)
             }
         }
     };
@@ -91,18 +92,6 @@ impl TasmObject for MmrAccumulator {
         "MmrAccumulator".to_string()
     }
 
-    fn get_field(field_name: &str) -> Vec<LabelledInstruction> {
-        FakeMmrAccumulator::get_field(field_name)
-    }
-
-    fn get_field_with_size(field_name: &str) -> Vec<LabelledInstruction> {
-        FakeMmrAccumulator::get_field_with_size(field_name)
-    }
-
-    fn get_field_start_with_jump_distance(field_name: &str) -> Vec<LabelledInstruction> {
-        FakeMmrAccumulator::get_field_start_with_jump_distance(field_name)
-    }
-
     fn compute_size_and_assert_valid_size_indicator(
         library: &mut Library,
     ) -> Vec<LabelledInstruction> {
@@ -115,5 +104,19 @@ impl TasmObject for MmrAccumulator {
         let FakeMmrAccumulator { leaf_count, peaks } = *FakeMmrAccumulator::decode_iter(iterator)?;
 
         Ok(Box::new(Self::init(peaks, leaf_count)))
+    }
+}
+
+impl TasmStruct for MmrAccumulator {
+    fn get_field(field_name: &str) -> Vec<LabelledInstruction> {
+        FakeMmrAccumulator::get_field(field_name)
+    }
+
+    fn get_field_with_size(field_name: &str) -> Vec<LabelledInstruction> {
+        FakeMmrAccumulator::get_field_with_size(field_name)
+    }
+
+    fn get_field_start_with_jump_distance(field_name: &str) -> Vec<LabelledInstruction> {
+        FakeMmrAccumulator::get_field_start_with_jump_distance(field_name)
     }
 }

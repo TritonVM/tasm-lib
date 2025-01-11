@@ -9,22 +9,10 @@ use crate::prelude::*;
 
 impl<const N: usize, T> TasmObject for [T; N]
 where
-    T: BFieldCodec + TasmObject,
+    T: TasmObject,
 {
     fn label_friendly_name() -> String {
         format!("array{}___{}", N, T::label_friendly_name())
-    }
-
-    fn get_field(_field_name: &str) -> Vec<LabelledInstruction> {
-        todo!()
-    }
-
-    fn get_field_with_size(_field_name: &str) -> Vec<LabelledInstruction> {
-        todo!()
-    }
-
-    fn get_field_start_with_jump_distance(_field_name: &str) -> Vec<LabelledInstruction> {
-        todo!()
     }
 
     fn compute_size_and_assert_valid_size_indicator(_: &mut Library) -> Vec<LabelledInstruction> {
@@ -49,22 +37,10 @@ where
 
 impl<T> TasmObject for Vec<T>
 where
-    T: BFieldCodec + TasmObject,
+    T: TasmObject,
 {
     fn label_friendly_name() -> String {
         format!("vec___{}", T::label_friendly_name())
-    }
-
-    fn get_field(_field_name: &str) -> Vec<LabelledInstruction> {
-        panic!("`Vec` does not have fields; cannot access them")
-    }
-
-    fn get_field_with_size(_field_name: &str) -> Vec<LabelledInstruction> {
-        panic!("`Vec` does not have fields; cannot access them")
-    }
-
-    fn get_field_start_with_jump_distance(_field_name: &str) -> Vec<LabelledInstruction> {
-        panic!("`Vec` does not have fields; cannot access them")
     }
 
     fn compute_size_and_assert_valid_size_indicator(
@@ -209,18 +185,6 @@ impl TasmObject for BFieldElement {
         DataType::Bfe.label_friendly_name()
     }
 
-    fn get_field(_field_name: &str) -> Vec<LabelledInstruction> {
-        panic!()
-    }
-
-    fn get_field_with_size(_field_name: &str) -> Vec<LabelledInstruction> {
-        panic!()
-    }
-
-    fn get_field_start_with_jump_distance(_field_name: &str) -> Vec<LabelledInstruction> {
-        panic!()
-    }
-
     fn compute_size_and_assert_valid_size_indicator(_: &mut Library) -> Vec<LabelledInstruction> {
         panic!("Size is known statically for BFieldElement encoding")
     }
@@ -234,18 +198,6 @@ impl TasmObject for BFieldElement {
 impl TasmObject for XFieldElement {
     fn label_friendly_name() -> String {
         DataType::Xfe.label_friendly_name()
-    }
-
-    fn get_field(_field_name: &str) -> Vec<LabelledInstruction> {
-        panic!()
-    }
-
-    fn get_field_with_size(_field_name: &str) -> Vec<LabelledInstruction> {
-        panic!()
-    }
-
-    fn get_field_start_with_jump_distance(_field_name: &str) -> Vec<LabelledInstruction> {
-        panic!()
     }
 
     fn compute_size_and_assert_valid_size_indicator(_: &mut Library) -> Vec<LabelledInstruction> {
@@ -266,18 +218,6 @@ impl TasmObject for Digest {
         DataType::Digest.label_friendly_name()
     }
 
-    fn get_field(_field_name: &str) -> Vec<LabelledInstruction> {
-        panic!()
-    }
-
-    fn get_field_with_size(_field_name: &str) -> Vec<LabelledInstruction> {
-        panic!()
-    }
-
-    fn get_field_start_with_jump_distance(_field_name: &str) -> Vec<LabelledInstruction> {
-        panic!()
-    }
-
     fn compute_size_and_assert_valid_size_indicator(_: &mut Library) -> Vec<LabelledInstruction> {
         panic!("Size is known statically for Digest encoding")
     }
@@ -294,18 +234,6 @@ impl TasmObject for Digest {
 impl TasmObject for bool {
     fn label_friendly_name() -> String {
         DataType::Bool.label_friendly_name()
-    }
-
-    fn get_field(_field_name: &str) -> Vec<LabelledInstruction> {
-        panic!()
-    }
-
-    fn get_field_with_size(_field_name: &str) -> Vec<LabelledInstruction> {
-        panic!()
-    }
-
-    fn get_field_start_with_jump_distance(_field_name: &str) -> Vec<LabelledInstruction> {
-        panic!()
     }
 
     fn compute_size_and_assert_valid_size_indicator(_: &mut Library) -> Vec<LabelledInstruction> {
@@ -327,18 +255,6 @@ impl TasmObject for u32 {
         DataType::U32.label_friendly_name()
     }
 
-    fn get_field(_field_name: &str) -> Vec<LabelledInstruction> {
-        panic!()
-    }
-
-    fn get_field_with_size(_field_name: &str) -> Vec<LabelledInstruction> {
-        panic!()
-    }
-
-    fn get_field_start_with_jump_distance(_field_name: &str) -> Vec<LabelledInstruction> {
-        panic!()
-    }
-
     fn compute_size_and_assert_valid_size_indicator(_: &mut Library) -> Vec<LabelledInstruction> {
         panic!("Size is known statically for u32 encoding")
     }
@@ -357,18 +273,6 @@ impl TasmObject for u32 {
 impl TasmObject for u64 {
     fn label_friendly_name() -> String {
         DataType::U64.label_friendly_name()
-    }
-
-    fn get_field(_field_name: &str) -> Vec<LabelledInstruction> {
-        panic!()
-    }
-
-    fn get_field_with_size(_field_name: &str) -> Vec<LabelledInstruction> {
-        panic!()
-    }
-
-    fn get_field_start_with_jump_distance(_field_name: &str) -> Vec<LabelledInstruction> {
-        panic!()
     }
 
     fn compute_size_and_assert_valid_size_indicator(_: &mut Library) -> Vec<LabelledInstruction> {
@@ -393,18 +297,6 @@ impl TasmObject for u128 {
         DataType::U128.label_friendly_name()
     }
 
-    fn get_field(_field_name: &str) -> Vec<LabelledInstruction> {
-        panic!()
-    }
-
-    fn get_field_with_size(_field_name: &str) -> Vec<LabelledInstruction> {
-        panic!()
-    }
-
-    fn get_field_start_with_jump_distance(_field_name: &str) -> Vec<LabelledInstruction> {
-        panic!()
-    }
-
     fn compute_size_and_assert_valid_size_indicator(_: &mut Library) -> Vec<LabelledInstruction> {
         panic!("Size is known statically for u128 encoding")
     }
@@ -426,8 +318,8 @@ impl TasmObject for u128 {
 
 impl<T, S> TasmObject for (T, S)
 where
-    T: TasmObject + BFieldCodec,
-    S: TasmObject + BFieldCodec,
+    T: TasmObject,
+    S: TasmObject,
 {
     fn label_friendly_name() -> String {
         format!(
@@ -435,18 +327,6 @@ where
             T::label_friendly_name(),
             S::label_friendly_name()
         )
-    }
-
-    fn get_field(_field_name: &str) -> Vec<LabelledInstruction> {
-        panic!()
-    }
-
-    fn get_field_with_size(_field_name: &str) -> Vec<LabelledInstruction> {
-        panic!()
-    }
-
-    fn get_field_start_with_jump_distance(_field_name: &str) -> Vec<LabelledInstruction> {
-        panic!()
     }
 
     fn compute_size_and_assert_valid_size_indicator(
@@ -558,18 +438,6 @@ impl TasmObject for Polynomial<'_, XFieldElement> {
         "polynomial_xfe".to_owned()
     }
 
-    fn get_field(_field_name: &str) -> Vec<LabelledInstruction> {
-        todo!()
-    }
-
-    fn get_field_with_size(_field_name: &str) -> Vec<LabelledInstruction> {
-        todo!()
-    }
-
-    fn get_field_start_with_jump_distance(_field_name: &str) -> Vec<LabelledInstruction> {
-        todo!()
-    }
-
     fn compute_size_and_assert_valid_size_indicator(_: &mut Library) -> Vec<LabelledInstruction> {
         triton_asm!(
             // _ *field_size
@@ -613,18 +481,6 @@ impl TasmObject for Proof {
         "tvm_proof".to_owned()
     }
 
-    fn get_field(_field_name: &str) -> Vec<LabelledInstruction> {
-        panic!()
-    }
-
-    fn get_field_with_size(_field_name: &str) -> Vec<LabelledInstruction> {
-        panic!()
-    }
-
-    fn get_field_start_with_jump_distance(_field_name: &str) -> Vec<LabelledInstruction> {
-        panic!()
-    }
-
     fn compute_size_and_assert_valid_size_indicator(_: &mut Library) -> Vec<LabelledInstruction> {
         // Proofs are special, as the fields of a proof is only accessed through
         // the [`DequeueNextAs`](crate::verifier::vm_proof_iter::dequeue_next_as)
@@ -653,22 +509,10 @@ impl TasmObject for Proof {
 
 impl<T> TasmObject for Option<T>
 where
-    T: TasmObject + BFieldCodec,
+    T: TasmObject,
 {
     fn label_friendly_name() -> String {
         format!("option_L_{}_R", T::label_friendly_name())
-    }
-
-    fn get_field(_field_name: &str) -> Vec<LabelledInstruction> {
-        panic!("cannot get field of an option type");
-    }
-
-    fn get_field_with_size(_field_name: &str) -> Vec<LabelledInstruction> {
-        panic!("cannot get field with size of an option type");
-    }
-
-    fn get_field_start_with_jump_distance(_field_name: &str) -> Vec<LabelledInstruction> {
-        panic!("cannot get field start with jump distance of an option type");
     }
 
     fn compute_size_and_assert_valid_size_indicator(
@@ -777,7 +621,7 @@ mod tests {
     use super::*;
     use crate::memory::encode_to_memory;
 
-    fn decode_iter_prop<T: TasmObject + BFieldCodec + Eq + Debug>(obj_written: T) {
+    fn decode_iter_prop<T: TasmObject + Eq + Debug>(obj_written: T) {
         let mut memory = HashMap::default();
         let address = random();
         encode_to_memory(&mut memory, address, &obj_written);
