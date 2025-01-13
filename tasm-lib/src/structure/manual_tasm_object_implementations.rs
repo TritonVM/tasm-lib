@@ -206,7 +206,7 @@ impl TasmObject for XFieldElement {
             .next_tuple()
             .ok_or(BFieldCodecError::SequenceTooShort)?;
 
-        Ok(Box::new(XFieldElement::new([c_0, c_1, c_2])))
+        Ok(Box::new(xfe!([c_0, c_1, c_2])))
     }
 }
 
@@ -242,7 +242,7 @@ impl TasmObject for bool {
         match the_bool.value() {
             0 => Ok(Box::new(false)),
             1 => Ok(Box::new(true)),
-            _ => Err(Box::new(BFieldCodecError::SequenceTooShort)),
+            _ => Err(Box::new(BFieldCodecError::ElementOutOfRange)),
         }
     }
 }
@@ -281,11 +281,7 @@ impl TasmObject for u64 {
             .next_tuple()
             .ok_or(BFieldCodecError::SequenceTooShort)?;
 
-        let too_big = |_| BFieldCodecError::ElementOutOfRange;
-        let val_lo = u64::from(u32::try_from(val_lo).map_err(too_big)?);
-        let val_hi = u64::from(u32::try_from(val_hi).map_err(too_big)?);
-
-        Ok(Box::new((val_hi << 32) + val_lo))
+        Ok(Self::decode(&[val_lo, val_hi])?)
     }
 }
 
@@ -299,17 +295,11 @@ impl TasmObject for u128 {
     }
 
     fn decode_iter<Itr: Iterator<Item = BFieldElement>>(iterator: &mut Itr) -> Result<Box<Self>> {
-        let (lolo, lohi, hilo, hihi) = iterator
+        let (lo_lo, lo_hi, hi_lo, hi_hi) = iterator
             .next_tuple()
             .ok_or(BFieldCodecError::SequenceTooShort)?;
 
-        let too_big = |_| BFieldCodecError::ElementOutOfRange;
-        let lolo = u128::from(u32::try_from(lolo).map_err(too_big)?);
-        let lohi = u128::from(u32::try_from(lohi).map_err(too_big)?);
-        let hilo = u128::from(u32::try_from(hilo).map_err(too_big)?);
-        let hihi = u128::from(u32::try_from(hihi).map_err(too_big)?);
-
-        Ok(Box::new((hihi << 96) + (hilo << 64) + (lohi << 32) + lolo))
+        Ok(Self::decode(&[lo_lo, lo_hi, hi_lo, hi_hi])?)
     }
 }
 
@@ -430,7 +420,7 @@ impl TasmObject for Polynomial<'_, XFieldElement> {
             pop 1
             // _ list_length field_size
 
-            push {Polynomial::<XFieldElement>::MAX_OFFSET}
+            push {Self::MAX_OFFSET}
             dup 1
             lt
             assert
