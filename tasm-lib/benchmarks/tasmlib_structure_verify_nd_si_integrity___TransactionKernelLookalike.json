@@ -2,10 +2,10 @@
   {
     "name": "tasmlib_structure_verify_nd_si_integrity___TransactionKernelLookalike",
     "benchmark_result": {
-      "clock_cycle_count": 278,
+      "clock_cycle_count": 282,
       "hash_table_height": 390,
       "u32_table_height": 240,
-      "op_stack_table_height": 184,
+      "op_stack_table_height": 180,
       "ram_table_height": 15
     },
     "case": "CommonCase"
@@ -16,7 +16,7 @@
       "clock_cycle_count": 244,
       "hash_table_height": 390,
       "u32_table_height": 212,
-      "op_stack_table_height": 164,
+      "op_stack_table_height": 160,
       "ram_table_height": 14
     },
     "case": "WorstCase"

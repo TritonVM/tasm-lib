@@ -12,22 +12,21 @@ where
     T: TasmObject,
 {
     fn label_friendly_name() -> String {
-        format!("array{}___{}", N, T::label_friendly_name())
+        format!("array{N}___{}", T::label_friendly_name())
     }
 
     fn compute_size_and_assert_valid_size_indicator(_: &mut Library) -> Vec<LabelledInstruction> {
-        if let Some(static_size) = T::static_length() {
-            let own_size = static_size * N;
-            triton_asm!(
+        if let Some(static_size) = Self::static_length() {
+            return triton_asm!(
                 // _ *elem[0]
 
                 pop 1
-                push {own_size}
+                push {static_size}
                 // _ own_size
-            )
-        } else {
-            todo!()
+            );
         }
+
+        todo!()
     }
 
     fn decode_iter<Itr: Iterator<Item = BFieldElement>>(_iterator: &mut Itr) -> Result<Box<Self>> {
@@ -46,116 +45,114 @@ where
     fn compute_size_and_assert_valid_size_indicator(
         library: &mut Library,
     ) -> Vec<LabelledInstruction> {
-        if let Some(static_size) = T::static_length() {
-            // _ *list_len
-            triton_asm!(
-                read_mem 1
-                pop 1
-                // _ list_len
+        if T::static_length().is_some() {
+            return triton_asm!(
+                // _ *list_len
 
-                push {static_size}
+                read_mem 1
+                // _ list_len *elem[0]
+
+                {&T::compute_size_and_assert_valid_size_indicator(library)}
+                // _ list_len elem_size
+
                 mul
                 addi 1
                 // _ (list_len * elem_size + 1)
                 // _ calculated_size
-            )
-        } else {
-            // _ *list_len
-
-            let verified_element_size = T::compute_size_and_assert_valid_size_indicator(library);
-
-            let loop_label = format!(
-                "tasmlib_structure_tasmobject_verify_size_indicators_dyn_elem_sizes___{}",
-                T::label_friendly_name()
             );
+        }
 
-            let loop_code = triton_asm!(
-                // INVARIANT: _ remaining_elements acc_size *element_si
-                {loop_label}:
+        let loop_label = format!(
+            "tasmlib_structure_tasmobject_verify_size_indicators_dyn_elem_sizes___{}",
+            T::label_friendly_name()
+        );
 
-                    dup 2
-                    push 0
-                    eq
-                    skiz
-                        return
-                    // _ remaining_elements acc_size *element_si
+        let loop_code = triton_asm!(
+            // INVARIANT: _ remaining_elements acc_size *element_si
+            {loop_label}:
 
-                    read_mem 1
-                    // _ remaining_elements acc_size element_si (*element_si-1)
-
-                    /* Verify that max allowed size is not exceeded */
-                    push {T::MAX_OFFSET}
-                    dup 2
-                    lt
-                    assert error_id 210
-                    // _ remaining_elements acc_size element_si (*element_si-1)
-
-                    addi 2
-                    // _ remaining_elements acc_size element_si *element
-
-                    dup 0
-                    {&verified_element_size}
-                    // _ remaining_elements acc_size element_si *element calculated_elem_size
-
-                    dup 2
-                    eq
-                    assert error_id 211
-                    // _ remaining_elements acc_size element_si *element
-
-                    dup 2
-                    dup 2
-                    add
-                    // _ remaining_elements acc_size element_si *element acc_size'
-
-                    /* Account for element's size indicator, since it's dynamically sized */
-                    addi 1
-                    // _ remaining_elements acc_size element_si *element acc_size'
-
-                    swap 3
-                    pop 1
-                    // _ remaining_elements acc_size' element_si *element
-
-                    add
-                    // _ remaining_elements acc_size' *next_element
-
-                    swap 2
-                    addi -1
-                    swap 2
-                    // _ (remaining_elements-1) acc_size' *next_element
-
-                    recurse
-            );
-
-            library.explicit_import(&loop_label, &loop_code);
-            triton_asm!(
-                // _ *list_len
+                dup 2
+                push 0
+                eq
+                skiz
+                    return
+                // _ remaining_elements acc_size *element_si
 
                 read_mem 1
-                // _ list_len (*list_len - 1)
+                // _ remaining_elements acc_size element_si (*element_si-1)
 
-                push 0
-                swap 1
-                // _ list_len 0 (*list_len - 1)
+                /* Verify that max allowed size is not exceeded */
+                push {T::MAX_OFFSET}
+                dup 2
+                lt
+                assert error_id 210
+                // _ remaining_elements acc_size element_si (*element_si-1)
 
                 addi 2
-                hint elem_si_ptr = stack[0]
-                hint acc_size = stack[1]
-                hint remaining_elements = stack[2]
-                // _ list_len 0 (*list_len + 1)
-                // _ remaining_elements acc_size *element[0]_si <-- rename
+                // _ remaining_elements acc_size element_si *element
 
-                call {loop_label}
-                // _ 0 acc_size *EOF
+                dup 0
+                {&T::compute_size_and_assert_valid_size_indicator(library)}
+                // _ remaining_elements acc_size element_si *element calculated_elem_size
 
-                pop 1
-                swap 1
-                pop 1
-                // _ acc_size
+                dup 2
+                eq
+                assert error_id 211
+                // _ remaining_elements acc_size element_si *element
 
-                /* Add size of (outer) list's length indicator */
+                pick 2
+                dup 2
+                add
+                // _ remaining_elements element_si *element acc_size'
+
+                /* Account for element's size indicator, since it's dynamically sized */
                 addi 1
-            )
-        }
+                // _ remaining_elements element_si *element acc_size'
+
+                place 2
+                // _ remaining_elements acc_size' element_si *element
+
+                add
+                // _ remaining_elements acc_size' *next_element
+
+                pick 2
+                addi -1
+                place 2
+                // _ (remaining_elements-1) acc_size' *next_element
+
+                recurse
+        );
+
+        library.explicit_import(&loop_label, &loop_code);
+        triton_asm!(
+            // _ *list_len
+
+            read_mem 1
+            hint remaining_elements = stack[1]
+            // _ list_len (*list_len - 1)
+
+            addi 2
+            hint elem_si_ptr = stack[0]
+            // _ list_len           (*list_len + 1)
+            // _ remaining_elements *element[0]_si
+
+            push 0
+            hint acc_size = stack[0]
+            // _ remaining_elements *element[0]_si acc_size
+
+            place 1
+            // _ remaining_elements acc_size *element[0]_si
+
+            call {loop_label}
+            // _ 0 acc_size *EOF
+
+            pick 2
+            pop 2
+            // _ acc_size
+
+            /* Add size of (outer) list's length indicator */
+            addi 1
+        )
     }
 
     fn decode_iter<Itr: Iterator<Item = BFieldElement>>(iterator: &mut Itr) -> Result<Box<Self>> {
@@ -186,7 +183,7 @@ impl TasmObject for BFieldElement {
     }
 
     fn compute_size_and_assert_valid_size_indicator(_: &mut Library) -> Vec<LabelledInstruction> {
-        panic!("Size is known statically for BFieldElement encoding")
+        triton_asm!(pop 1 push {Self::static_length().unwrap()})
     }
 
     fn decode_iter<Itr: Iterator<Item = BFieldElement>>(iterator: &mut Itr) -> Result<Box<Self>> {
@@ -201,7 +198,7 @@ impl TasmObject for XFieldElement {
     }
 
     fn compute_size_and_assert_valid_size_indicator(_: &mut Library) -> Vec<LabelledInstruction> {
-        panic!("Size is known statically for XFieldElement encoding")
+        triton_asm!(pop 1 push {Self::static_length().unwrap()})
     }
 
     fn decode_iter<Itr: Iterator<Item = BFieldElement>>(iterator: &mut Itr) -> Result<Box<Self>> {
@@ -219,7 +216,7 @@ impl TasmObject for Digest {
     }
 
     fn compute_size_and_assert_valid_size_indicator(_: &mut Library) -> Vec<LabelledInstruction> {
-        panic!("Size is known statically for Digest encoding")
+        triton_asm!(pop 1 push {Self::static_length().unwrap()})
     }
 
     fn decode_iter<Itr: Iterator<Item = BFieldElement>>(iterator: &mut Itr) -> Result<Box<Self>> {
@@ -237,7 +234,7 @@ impl TasmObject for bool {
     }
 
     fn compute_size_and_assert_valid_size_indicator(_: &mut Library) -> Vec<LabelledInstruction> {
-        panic!("Size is known statically for bool encoding")
+        triton_asm!(pop 1 push {Self::static_length().unwrap()})
     }
 
     fn decode_iter<Itr: Iterator<Item = BFieldElement>>(iterator: &mut Itr) -> Result<Box<Self>> {
@@ -256,7 +253,7 @@ impl TasmObject for u32 {
     }
 
     fn compute_size_and_assert_valid_size_indicator(_: &mut Library) -> Vec<LabelledInstruction> {
-        panic!("Size is known statically for u32 encoding")
+        triton_asm!(pop 1 push {Self::static_length().unwrap()})
     }
 
     fn decode_iter<Itr: Iterator<Item = BFieldElement>>(iterator: &mut Itr) -> Result<Box<Self>> {
@@ -276,7 +273,7 @@ impl TasmObject for u64 {
     }
 
     fn compute_size_and_assert_valid_size_indicator(_: &mut Library) -> Vec<LabelledInstruction> {
-        panic!("Size is known statically for u64 encoding")
+        triton_asm!(pop 1 push {Self::static_length().unwrap()})
     }
 
     fn decode_iter<Itr: Iterator<Item = BFieldElement>>(iterator: &mut Itr) -> Result<Box<Self>> {
@@ -298,7 +295,7 @@ impl TasmObject for u128 {
     }
 
     fn compute_size_and_assert_valid_size_indicator(_: &mut Library) -> Vec<LabelledInstruction> {
-        panic!("Size is known statically for u128 encoding")
+        triton_asm!(pop 1 push {Self::static_length().unwrap()})
     }
 
     fn decode_iter<Itr: Iterator<Item = BFieldElement>>(iterator: &mut Itr) -> Result<Box<Self>> {
@@ -332,90 +329,74 @@ where
     fn compute_size_and_assert_valid_size_indicator(
         library: &mut Library,
     ) -> Vec<LabelledInstruction> {
-        let size_left = match T::static_length() {
-            Some(static_size) => triton_asm!(
-                // _ *left
+        let size_left = if T::static_length().is_some() {
+            T::compute_size_and_assert_valid_size_indicator(library)
+        } else {
+            triton_asm!(
+                // _ *left_si
+                hint left_si_ptr = stack[0]
 
-                pop 1
-                push { static_size }
+                read_mem 1
+                addi 2
+                // _ left_si *left
+
+                {&T::compute_size_and_assert_valid_size_indicator(library)}
+                hint calculated_left = stack[0]
+                // _ left_si calculated_left
+
+                dup 1
+                eq
+                assert error_id 220
                 // _ left_size
-            ),
-            None => {
-                let recursive_call = T::compute_size_and_assert_valid_size_indicator(library);
 
-                triton_asm!(
-                    // _ *left_si
-                    hint left_si_ptr = stack[0]
-
-                    read_mem 1
-                    addi 2
-                    // _ left_si *left
-
-                    {&recursive_call}
-                    hint calculated_left = stack[0]
-                    // _ left_si calculated_left
-
-                    dup 1
-                    eq
-                    assert error_id 220
-                    // _ left_size
-
-                    addi 1
-                    // _ (left_size + 1)
-                )
-            }
+                addi 1
+                // _ (left_size + 1)
+            )
         };
-        let size_right = match S::static_length() {
-            Some(static_size) => triton_asm!(
-                // _ *right
 
-                push { static_size }
-                hint right_size = stack[0]
-                 // _ *right right_size
-            ),
-            None => {
-                let recursive_call = S::compute_size_and_assert_valid_size_indicator(library);
+        let size_right = if S::static_length().is_some() {
+            S::compute_size_and_assert_valid_size_indicator(library)
+        } else {
+            triton_asm!(
+                // _ *right_si
+                hint right_si_ptr = stack[0]
 
-                triton_asm!(
-                    // _ *right_si
-                    hint right_si_ptr = stack[0]
+                read_mem 1
+                hint right_si = stack[1]
+                // _ right_si (*right_si - 1)
 
-                    read_mem 1
-                    addi 1
-                    swap 1
-                    dup 1
-                    addi 1
-                    // _ *right_si right_si *right
 
-                    {&recursive_call}
-                    hint calculated_right = stack[0]
-                    // _ *right_si right_si calculated_right
+                addi 2
+                // _ right_size *right
 
-                    dup 1
-                    eq
-                    assert error_id 221
-                    // _ *right_si right_size
+                {&S::compute_size_and_assert_valid_size_indicator(library)}
+                hint calculated_right = stack[0]
+                // _ right_size calculated_right_size
 
-                    /* Include size of size-indicator */
-                    addi 1
-                    // _ *right_si (right_size+1)
-                )
-            }
+                dup 1
+                eq
+                assert error_id 221
+                // _ right_size
+
+                /* Include size of size-indicator */
+                addi 1
+                // _ (right_size+1)
+            )
         };
 
         triton_asm!(
             // _ *tuple
 
-            // TODO: addi 1 here?
+            dup 0
             {&size_right}
             hint right_ptr_or_right_si = stack[1]
             hint right_size_incl_pot_si = stack[0]
             // _ *right right_size'
 
-            swap 1
+            pick 1
             dup 1
             add
-            hint left = stack[0]
+            hint left: Pointer = stack[0]
             // _ right_size' (*right + right_size')
             // _ right_size' *left
 
@@ -455,7 +436,7 @@ impl TasmObject for Polynomial<'_, XFieldElement> {
             assert
             // _ list_length field_size
 
-            swap 1
+            pick 1
             push {EXTENSION_DEGREE}
             mul
             addi 1
@@ -489,14 +470,12 @@ impl TasmObject for Proof {
 
         triton_asm!(
             // _ *proof
-            read_mem 1
-            // _ field_0_len (*proof - 1)
 
+            read_mem 1
             pop 1
             // _ field_0_len
 
             addi 1
-
             // _ own_size
         )
     }
@@ -518,17 +497,6 @@ where
     fn compute_size_and_assert_valid_size_indicator(
         library: &mut Library,
     ) -> Vec<LabelledInstruction> {
-        let get_payload_size = match T::static_length() {
-            Some(static_size) => triton_asm!(
-                // _ *value
-
-                pop 1
-                push { static_size }
-                // _ value_size
-            ),
-            None => T::compute_size_and_assert_valid_size_indicator(library),
-        };
-
         let some_branch_label = format!(
             "tasmlib_tasmobject_size_verifier_option_some_branch___{}",
             T::label_friendly_name()
@@ -539,7 +507,7 @@ where
                 // _ *value 1
                 pop 1
 
-                {&get_payload_size}
+                {&T::compute_size_and_assert_valid_size_indicator(library)}
                 // _ value_size
 
                 /* Push 0 to avoid `None` branch from being taken */
@@ -580,14 +548,12 @@ where
             // _ discriminant (*discriminant + 1) ((discriminant == 0) || (discriminant == 1))
 
             assert error_id 200
-
-            swap 1
-            // _ (*discriminant + 1) discriminant
+            // _ discriminant (*discriminant + 1)
 
             push 1
-            swap 1
-            // _ (*discriminant + 1) 1 discriminant
+            // _ discriminant (*discriminant + 1) 1
 
+            pick 2
             push 1
             eq
             // _ (*discriminant + 1) 1 (discriminant == 1)
