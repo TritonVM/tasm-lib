@@ -183,7 +183,6 @@ impl BasicSnippet for MerkleRoot {
 #[cfg(test)]
 mod tests {
     use num_traits::Zero;
-    use twenty_first::util_types::merkle_tree::CpuParallel;
     use twenty_first::util_types::merkle_tree::MerkleTree;
 
     use super::*;
@@ -213,7 +212,7 @@ mod tests {
         ) {
             let leafs_pointer = stack.pop().unwrap();
             let leafs = *Vec::<Digest>::decode_from_memory(memory, leafs_pointer).unwrap();
-            let mt = MerkleTree::new::<CpuParallel>(&leafs).unwrap();
+            let mt = MerkleTree::par_new(&leafs).unwrap();
 
             // Write entire Merkle tree to memory, because that's what the VM does
             let pointer = dynamic_allocator(memory);

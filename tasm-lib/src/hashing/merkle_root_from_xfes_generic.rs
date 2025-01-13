@@ -175,8 +175,6 @@ impl BasicSnippet for MerkleRootFromXfesGeneric {
 #[cfg(test)]
 mod tests {
     use num::One;
-    use twenty_first::prelude::MerkleTreeMaker;
-    use twenty_first::util_types::merkle_tree::CpuParallel;
     use twenty_first::util_types::merkle_tree::MerkleTree;
 
     use super::*;
@@ -201,8 +199,7 @@ mod tests {
             );
             let leafs: Vec<Digest> = leafs.into_iter().map(|x| x.into()).collect();
 
-            let mt: MerkleTree = CpuParallel::from_digests(&leafs).unwrap();
-            let root = mt.root();
+            let mt = MerkleTree::par_new(&leafs).unwrap();
 
             // Write entire Merkle tree to memory, because that's what the VM does
             let digests_in_layer_one = dynamic_allocator(memory);
@@ -228,11 +225,7 @@ mod tests {
                 }
             }
 
-            stack.push(root.0[4]);
-            stack.push(root.0[3]);
-            stack.push(root.0[2]);
-            stack.push(root.0[1]);
-            stack.push(root.0[0]);
+            stack.extend(mt.root().reversed().values());
         }
 
         fn pseudorandom_initial_state(

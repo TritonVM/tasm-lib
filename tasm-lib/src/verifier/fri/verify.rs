@@ -12,8 +12,6 @@ use twenty_first::math::polynomial::barycentric_evaluate;
 use twenty_first::math::polynomial::Polynomial;
 use twenty_first::math::traits::ModPowU32;
 use twenty_first::math::x_field_element::EXTENSION_DEGREE;
-use twenty_first::prelude::MerkleTreeMaker;
-use twenty_first::util_types::merkle_tree::CpuParallel;
 use twenty_first::util_types::merkle_tree::MerkleTree;
 use twenty_first::util_types::merkle_tree::MerkleTreeInclusionProof;
 
@@ -954,7 +952,7 @@ impl FriVerify {
 
         // Check if last codeword matches the given root
         let codeword_digests = Self::map_convert_xfe_to_digest(&last_codeword);
-        let mt: MerkleTree = CpuParallel::from_digests(&codeword_digests).unwrap();
+        let mt: MerkleTree = MerkleTree::par_new(&codeword_digests).unwrap();
         let last_codeword_merkle_root = mt.root();
 
         let last_root = roots.last().unwrap();

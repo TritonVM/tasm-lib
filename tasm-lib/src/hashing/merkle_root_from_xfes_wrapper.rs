@@ -134,7 +134,7 @@ mod tests {
                 "This algorithm currently can currently only handle lengths of 256, 512, and 1024."
             );
             let as_digests: Vec<Digest> = xfes.into_iter().map(|x| x.into()).collect_vec();
-            let mt = MerkleTree::new::<CpuParallel>(&as_digests).unwrap();
+            let mt = MerkleTree::par_new(&as_digests).unwrap();
             let num_not_leaf_nodes = xfes_len as u32;
 
             // Modify statically allocated memory as the above snippet does.

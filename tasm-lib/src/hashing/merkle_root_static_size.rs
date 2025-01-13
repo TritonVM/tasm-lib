@@ -119,7 +119,7 @@ mod tests {
             let leafs_pointer =
                 self.nodes_pointer + bfe!(self.num_leaves() as u32) * bfe!(Digest::LEN as u32);
             let leafs = array_from_memory::<Digest>(leafs_pointer, self.num_leaves(), memory);
-            let mt = MerkleTree::new::<CpuParallel>(&leafs).unwrap();
+            let mt = MerkleTree::par_new(&leafs).unwrap();
 
             let num_not_leaf_nodes = self.num_leaves() as u32;
 

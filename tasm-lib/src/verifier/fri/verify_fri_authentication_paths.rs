@@ -264,7 +264,7 @@ mod tests {
                 .collect_vec();
             let leafs_as_digest: Vec<Digest> =
                 xfe_leafs.iter().map(|&xfe| xfe.into()).collect_vec();
-            let tree = MerkleTree::new::<CpuParallel>(&leafs_as_digest).unwrap();
+            let tree = MerkleTree::par_new(&leafs_as_digest).unwrap();
             let root = tree.root();
 
             let a_indices = (0..num_indices)

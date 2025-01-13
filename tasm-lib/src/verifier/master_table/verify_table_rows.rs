@@ -390,7 +390,7 @@ mod tests {
                 leafs[*leaf_index] = Tip5::hash_varlen(leaf_preimage);
             }
 
-            let merkle_tree: MerkleTree = CpuParallel::from_digests(&leafs).unwrap();
+            let merkle_tree = MerkleTree::par_new(&leafs).unwrap();
             let merkle_root = merkle_tree.root();
             let merkle_root_pointer: BFieldElement = rng.gen();
             encode_to_memory(&mut memory, merkle_root_pointer, &merkle_root);
