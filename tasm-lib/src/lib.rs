@@ -53,11 +53,6 @@ pub use triton_vm::twenty_first;
 
 use crate::test_helpers::prepend_program_with_stack_setup;
 
-#[deprecated(since = "0.44.0", note = "use `tasm_lib::prelude::Tip5` instead")]
-pub type VmHasher = Tip5;
-#[deprecated(since = "0.44.0", note = "use `tasm_lib::prelude::Digest` instead")]
-pub type Digest = tip5::Digest;
-
 #[derive(Clone, Debug, Default)]
 pub struct InitVmState {
     pub stack: Vec<BFieldElement>,
@@ -233,23 +228,6 @@ pub fn execute_test(
 
     stack.clone_from(&terminal_state.op_stack.stack);
     terminal_state
-}
-
-#[deprecated(
-    since = "0.3.0",
-    note = "\
-        Use `maybe_write_debuggable_vm_state_to_disk` instead. Explanation: \
-        The program is now included in the VM's state and no longer needed separately.\
-    "
-)]
-pub fn maybe_write_debuggable_program_to_disk(program: &Program, vm_state: &VMState) {
-    let Ok(_) = std::env::var("TASMLIB_TRITON_TUI") else {
-        return;
-    };
-
-    let mut program_file = std::fs::File::create("program.tasm").unwrap();
-    write!(program_file, "{program}").unwrap();
-    maybe_write_debuggable_vm_state_to_disk(vm_state);
 }
 
 /// If the environment variable TASMLIB_TRITON_TUI is set, write the initial VM state

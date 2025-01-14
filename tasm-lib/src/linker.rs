@@ -4,11 +4,6 @@ use crate::prelude::*;
 use crate::prove_and_verify;
 use crate::snippet_bencher::BenchmarkResult;
 
-#[deprecated(since = "0.44.0", note = "Use `snippet.link_for_isolated_run` instead")]
-pub fn link_for_isolated_run<T: BasicSnippet>(snippet: &T) -> Vec<LabelledInstruction> {
-    snippet.link_for_isolated_run()
-}
-
 /// Execute a Triton-VM program and return its output and execution trace length
 pub fn execute_bench(
     code: &[LabelledInstruction],
