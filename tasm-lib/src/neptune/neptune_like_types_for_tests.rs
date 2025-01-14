@@ -49,43 +49,43 @@ pub(crate) struct CollectTypeScriptsWitnessLookalike {
     salted_output_utxos: SaltedUtxosLookalike,
 }
 
-#[derive(Debug, Clone, TasmObject, BFieldCodec, Arbitrary)]
+#[derive(Debug, Clone, Eq, PartialEq, TasmObject, BFieldCodec, Arbitrary)]
 pub(crate) struct NeptuneCoinsLookalike(u128);
 
-#[derive(Debug, Clone, TasmObject, BFieldCodec, Arbitrary)]
+#[derive(Debug, Clone, Eq, PartialEq, TasmObject, BFieldCodec, Arbitrary)]
 pub(crate) struct ChunkLookalike {
     pub relative_indices: Vec<u32>,
 }
 
-#[derive(Debug, Clone, TasmObject, BFieldCodec, Arbitrary)]
+#[derive(Debug, Clone, Eq, PartialEq, TasmObject, BFieldCodec, Arbitrary)]
 pub(crate) struct ChunkDictionaryLookalike {
     dictionary: Vec<(u64, (MmrMembershipProof, ChunkLookalike))>,
 }
 
 const NUM_TRIALS_LOOKALIKE: usize = 45;
-#[derive(Debug, Clone, TasmObject, BFieldCodec, Arbitrary)]
+#[derive(Debug, Clone, Eq, PartialEq, TasmObject, BFieldCodec, Arbitrary)]
 pub(crate) struct AbsoluteIndexSetLookalike([u128; NUM_TRIALS_LOOKALIKE]);
 
-#[derive(Debug, Clone, TasmObject, BFieldCodec, Arbitrary)]
+#[derive(Debug, Clone, Eq, PartialEq, TasmObject, BFieldCodec, Arbitrary)]
 pub(crate) struct RemovalRecordLookalike {
     pub absolute_indices: AbsoluteIndexSetLookalike,
     pub target_chunks: ChunkDictionaryLookalike,
 }
 
-#[derive(Debug, Clone, TasmObject, BFieldCodec, Arbitrary)]
+#[derive(Debug, Clone, Eq, PartialEq, TasmObject, BFieldCodec, Arbitrary)]
 pub(crate) struct AdditionRecordLookalike {
     pub canonical_commitment: Digest,
 }
 
-#[derive(Debug, Clone, TasmObject, BFieldCodec, Arbitrary)]
+#[derive(Debug, Clone, Eq, PartialEq, TasmObject, BFieldCodec, Arbitrary)]
 pub(crate) struct PublicAnnouncementLookalike {
     pub message: Vec<BFieldElement>,
 }
 
-#[derive(Debug, Clone, TasmObject, BFieldCodec, Arbitrary)]
+#[derive(Debug, Clone, Eq, PartialEq, TasmObject, BFieldCodec, Arbitrary)]
 pub(crate) struct TimestampLookalike(pub(crate) BFieldElement);
 
-#[derive(Debug, Clone, TasmObject, BFieldCodec, Arbitrary)]
+#[derive(Debug, Clone, Eq, PartialEq, TasmObject, BFieldCodec, Arbitrary)]
 pub(crate) struct TransactionKernelLookalike {
     pub inputs: Vec<RemovalRecordLookalike>,
 
@@ -142,27 +142,27 @@ pub(crate) struct RemovalRecordsIntegrityWitnessLookalike {
     mast_root: Digest,
 }
 
-#[derive(Debug, Clone, BFieldCodec, TasmObject, Arbitrary)]
+#[derive(Debug, Clone, Eq, PartialEq, BFieldCodec, TasmObject, Arbitrary)]
 pub(crate) struct MmrSuccessorProofLookalike {
     pub paths: Vec<Digest>,
 }
 
-#[derive(Debug, Clone, BFieldCodec, TasmObject, Arbitrary)]
+#[derive(Debug, Clone, Eq, PartialEq, BFieldCodec, TasmObject, Arbitrary)]
 pub(crate) struct UpdateWitnessLookalike {
-    old_kernel: TransactionKernelLookalike,
-    new_kernel: TransactionKernelLookalike,
-    old_kernel_mast_hash: Digest,
-    new_kernel_mast_hash: Digest,
-    old_proof: Proof,
-    new_swbfi_bagged: Digest,
-    new_aocl: MmrAccumulator,
-    new_swbfa_hash: Digest,
-    old_swbfi_bagged: Digest,
-    old_aocl: MmrAccumulator,
-    old_swbfa_hash: Digest,
-    aocl_successor_proof: MmrSuccessorProofLookalike,
-    outputs_hash: Digest,
-    public_announcements_hash: Digest,
+    pub old_kernel: TransactionKernelLookalike,
+    pub new_kernel: TransactionKernelLookalike,
+    pub old_kernel_mast_hash: Digest,
+    pub new_kernel_mast_hash: Digest,
+    pub old_proof: Proof,
+    pub new_swbfi_bagged: Digest,
+    pub new_aocl: MmrAccumulator,
+    pub new_swbfa_hash: Digest,
+    pub old_swbfi_bagged: Digest,
+    pub old_aocl: MmrAccumulator,
+    pub old_swbfa_hash: Digest,
+    pub aocl_successor_proof: MmrSuccessorProofLookalike,
+    pub outputs_hash: Digest,
+    pub public_announcements_hash: Digest,
 }
 
 #[derive(Debug, Clone, BFieldCodec, TasmObject, Arbitrary)]

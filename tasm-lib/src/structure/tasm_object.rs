@@ -939,6 +939,10 @@ mod tests {
     #[cfg(test)]
     mod destructure {
         use super::*;
+        use crate::neptune::neptune_like_types_for_tests::MmrSuccessorProofLookalike;
+        use crate::neptune::neptune_like_types_for_tests::TransactionKernelLookalike;
+        use crate::neptune::neptune_like_types_for_tests::UpdateWitnessLookalike;
+        use crate::twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
 
         #[test]
         fn unit_struct() {
@@ -967,6 +971,9 @@ mod tests {
             #[derive(Debug, Clone, BFieldCodec, TasmObject, Arbitrary)]
             struct TupleDynamic(Vec<u32>);
 
+            #[derive(Debug, Clone, BFieldCodec, TasmObject, Arbitrary)]
+            struct TupleNested(Vec<Vec<u32>>);
+
             #[derive(Debug, Copy, Clone, BFieldCodec, TasmObject, Arbitrary)]
             struct NamedStatic {
                 field: u32,
@@ -977,9 +984,14 @@ mod tests {
                 field: Vec<u32>,
             }
 
+            #[derive(Debug, Clone, BFieldCodec, TasmObject, Arbitrary)]
+            struct NamedNested {
+                field: Vec<Vec<u32>>,
+            }
+
             // This macro is a little bit cursed due to the `$post_process`. Since it is
             // very limited in scope, I say it's better than duplicating essentially the
-            // same code four times. If you want to extend the scope of this macro, please
+            // same code six times. If you want to extend the scope of this macro, please
             // re-design it.
             macro_rules! one_field_test_case {
                 (fn $test_name:ident for $ty:ident: $f_name:tt $($post_process:tt)*) => {
@@ -998,8 +1010,8 @@ mod tests {
                         let mut non_determinism = NonDeterminism::default();
                         encode_to_memory(&mut non_determinism.ram, ptr, &foo);
 
-                        let output = VM::run(program, PublicInput::default(), non_determinism);
-                        let [output] = output.unwrap()[..] else {
+                        let output = VM::run(program, PublicInput::default(), non_determinism)?;
+                        let [output] = output[..] else {
                             return Err(TestCaseError::Fail("unexpected output".into()));
                         };
 
@@ -1012,8 +1024,10 @@ mod tests {
 
             one_field_test_case!( fn tuple_static  for TupleStatic:  0 );
             one_field_test_case!( fn tuple_dynamic for TupleDynamic: 0.len() );
+            one_field_test_case!( fn tuple_nested  for TupleNested:  0.len() );
             one_field_test_case!( fn named_static  for NamedStatic:  field );
             one_field_test_case!( fn named_dynamic for NamedDynamic: field.len() );
+            one_field_test_case!( fn named_nested  for NamedNested:  field.len() );
         }
 
         mod two_fields {
@@ -1030,6 +1044,15 @@ mod tests {
 
             #[derive(Debug, Clone, BFieldCodec, TasmObject, Arbitrary)]
             struct TupleDynDyn(Vec<u32>, Vec<u32>);
+
+            #[derive(Debug, Clone, BFieldCodec, TasmObject, Arbitrary)]
+            struct TupleStatNest(u32, Vec<Vec<u32>>);
+
+            #[derive(Debug, Clone, BFieldCodec, TasmObject, Arbitrary)]
+            struct TupleNestStat(Vec<Vec<u32>>, u32);
+
+            #[derive(Debug, Clone, BFieldCodec, TasmObject, Arbitrary)]
+            struct TupleNestNest(Vec<Vec<u32>>, Vec<Vec<u32>>);
 
             #[derive(Debug, Copy, Clone, BFieldCodec, TasmObject, Arbitrary)]
             struct NamedStatStat {
@@ -1055,9 +1078,27 @@ mod tests {
                 b: Vec<u32>,
             }
 
+            #[derive(Debug, Clone, BFieldCodec, TasmObject, Arbitrary)]
+            struct NamedStatNest {
+                a: u32,
+                b: Vec<Vec<u32>>,
+            }
+
+            #[derive(Debug, Clone, BFieldCodec, TasmObject, Arbitrary)]
+            struct NamedNestStat {
+                a: Vec<Vec<u32>>,
+                b: u32,
+            }
+
+            #[derive(Debug, Clone, BFieldCodec, TasmObject, Arbitrary)]
+            struct NamedNestNest {
+                a: Vec<Vec<u32>>,
+                b: Vec<Vec<u32>>,
+            }
+
             // This macro is a little bit cursed due to the `$post_process`es. Since it is
             // very limited in scope, I say it's better than duplicating essentially the
-            // same code eight times. If you want to extend the scope of this macro, please
+            // same code 14 times. If you want to extend the scope of this macro, please
             // re-design it.
             macro_rules! two_fields_test_case {
                 (fn $test_name:ident for $ty:ident:
@@ -1080,8 +1121,8 @@ mod tests {
                         let mut non_determinism = NonDeterminism::default();
                         encode_to_memory(&mut non_determinism.ram, ptr, &foo);
 
-                        let output = VM::run(program, PublicInput::default(), non_determinism);
-                        let [output_0, output_1] = output.unwrap()[..] else {
+                        let output = VM::run(program, PublicInput::default(), non_determinism)?;
+                        let [output_0, output_1] = output[..] else {
                             return Err(TestCaseError::Fail("unexpected output".into()));
                         };
 
@@ -1098,10 +1139,16 @@ mod tests {
             two_fields_test_case!( fn tuple_stat_dyn  for TupleStatDyn:  (0) (1.len()) );
             two_fields_test_case!( fn tuple_dyn_stat  for TupleDynStat:  (0.len()) (1) );
             two_fields_test_case!( fn tuple_dyn_dyn   for TupleDynDyn:   (0.len()) (1.len()) );
+            two_fields_test_case!( fn tuple_stat_nest for TupleStatNest: (0) (1.len()) );
+            two_fields_test_case!( fn tuple_nest_stat for TupleNestStat: (0.len()) (1) );
+            two_fields_test_case!( fn tuple_nest_nest for TupleNestNest: (0.len()) (1.len()) );
             two_fields_test_case!( fn named_stat_stat for NamedStatStat: (a) (b) );
             two_fields_test_case!( fn named_stat_dyn  for NamedStatDyn:  (a) (b.len()) );
             two_fields_test_case!( fn named_dyn_stat  for NamedDynStat:  (a.len()) (b) );
             two_fields_test_case!( fn named_dyn_dyn   for NamedDynDyn:   (a.len()) (b.len()) );
+            two_fields_test_case!( fn named_stat_nest for NamedStatNest: (a) (b.len()) );
+            two_fields_test_case!( fn named_nest_stat for NamedNestStat: (a.len()) (b) );
+            two_fields_test_case!( fn named_nest_nest for NamedNestNest: (a.len()) (b.len()) );
         }
 
         #[test]
@@ -1164,6 +1211,64 @@ mod tests {
             let e = *u64::decode_from_memory(&non_determinism.ram, e_ptr).unwrap();
             let foo_again = Foo { a, b, c, d, e };
             assert_eq!(foo, foo_again);
+        }
+
+        #[proptest]
+        fn destructure_update_witness(
+            #[strategy(arb())] witness: UpdateWitnessLookalike,
+            #[strategy(arb())] witness_ptr: BFieldElement,
+        ) {
+            let mut non_determinism = NonDeterminism::default();
+            encode_to_memory(&mut non_determinism.ram, witness_ptr, &witness);
+
+            let program = triton_program! {
+                read_io 1
+                {&UpdateWitnessLookalike::destructure()}
+                write_io 5 write_io 5 write_io 4
+                halt
+            };
+
+            let input = PublicInput::new(vec![witness_ptr]);
+            let output = VM::run(program, input, non_determinism.clone())?;
+            let mut output = output.into_iter();
+            let mut next_ptr = || output.next().unwrap();
+            let ram = &non_determinism.ram;
+
+            let old_kernel =
+                *TransactionKernelLookalike::decode_from_memory(ram, next_ptr()).unwrap();
+            let new_kernel =
+                *TransactionKernelLookalike::decode_from_memory(ram, next_ptr()).unwrap();
+            let old_kernel_mast_hash = *Digest::decode_from_memory(ram, next_ptr()).unwrap();
+            let new_kernel_mast_hash = *Digest::decode_from_memory(ram, next_ptr()).unwrap();
+            let old_proof = *Proof::decode_from_memory(ram, next_ptr()).unwrap();
+            let new_swbfi_bagged = *Digest::decode_from_memory(ram, next_ptr()).unwrap();
+            let new_aocl = *MmrAccumulator::decode_from_memory(ram, next_ptr()).unwrap();
+            let new_swbfa_hash = *Digest::decode_from_memory(ram, next_ptr()).unwrap();
+            let old_swbfi_bagged = *Digest::decode_from_memory(ram, next_ptr()).unwrap();
+            let old_aocl = *MmrAccumulator::decode_from_memory(ram, next_ptr()).unwrap();
+            let old_swbfa_hash = *Digest::decode_from_memory(ram, next_ptr()).unwrap();
+            let aocl_successor_proof =
+                *MmrSuccessorProofLookalike::decode_from_memory(ram, next_ptr()).unwrap();
+            let outputs_hash = *Digest::decode_from_memory(ram, next_ptr()).unwrap();
+            let public_announcements_hash = *Digest::decode_from_memory(ram, next_ptr()).unwrap();
+
+            let witness_again = UpdateWitnessLookalike {
+                old_kernel,
+                new_kernel,
+                old_kernel_mast_hash,
+                new_kernel_mast_hash,
+                old_proof,
+                new_swbfi_bagged,
+                new_aocl,
+                new_swbfa_hash,
+                old_swbfi_bagged,
+                old_aocl,
+                old_swbfa_hash,
+                aocl_successor_proof,
+                outputs_hash,
+                public_announcements_hash,
+            };
+            prop_assert_eq!(witness, witness_again);
         }
     }
 
