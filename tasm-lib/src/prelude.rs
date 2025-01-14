@@ -14,5 +14,5 @@ pub use crate::memory::memcpy::MemCpy;
 pub use crate::structure::tasm_object::TasmObject;
 pub use crate::structure::tasm_object::TasmStruct;
 pub use crate::traits::basic_snippet::BasicSnippet;
-pub use crate::triton_vm::prelude::Digest;
-pub use crate::triton_vm::prelude::Tip5;
+pub use crate::triton_vm::twenty_first::prelude::Digest;
+pub use crate::triton_vm::twenty_first::prelude::Tip5;
