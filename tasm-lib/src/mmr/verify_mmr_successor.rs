@@ -5,7 +5,6 @@ use twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
 use twenty_first::util_types::mmr::mmr_successor_proof::MmrSuccessorProof;
 
 use crate::arithmetic::u64 as u64_lib;
-use crate::field;
 use crate::hashing::merkle_step_mem_u64_index::MerkleStepMemU64Index;
 use crate::hashing::merkle_step_u64_index::MerkleStepU64Index;
 use crate::mmr::leaf_index_to_mt_index_and_peak_index::MmrLeafIndexToMtIndexAndPeakIndex;
@@ -93,23 +92,21 @@ impl BasicSnippet for VerifyMmrSuccessor {
             // AFTER:  _
             {entrypoint}:
                 /* consistent old MMR? */
-                dup 1
-                {&field!(MmrAccumulator::peaks)} hint old_peaks: Pointer = stack[0]
-                // _ *old *new *old_peaks
+                pick 1
+                {&MmrAccumulator::destructure()}
+                    hint old_num_leafs: Pointer = stack[0]
+                    hint old_peaks: Pointer = stack[1]
+                // _ *new *old_peaks *old_num_leafs
 
-                read_mem 1 hint old_peaks_len = stack[1]
-                addi 1
-                place 1
-                // _ *old *new *old_peaks old_peaks_len
-
-                pick 3
-                {&field!(MmrAccumulator::leaf_count)} hint old_leaf_count: Pointer = stack[0]
                 addi 1
                 read_mem 2 hint old_num_leafs: u64 = stack[1..3]
                 pop 1
-                // _ *new *old_peaks old_peaks_len [old_num_leafs: u64]
+                // _ *new *old_peaks [old_num_leafs: u64]
 
-                place 3 place 3
+                pick 2
+                read_mem 1 hint old_peaks_len = stack[1]
+                addi 1
+                place 1
                 // _ *new [old_num_leafs: u64] *old_peaks old_peaks_len
 
                 dup 3 dup 3
@@ -120,23 +117,21 @@ impl BasicSnippet for VerifyMmrSuccessor {
                 // _ *new [old_num_leafs: u64] *old_peaks
 
                 /* consistent new MMR? */
-                dup 3
-                {&field!(MmrAccumulator::peaks)} hint new_peaks: Pointer = stack[0]
-                // _ *new [old_num_leafs: u64] *old_peaks *new_peaks
+                pick 3
+                {&MmrAccumulator::destructure()}
+                    hint new_num_leafs: Pointer = stack[0]
+                    hint new_peaks: Pointer = stack[1]
+                // _ [old_num_leafs: u64] *old_peaks *new_peaks *new_num_leafs
 
-                read_mem 1 hint new_peaks_len = stack[1]
-                addi 1
-                place 1
-                // _ *new [old_num_leafs: u64] *old_peaks *new_peaks new_peaks_len
-
-                pick 5
-                {&field!(MmrAccumulator::leaf_count)} hint new_leaf_count: Pointer = stack[0]
                 addi 1
                 read_mem 2 hint new_num_leafs: u64 = stack[1..3]
                 pop 1
-                // _ [old_num_leafs: u64] *old_peaks *new_peaks new_peaks_len [new_num_leafs: u64]
+                // _ [old_num_leafs: u64] *old_peaks *new_peaks [new_num_leafs: u64]
 
-                place 3 place 3
+                pick 2
+                read_mem 1 hint new_peaks_len = stack[1]
+                addi 1
+                place 1
                 // _ [old_num_leafs: u64] *old_peaks [new_num_leafs: u64] *new_peaks new_peaks_len
 
                 dup 3 dup 3
@@ -385,7 +380,7 @@ impl BasicSnippet for VerifyMmrSuccessor {
 
     fn sign_offs(&self) -> HashMap<Reviewer, SignOffFingerprint> {
         let mut sign_offs = HashMap::new();
-        sign_offs.insert(Reviewer("ferdinand"), 0x8aea33a7d02a94a1.into());
+        sign_offs.insert(Reviewer("ferdinand"), 0xeb1e81bd042d7a0c.into());
         sign_offs
     }
 }

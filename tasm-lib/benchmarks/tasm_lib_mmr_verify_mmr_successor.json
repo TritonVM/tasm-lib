@@ -2,22 +2,22 @@
   {
     "name": "tasm_lib_mmr_verify_mmr_successor",
     "benchmark_result": {
-      "clock_cycle_count": 1578,
-      "hash_table_height": 696,
+      "clock_cycle_count": 1550,
+      "hash_table_height": 666,
       "u32_table_height": 1552,
-      "op_stack_table_height": 918,
-      "ram_table_height": 176
+      "op_stack_table_height": 902,
+      "ram_table_height": 174
     },
     "case": "CommonCase"
   },
   {
     "name": "tasm_lib_mmr_verify_mmr_successor",
     "benchmark_result": {
-      "clock_cycle_count": 2658,
-      "hash_table_height": 876,
+      "clock_cycle_count": 2630,
+      "hash_table_height": 846,
       "u32_table_height": 1875,
-      "op_stack_table_height": 1518,
-      "ram_table_height": 326
+      "op_stack_table_height": 1502,
+      "ram_table_height": 324
     },
     "case": "WorstCase"
   }
