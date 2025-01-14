@@ -1,3 +1,84 @@
+## [0.45.0](https://github.com/TritonVM/tasm-lib/compare/v0.43.0..v0.45.0) - 2025-01-14
+
+### ✨ Features
+
+- LessThan for U128 ([0492f3b6](https://github.com/TritonVM/tasm-lib/commit/0492f3b6))
+- *(i128)* Add `lt` for `i128` ([820f26b3](https://github.com/TritonVM/tasm-lib/commit/820f26b3))
+- Introduce snippet sign-off functionality ([6bc26129](https://github.com/TritonVM/tasm-lib/commit/6bc26129))
+- *(u128)* Add overflowing add ([d9afd642](https://github.com/TritonVM/tasm-lib/commit/d9afd642))
+- *(i128)* Shift-right for `i128`s ([39922aef](https://github.com/TritonVM/tasm-lib/commit/39922aef))
+- *(hashing)* Add snippet for hashing stack value ([821d7cac](https://github.com/TritonVM/tasm-lib/commit/821d7cac))
+- Add snippet `u32::trailing_zeros` ([1b1a18e5](https://github.com/TritonVM/tasm-lib/commit/1b1a18e5))
+- (!) Add snippet `u64::trailing_zeros` ([a376c4a5](https://github.com/TritonVM/tasm-lib/commit/a376c4a5))
+- Add snippet `hashing::merkle_step_mem_u64` ([a9549e80](https://github.com/TritonVM/tasm-lib/commit/a9549e80))
+- *(TasmStruct)* Add destructuring capabilities ([3af418ab](https://github.com/TritonVM/tasm-lib/commit/3af418ab))
+
+### 🐛 Bug Fixes
+
+- Don't unwrap in `TasmObject::decode_iter()` ([cffd64be](https://github.com/TritonVM/tasm-lib/commit/cffd64be))
+- *(TasmObjectDerive)* Make emitted paths absolute ([eb715c60](https://github.com/TritonVM/tasm-lib/commit/eb715c60))
+
+### ⚡️ Performance
+
+- *(TasmObject)* Use `addi x` over `push x + add` ([dcf29572](https://github.com/TritonVM/tasm-lib/commit/dcf29572))
+- *(safe-add)* User overflowing add internally ([02559987](https://github.com/TritonVM/tasm-lib/commit/02559987))
+- *(verify_mmr_successor)* Use new algorithm ([94fb493f](https://github.com/TritonVM/tasm-lib/commit/94fb493f))
+
+### 📚 Documentation
+
+- *(PrimitiveRootOfUnity)* Add snippet contract ([3f8d33e1](https://github.com/TritonVM/tasm-lib/commit/3f8d33e1))
+
+### ⚙️ Miscellaneous
+
+- *(AddU64)* Implement `BasicSnippet` ([4d55540c](https://github.com/TritonVM/tasm-lib/commit/4d55540c))
+- (!) `TasmObject` is `BFieldCodec` subtrait ([bb67184b](https://github.com/TritonVM/tasm-lib/commit/bb67184b))
+- Deprecate public type aliases ([a880abbd](https://github.com/TritonVM/tasm-lib/commit/a880abbd))
+- (!) Drop `Rc<RefCell<_>>` from `RustShadow` ([f82b2952](https://github.com/TritonVM/tasm-lib/commit/f82b2952))
+- (!) *(`Closure`)* De-duplicate boilerplate ([19361715](https://github.com/TritonVM/tasm-lib/commit/19361715))
+
+### ♻️ Refactor
+
+- (!) *(arithmetic)* Drop type suffixes ([af934daa](https://github.com/TritonVM/tasm-lib/commit/af934daa))
+- (!) Simplify testing framework ([b7334898](https://github.com/TritonVM/tasm-lib/commit/b7334898))
+- Remove superfluous `'static` bounds ([137de811](https://github.com/TritonVM/tasm-lib/commit/137de811))
+- (!) *(TasmObject)* Move checks to compile time ([bc6c3017](https://github.com/TritonVM/tasm-lib/commit/bc6c3017))
+- *(TasmObject)* Don't panic asserting sizes ([52a8ba30](https://github.com/TritonVM/tasm-lib/commit/52a8ba30))
+- *(TasmStruct)* Remove unreachable code ([64f4d3d0](https://github.com/TritonVM/tasm-lib/commit/64f4d3d0))
+- (!) *(TasmObject)* Slim down public API ([3d3daa76](https://github.com/TritonVM/tasm-lib/commit/3d3daa76))
+
+### ✅ Testing
+
+- *(PrimitiveRootOfUnity)* Check correct encoding ([93770758](https://github.com/TritonVM/tasm-lib/commit/93770758))
+- Add tests and bencher for shift-right-i128 ([cc2ad2dc](https://github.com/TritonVM/tasm-lib/commit/cc2ad2dc))
+- Test `DataType::compare()` ([ad6c580b](https://github.com/TritonVM/tasm-lib/commit/ad6c580b))
+- *(TasmStruct::destructure)* Add test cases ([8c940bca](https://github.com/TritonVM/tasm-lib/commit/8c940bca))
+
+### ⏱ Bench
+
+- Make benchmarks deterministic ([c38c7ae0](https://github.com/TritonVM/tasm-lib/commit/c38c7ae0))
+- Add benchmarks ([b5245450](https://github.com/TritonVM/tasm-lib/commit/b5245450))
+- *(i128_shift_right)* Add assembly benchmark ([a0209d96](https://github.com/TritonVM/tasm-lib/commit/a0209d96))
+- Benchmark `merkle_step_u64_index` ([d703f9a0](https://github.com/TritonVM/tasm-lib/commit/d703f9a0))
+
+### 🖋 Snippet Sign-Off
+
+- Primitive root of unity ([ee5fcc4b](https://github.com/TritonVM/tasm-lib/commit/ee5fcc4b))
+- U32::next_power_of_two ([f22eef97](https://github.com/TritonVM/tasm-lib/commit/f22eef97))
+- Xfe to the fourth ([3bd722ac](https://github.com/TritonVM/tasm-lib/commit/3bd722ac))
+- U64::add and u64::overflowing_add ([8263f873](https://github.com/TritonVM/tasm-lib/commit/8263f873))
+- U64::log_2_floor ([fd4c0353](https://github.com/TritonVM/tasm-lib/commit/fd4c0353))
+- (!) U64::lt and u64::lt_preserve_args ([6a254f02](https://github.com/TritonVM/tasm-lib/commit/6a254f02))
+- (!) U64::popcount ([d46d1540](https://github.com/TritonVM/tasm-lib/commit/d46d1540))
+- (!) U64::shift_right ([4bb397b9](https://github.com/TritonVM/tasm-lib/commit/4bb397b9))
+- (!) U64::{ε, wrapping_, overflowing_}sub ([cc878fa9](https://github.com/TritonVM/tasm-lib/commit/cc878fa9))
+- (!) `mmr::bag_peaks` ([21877936](https://github.com/TritonVM/tasm-lib/commit/21877936))
+- (!) U64::and ([2b9c031e](https://github.com/TritonVM/tasm-lib/commit/2b9c031e))
+- (!) U64::pow2 ([904e5b65](https://github.com/TritonVM/tasm-lib/commit/904e5b65))
+- (!) U64::decr ([bb022cbe](https://github.com/TritonVM/tasm-lib/commit/bb022cbe))
+- (!) Leaf index to Merkle tree index ([565ea09d](https://github.com/TritonVM/tasm-lib/commit/565ea09d))
+- `merkle_step_u64_index` ([d66ac023](https://github.com/TritonVM/tasm-lib/commit/d66ac023))
+- (!) U64::div2 ([0ea12d29](https://github.com/TritonVM/tasm-lib/commit/0ea12d29))
+- (!) U64::shift_left ([a8be2020](https://github.com/TritonVM/tasm-lib/commit/a8be2020))
 
 ## [0.43.0](https://github.com/TritonVM/tasm-lib/compare/v0.2.1..v0.43.0) - 2024-11-21
 
