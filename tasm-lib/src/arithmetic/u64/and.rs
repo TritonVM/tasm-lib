@@ -6,7 +6,7 @@ use crate::prelude::*;
 use crate::traits::basic_snippet::Reviewer;
 use crate::traits::basic_snippet::SignOffFingerprint;
 
-/// [Bitwise “and”](u64::bitand) (“`&`”) for `u64`s.
+/// [Bitwise “and”][bitand] (“`&`”) for `u64`s.
 ///
 /// ### Behavior
 ///
@@ -23,6 +23,8 @@ use crate::traits::basic_snippet::SignOffFingerprint;
 ///
 /// - the output is the bitwise “and” of the input
 /// - the output is properly [`BFieldCodec`] encoded
+///
+/// [bitand]: core::ops::BitAnd
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct And;
 
