@@ -106,6 +106,7 @@ pub trait TasmStruct: TasmObject {
     /// This function is used internally for the derive macro. You probably want to use
     /// [`get_field`](TasmObject::get_field) or
     /// [`get_field_with_size`](TasmObject::get_field_with_size) instead.
+    #[doc(hidden)]
     fn get_field_start_with_jump_distance(field_name: &str) -> Vec<LabelledInstruction>;
 }
 
