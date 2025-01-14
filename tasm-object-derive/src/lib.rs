@@ -179,6 +179,8 @@ fn generate_integral_size_indicators_code(parse_result: &ParseResult) -> TokenSt
 
 fn impl_tasm_object_derive_macro(ast: DeriveInput) -> TokenStream {
     let parse_result = generate_parse_result(&ast);
+    let name = &ast.ident;
+    let name_as_string = ast.ident.to_string();
 
     // generate clauses for match statements
     let get_current_field_start_with_jump = (0..parse_result.field_names.len()).map(|index| {
@@ -216,6 +218,28 @@ fn impl_tasm_object_derive_macro(ast: DeriveInput) -> TokenStream {
                 }
             }
         });
+    let get_field_code = if parse_result.field_names.is_empty() {
+        quote!(panic!("{} has no fields", #name_as_string);)
+    } else {
+        quote!(
+            let field_getter = match field_name {
+                #( #just_field_clauses ,)*
+                unknown_field_name => panic!("Cannot match on field name `{unknown_field_name}`."),
+            };
+            let hint_appendix = [
+                crate::triton_vm::isa::instruction::LabelledInstruction::TypeHint(
+                    crate::triton_vm::isa::instruction::TypeHint {
+                        starting_index: 0,
+                        length: 1,
+                        type_name: ::std::option::Option::<::std::string::String>::None,
+                        variable_name: ::std::string::String::from(field_name),
+                    }
+                )
+            ].to_vec();
+            [field_getter, hint_appendix].concat()
+        )
+    };
+
     let field_with_size_clauses = parse_result
         .field_names
         .iter()
@@ -231,23 +255,54 @@ fn impl_tasm_object_derive_macro(ast: DeriveInput) -> TokenStream {
                 }
             }
         });
+    let get_field_with_size_code = if parse_result.field_names.is_empty() {
+        quote!(panic!("{} has no fields", #name_as_string);)
+    } else {
+        quote!(
+            let field_getter = match field_name {
+                #( #field_with_size_clauses ,)*
+                unknown_field_name => panic!("Cannot match on field name `{unknown_field_name}`."),
+            };
+            let hint_appendix = [
+                crate::triton_vm::isa::instruction::LabelledInstruction::TypeHint(
+                    crate::triton_vm::isa::instruction::TypeHint {
+                        starting_index: 0,
+                        length: 1,
+                        type_name: ::std::option::Option::Some(::std::string::String::from("u32")),
+                        variable_name: ::std::string::String::from("size"),
+                    }
+                ),
+                crate::triton_vm::isa::instruction::LabelledInstruction::TypeHint(
+                    crate::triton_vm::isa::instruction::TypeHint {
+                        starting_index: 1,
+                        length: 1,
+                        type_name: ::std::option::Option::<::std::string::String>::None,
+                        variable_name: ::std::string::String::from(field_name),
+                    }
+                )
+            ].to_vec();
+
+            [field_getter, hint_appendix].concat()
+        )
+    };
+
     let field_starter_clauses = parse_result.field_names
         .iter()
         .zip(parse_result.jumpers.iter())
         .enumerate()
-        .map(|(index,(name, jumper))| {
-            let name_as_string = name.to_string();
+        .map(|(index, (name, jumper))| {
+            let field_name = name.to_string();
             match index {
                 0 => quote!{
-                    #name_as_string => { #jumper }
+                    #field_name => { #jumper }
                 },
                 not_zero => {
-                    let previous_field_name_as_string = parse_result.field_names[not_zero-1].to_string();
+                    let previous_field_name = parse_result.field_names[not_zero-1].to_string();
                     quote! {
-                        #name_as_string => {
+                        #field_name => {
                             let prev =
                             [
-                                Self::get_field_start_with_jump_distance(#previous_field_name_as_string),
+                                Self::get_field_start_with_jump_distance(#previous_field_name),
                                     // _ *prev_field_start prev_field_size
                                 [crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::Add)].to_vec(),
                                     // _ *current_field_start
@@ -307,9 +362,7 @@ fn impl_tasm_object_derive_macro(ast: DeriveInput) -> TokenStream {
 
     let integral_size_indicators_code = generate_integral_size_indicators_code(&parse_result);
 
-    let name = &ast.ident;
-    let name_as_string = ast.ident.to_string();
-    let gen = quote! {
+    quote! {
         impl #impl_generics crate::tasm_lib::structure::tasm_object::TasmObject
         for #name #ty_generics #new_where_clause {
             fn label_friendly_name() -> String {
@@ -343,56 +396,13 @@ fn impl_tasm_object_derive_macro(ast: DeriveInput) -> TokenStream {
             fn get_field(
                 field_name: &str
             ) -> ::std::vec::Vec<crate::triton_vm::isa::instruction::LabelledInstruction> {
-                let field_getter = match field_name {
-                    #( #just_field_clauses ,)*
-                    unknown_field_name => panic!("Cannot match on field name `{unknown_field_name}`."),
-                };
-                let hint_appendix = [
-                    crate::triton_vm::isa::instruction::LabelledInstruction::TypeHint(
-                        crate::triton_vm::isa::instruction::TypeHint {
-                            starting_index: 0,
-                            length: 1,
-                            type_name: ::std::option::Option::<::std::string::String>::None,
-                            variable_name: ::std::string::String::from(field_name),
-                        }
-                    )
-                ].to_vec();
-                [
-                    field_getter,
-                    hint_appendix,
-                ].concat()
+                #get_field_code
             }
 
             fn get_field_with_size(
                 field_name: &str
             ) -> ::std::vec::Vec<crate::triton_vm::isa::instruction::LabelledInstruction> {
-                let field_getter = match field_name {
-                    #( #field_with_size_clauses ,)*
-                    unknown_field_name => panic!("Cannot match on field name `{unknown_field_name}`."),
-                };
-                let hint_appendix = [
-                    crate::triton_vm::isa::instruction::LabelledInstruction::TypeHint(
-                        crate::triton_vm::isa::instruction::TypeHint {
-                            starting_index: 0,
-                            length: 1,
-                            type_name: ::std::option::Option::Some(::std::string::String::from("u32")),
-                            variable_name: ::std::string::String::from("size"),
-                        }
-                    ),
-                    crate::triton_vm::isa::instruction::LabelledInstruction::TypeHint(
-                        crate::triton_vm::isa::instruction::TypeHint {
-                            starting_index: 1,
-                            length: 1,
-                            type_name: ::std::option::Option::<::std::string::String>::None,
-                            variable_name: ::std::string::String::from(field_name),
-                        }
-                    )
-                ].to_vec();
-
-                [
-                    field_getter,
-                    hint_appendix
-                ].concat()
+                #get_field_with_size_code
             }
 
             fn get_field_start_with_jump_distance(
@@ -404,9 +414,7 @@ fn impl_tasm_object_derive_macro(ast: DeriveInput) -> TokenStream {
                 }
             }
         }
-    };
-
-    gen
+    }
 }
 
 fn generate_parse_result(ast: &DeriveInput) -> ParseResult {
