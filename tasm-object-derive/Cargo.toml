@@ -20,3 +20,6 @@ proc-macro2 = "1.0"
 
 [lib]
 proc-macro = true
+
+[dev-dependencies]
+prettyplease = "0.2.29"

@@ -67,10 +67,10 @@ pub trait TasmObject: BFieldCodec {
 ///
 /// [dyn-compatible]: https://doc.rust-lang.org/reference/items/traits.html#dyn-compatibility
 pub trait TasmStruct: TasmObject {
-    /// Returns tasm code that returns a pointer the field of the object, assuming:
+    /// Tasm code that returns a pointer to the field of the object, assuming:
     ///  - that a pointer to the said object lives on top of the stack;
-    ///  - said object has a type that implements the TasmObject trait;
-    ///  - said object lives in memory encoded as BFieldCodec specifies.
+    ///  - said object has a type that implements the [`TasmObject`] trait;
+    ///  - said object lives in memory encoded as [`BFieldCodec`] specifies.
     ///
     /// ```text
     /// BEFORE: _ *object
@@ -78,10 +78,10 @@ pub trait TasmStruct: TasmObject {
     /// ```
     fn get_field(field_name: &str) -> Vec<LabelledInstruction>;
 
-    /// Returns tasm code that returns a pointer the field of the object, along with
-    /// the size of that field in number of BFieldElements, assuming:
+    /// Tasm code that returns a pointer to the field of the object, along with
+    /// the size of that field in number of [`BFieldElement`]s, assuming:
     ///  - that a pointer to the said object lives on top of the stack;
-    ///  - said object has a type that implements the TasmObject trait;
+    ///  - said object has a type that implements the [`TasmObject`] trait;
     ///  - said object lives in memory encoded as [`BFieldCodec`] specifies.
     ///
     /// ```text
@@ -91,23 +91,6 @@ pub trait TasmStruct: TasmObject {
     ///
     /// See also: `get_field` if you just want the field without the size.
     fn get_field_with_size(field_name: &str) -> Vec<LabelledInstruction>;
-
-    /// Returns tasm code that returns a pointer to the start of the field of the object,
-    /// along with the jump distance to the next field. Note that:
-    ///
-    ///  -  *field_start == *field      if the size is statically known, but
-    ///  -  *field_start == *field-1    if the size is not statically known.
-    ///
-    /// ```text
-    /// BEFORE: _ *object
-    /// AFTER:  _ *field_start field_jump_distance
-    /// ```
-    ///
-    /// This function is used internally for the derive macro. You probably want to use
-    /// [`get_field`](TasmObject::get_field) or
-    /// [`get_field_with_size`](TasmObject::get_field_with_size) instead.
-    #[doc(hidden)]
-    fn get_field_start_with_jump_distance(field_name: &str) -> Vec<LabelledInstruction>;
 
     /// Destructure a struct into the pointers to its fields.
     ///

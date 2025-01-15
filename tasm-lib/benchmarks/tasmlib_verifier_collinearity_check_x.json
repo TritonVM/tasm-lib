@@ -2,10 +2,10 @@
   {
     "name": "tasmlib_verifier_collinearity_check_x",
     "benchmark_result": {
-      "clock_cycle_count": 29,
-      "hash_table_height": 36,
+      "clock_cycle_count": 24,
+      "hash_table_height": 30,
       "u32_table_height": 38,
-      "op_stack_table_height": 24,
+      "op_stack_table_height": 18,
       "ram_table_height": 2
     },
     "case": "CommonCase"
@@ -13,10 +13,10 @@
   {
     "name": "tasmlib_verifier_collinearity_check_x",
     "benchmark_result": {
-      "clock_cycle_count": 29,
-      "hash_table_height": 36,
+      "clock_cycle_count": 24,
+      "hash_table_height": 30,
       "u32_table_height": 54,
-      "op_stack_table_height": 24,
+      "op_stack_table_height": 18,
       "ram_table_height": 2
     },
     "case": "WorstCase"

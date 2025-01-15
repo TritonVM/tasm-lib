@@ -9,22 +9,20 @@
 //! }
 //! ```
 //!
-//! notes:
-//!  1. An implementation of `BFieldCodec` is required, else compilation will
-//!     fail. It is recommended to derive `BFieldCodec`.
-//!  2. If the target struct has a `where` clause with a trailing comma,
-//!     compilation will fail.
+//! Note: An implementation of `BFieldCodec` is required, else compilation will
+//! fail. It is recommended to derive `BFieldCodec`.
 //!
-//!     See also: <https://github.com/TritonVM/tasm-lib/issues/91>
+//! ### Known limitations
 //!
-//!     Example: do not do this.
-//! ```no_compile
-//! #[derive(BFieldCodec, TasmObject)]
-//! struct Foo<T>
-//! where
-//!     T: BFieldCodec, { … }
-//! //                ^
-//! ```
+//!  - Ignoring fields in tuple structs is currently not supported. Consider
+//!    using a struct with named fields instead.
+//!
+//!    ```no_compile
+//!    #[derive(BFieldCodec, TasmObject)]
+//!    struct Foo(#[tasm_object(ignore)] u32);
+//!    //         ~~~~~~~~~~~~~~~~~~~~~~
+//!    //         currently unsupported in tuple structs
+//!    ```
 
 extern crate proc_macro;
 
@@ -39,464 +37,685 @@ pub fn tasm_object_derive(input: proc_macro::TokenStream) -> proc_macro::TokenSt
     impl_tasm_object_derive_macro(ast).into()
 }
 
+// To follow along with the more involved functions, consider struct `Foo`:
+//
+// #[derive(BFieldCodec, TasmObject)]
+// struct Foo {
+//     a: Vec<u32>,
+//     b: XFieldElement,
+//     c: Vec<Digest>,
+// }
+//
+// The encoding of
+// Foo {
+//     a: vec![40, 41, 42],
+//     b: xfe!([43, 44, 45]),
+//     c: vec![Digest::new(bfe_array![46, 47, 48, 49, 50])]
+// }
+// loos like this:
+//
+//     ╭──────── c ────────╮  ╭─── b ──╮     ╭──── a ────╮
+//  6, 1, 46, 47, 48, 49, 50, 43, 44, 45, 4, 3, 40, 41, 42
+//  ↑  ↑                       ↑          ↑  ↑
+//  | *c                      *b          | *a
+// *c_si                                 *a_si
+//
+// The abbreviation `si` means “size indicator”. Any dynamically-sized field
+// is prepended by a size indicator.
+//
+// A pointer `*foo` is equal to pointer `*c_si`.
+//
 #[derive(Clone)]
-struct ParseResult {
+struct ParsedStruct {
+    /// The names of all relevant fields. Notably, ignored fields are _not_ included.
+    ///
+    /// Reversed compared to the field declaration order. That is, for struct `Foo`:
+    ///
+    /// ```no_compile
+    /// #[derive(BFieldCodec, TasmObject)]
+    /// struct Foo {
+    ///     a: Vec<u32>,
+    ///     b: XFieldElement,
+    /// }
+    /// ```
+    ///
+    /// element `self.field_names[0]` is `b`, element `self.field_names[1]` is `a`.
     field_names: Vec<syn::Ident>,
+
+    /// The types of all relevant fields. Notably, ignored fields are _not_ included.
+    ///
+    /// The order of the entries mimics the order of field [`field_names`].
     field_types: Vec<syn::Type>,
-    getters: Vec<TokenStream>,
-    sizers: Vec<TokenStream>,
-    jumpers: Vec<TokenStream>,
+
     ignored_fields: Vec<syn::Field>,
+
+    /// The rust code to assemble the struct that's annotated with the derive macro.
+    /// Variables with identifiers equal to the struct field identifiers and of the
+    /// appropriate type must be in scope.
+    struct_builder: TokenStream,
 }
 
-impl ParseResult {
-    /// Generate the tasm code that
-    /// - assumes the stack is in the state `_ *struct`
-    /// - leaves the stack in the state `_ *field_n *field_(n-1) … *field_0`
-    //
-    // `self.field_types` is reversed compared to the struct's declaration order.
-    // That is, for struct `Foo`:
-    //
-    // #[derive(BFieldCodec, TasmObject)]
-    // struct Foo {
-    //     a: Vec<u32>,
-    //     b: XFieldElement,
-    // }
-    //
-    // the element `self.field_types[0]` is `XFieldElement`, element
-    // `self.field_types[1]` is `Vec<u32>`.
-    //
-    // An example for you to follow along while reading the function below: Consider
-    // struct `Bar`:
-    //
-    // #[derive(BFieldCodec, TasmObject)]
-    // struct Bar {
-    //     a: Vec<u32>,
-    //     b: XFieldElement,
-    //     c: Vec<Digest>,
-    // }
-    //
-    // The encoding of
-    // Bar {
-    //     a: vec![40, 41, 42],
-    //     b: xfe!([43, 44, 45]),
-    //     c: vec![Digest::new(bfe_array![46, 47, 48, 49, 50])]
-    // }
-    // loos like this:
-    //
-    //     ╭──────── c ────────╮  ╭─── b ──╮     ╭──── a ────╮
-    //  6, 1, 46, 47, 48, 49, 50, 43, 44, 45, 4, 3, 40, 41, 42
-    //  ↑  ↑                       ↑          ↑  ↑
-    //  | *c                      *b          | *a
-    // *c_si                                 *a_si
-    //
-    // A pointer `*bar` is equal to pointer `*c_si`.
-    //
-    fn generate_tasm_for_destructuring(&self) -> TokenStream {
-        debug_assert_eq!(self.field_types.len(), self.field_names.len());
-
-        let mut fields = self.field_types.iter().zip(&self.field_names);
-        let Some(first_field) = fields.next_back() else {
-            return quote!([
-                crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
-                    crate::triton_vm::isa::instruction::AnInstruction::Pop(
-                        crate::triton_vm::isa::op_stack::NumberOfWords::N1
-                    )
-                )
-            ]
-            .to_vec());
+impl ParsedStruct {
+    fn new(ast: &DeriveInput) -> Self {
+        let syn::Data::Struct(syn::DataStruct { fields, .. }) = &ast.data else {
+            panic!("expected a struct")
         };
 
-        let mut tasm = quote!(let mut instructions = ::std::vec::Vec::new(););
-        for (field_ty, field_name) in fields {
-            let field_name = field_name.to_string();
-            let field_ptr_hint = quote!(
-                crate::triton_vm::isa::instruction::LabelledInstruction::TypeHint(
-                    crate::triton_vm::isa::instruction::TypeHint {
-                        starting_index: 0,
-                        length: 1,
-                        type_name: ::std::option::Option::Some("Pointer".to_string()),
-                        variable_name: ::std::string::String::from(#field_name),
-                    }
-                )
-            );
+        match fields {
+            syn::Fields::Named(fields) => Self::parse_struct_with_named_fields(fields),
+            syn::Fields::Unnamed(fields) => Self::parse_tuple_struct(fields),
+            syn::Fields::Unit => Self::unit(),
+        }
+    }
 
-            tasm.extend(quote!(
-            if let Some(size) = <#field_ty as crate::twenty_first::math::bfield_codec::BFieldCodec>::static_length() {
+    fn parse_struct_with_named_fields(fields: &syn::FieldsNamed) -> Self {
+        let (ignored_fields, fields): (Vec<_>, Vec<_>) = fields
+            .named
+            .iter()
+            .cloned()
+            .rev()
+            .partition(Self::field_is_ignored);
+
+        let fields = fields.into_iter();
+        let field_names = fields.clone().map(|f| f.ident.unwrap()).collect::<Vec<_>>();
+        let field_types = fields.map(|f| f.ty).collect::<Vec<_>>();
+
+        let fields = field_names.iter();
+        let ignored = ignored_fields.iter().map(|f| f.ident.clone());
+        let struct_builder =
+            quote! { Self { #( #fields ,)* #( #ignored : Default::default(), )* } };
+
+        Self {
+            field_names,
+            field_types,
+            ignored_fields,
+            struct_builder,
+        }
+    }
+
+    fn parse_tuple_struct(fields: &syn::FieldsUnnamed) -> Self {
+        // for now, ignoring fields in tuple structs is unsupported
+        let (field_names, field_types): (Vec<_>, Vec<_>) = fields
+            .unnamed
+            .iter()
+            .cloned()
+            .enumerate()
+            .map(|(i, f)| (quote::format_ident!("field_{i}"), f.ty))
+            .rev()
+            .unzip();
+
+        let fields_in_declared_order = field_names.iter().rev();
+        let struct_builder = quote! { Self( #( #fields_in_declared_order ),* ) };
+
+        Self {
+            field_names,
+            field_types,
+            ignored_fields: vec![],
+            struct_builder,
+        }
+    }
+
+    fn unit() -> Self {
+        Self {
+            field_names: vec![],
+            field_types: vec![],
+            ignored_fields: vec![],
+            struct_builder: quote! { Self },
+        }
+    }
+
+    fn field_is_ignored(field: &syn::Field) -> bool {
+        let field_name = field.ident.as_ref().unwrap();
+        let mut relevant_attributes = field
+            .attrs
+            .iter()
+            .filter(|attr| attr.path().is_ident("tasm_object"));
+
+        let Some(attribute) = relevant_attributes.next() else {
+            return false;
+        };
+        if relevant_attributes.next().is_some() {
+            panic!("field `{field_name}` must have at most 1 `tasm_object` attribute");
+        }
+
+        let parse_ignore = attribute.parse_nested_meta(|meta| match meta.path.get_ident() {
+            Some(ident) if ident == "ignore" => Ok(()),
+            Some(ident) => panic!("unknown identifier `{ident}` for field `{field_name}`"),
+            _ => unreachable!(),
+        });
+        parse_ignore.is_ok()
+    }
+
+    /// Allows writing shorter paths while staying hygienic.
+    fn path_abbreviations() -> TokenStream {
+        quote! {
+            type Instruction = crate::triton_vm::isa::instruction::LabelledInstruction;
+            type AssertionContext = crate::triton_vm::isa::instruction::AssertionContext;
+            type TypeHint = crate::triton_vm::isa::instruction::TypeHint;
+
+            type AnInstruction =
+                crate::triton_vm::isa::instruction::AnInstruction<::std::string::String>;
+
+            type N = crate::triton_vm::isa::op_stack::NumberOfWords;
+            type ST = crate::triton_vm::isa::op_stack::OpStackElement;
+            type BFE = crate::triton_vm::prelude::BFieldElement;
+
+        }
+    }
+
+    fn generate_code_for_fn_compute_size_and_assert_valid_size_indicator(&self) -> TokenStream {
+        debug_assert_eq!(self.field_types.len(), self.field_names.len());
+
+        let mut fields = self
+            .field_names
+            .iter()
+            .map(|n| n.to_string())
+            .zip(&self.field_types);
+
+        let path_abbreviations = Self::path_abbreviations();
+        let Some((_, first_field_ty)) = fields.next_back() else {
+            return quote! {
+                #path_abbreviations
+
+                [
+                    Instruction::Instruction(AnInstruction::Pop(N::N1)),
+                    Instruction::Instruction(AnInstruction::Push(BFE::new(0_u64))),
+                ]
+                .to_vec()
+            };
+        };
+
+        let accumulator_type_hint = quote! {
+            Instruction::TypeHint(
+                TypeHint {
+                    starting_index: 0,
+                    length: 1,
+                    type_name: ::std::option::Option::None,
+                    variable_name: ::std::string::String::from("size_acc"),
+                }
+            )
+        };
+        let mut rust = quote! {
+            #path_abbreviations
+            let mut instructions = [
+                Instruction::Instruction(AnInstruction::Push(BFE::new(0_u64))),
+                #accumulator_type_hint,
+                Instruction::Instruction(AnInstruction::Place(ST::ST1)),
+            ].to_vec();
+        };
+
+        for (field_name, field_ty) in fields {
+            let field_ptr_hint = Self::top_of_stack_pointer_type_hint(&field_name);
+            rust.extend(quote! {
+                if let Some(size) =
+                    <#field_ty as crate::twenty_first::math::bfield_codec::BFieldCodec>
+                        ::static_length()
+                {
+                    instructions.extend([
+                        #field_ptr_hint,
+                        // _ acc *field
+                        Instruction::Instruction(AnInstruction::AddI(BFE::from(size))),
+                        // _ acc *next_field_or_next_field_si
+                        Instruction::Instruction(AnInstruction::Pick(ST::ST1)),
+                        // _ *next_field_or_next_field_si acc
+                        Instruction::Instruction(AnInstruction::AddI(BFE::from(size))),
+                        // _ *next_field_or_next_field_si (acc + field_size)
+                        Instruction::Instruction(AnInstruction::Place(ST::ST1)),
+                        // _ (acc + field_size) *next_field_or_next_field_si
+                    ]);
+                } else {
+                    instructions.extend([
+                        // _ acc *field_si
+                        Instruction::Instruction(AnInstruction::ReadMem(N::N1)),
+                        // _ acc field_size (*field_si - 1)
+                        Instruction::Instruction(AnInstruction::AddI(BFE::new(2_u64))),
+                        #field_ptr_hint,
+                        // _ acc field_size *field
+                        Instruction::Instruction(AnInstruction::Push(BFE::from(Self::MAX_OFFSET))),
+                        Instruction::Instruction(AnInstruction::Dup(ST::ST2)),
+                        Instruction::Instruction(AnInstruction::Lt),
+                        Instruction::Instruction(AnInstruction::Assert),
+                        Instruction::AssertionContext(AssertionContext::ID(180_i128)),
+                        // _ acc field_size *field
+                        Instruction::Instruction(AnInstruction::Dup(ST::ST0)),
+                        // _ acc field_size *field *field
+                    ]);
+                    instructions.extend(
+                        <#field_ty as crate::tasm_lib::structure::tasm_object::TasmObject>
+                            ::compute_size_and_assert_valid_size_indicator(library)
+                    );
+                    instructions.extend([
+                        // _ acc field_size *field computed_field_size
+                        Instruction::Instruction(AnInstruction::Dup(ST::ST2)),
+                        // _ acc field_size *field computed_field_size field_size
+                        Instruction::Instruction(AnInstruction::Eq),
+                        // _ acc field_size *field (computed_field_size == field_size)
+                        Instruction::Instruction(AnInstruction::Assert),
+                        Instruction::AssertionContext(AssertionContext::ID(181_i128)),
+                        // _ acc field_size *field
+                        Instruction::Instruction(AnInstruction::Dup(ST::ST1)),
+                        // _ acc field_size *field field_size
+                        Instruction::Instruction(AnInstruction::Add),
+                        // _ acc field_size *next_field_or_next_field_si
+                        Instruction::Instruction(AnInstruction::Place(ST::ST2)),
+                        // _ *next_field_or_next_field_si acc field_size
+                        Instruction::Instruction(AnInstruction::Add),
+                        // _ *next_field_or_next_field_si (acc + field_size)
+                        Instruction::Instruction(AnInstruction::AddI(BFE::new(1_u64))),
+                        // _ *next_field_or_next_field_si (acc + field_size + 1)
+                        Instruction::Instruction(AnInstruction::Pick(ST::ST1)),
+                        // _ (acc + field_size + 1) Default::default()*next_field_or_next_field_si
+                    ]);
+                }
+            });
+        }
+
+        rust.extend(quote!(
+            if let Some(size) =
+                <#first_field_ty as crate::twenty_first::math::bfield_codec::BFieldCodec>
+                    ::static_length()
+            {
+                instructions.extend([
+                    // _ acc *field
+                    Instruction::Instruction(AnInstruction::Pop(N::N1)),
+                    // _ acc
+                    Instruction::Instruction(AnInstruction::AddI(BFE::from(size))),
+                    // _ final_size
+                ]);
+            } else {
+                instructions.extend([
+                    // _ acc *field_si
+                    Instruction::Instruction(AnInstruction::ReadMem(N::N1)),
+                    // _ acc field_size (*field_si - 1)
+                    Instruction::Instruction(AnInstruction::AddI(BFE::new(2_u64))),
+                    // _ acc field_size *field
+                    Instruction::Instruction(AnInstruction::Push(BFE::from(Self::MAX_OFFSET))),
+                    Instruction::Instruction(AnInstruction::Dup(ST::ST2)),
+                    Instruction::Instruction(AnInstruction::Lt),
+                    Instruction::Instruction(AnInstruction::Assert),
+                    Instruction::AssertionContext(AssertionContext::ID(180_i128)),
+                    // _ acc field_size *field
+                ]);
+                instructions.extend(
+                    <#first_field_ty as crate::tasm_lib::structure::tasm_object::TasmObject>
+                        ::compute_size_and_assert_valid_size_indicator(library)
+                );
+                instructions.extend([
+                    // _ acc field_size computed_field_size
+                    Instruction::Instruction(AnInstruction::Dup(ST::ST1)),
+                    // _ acc field_size computed_field_size field_size
+                    Instruction::Instruction(AnInstruction::Eq),
+                    // _ acc field_size (computed_field_size == field_size)
+                    Instruction::Instruction(AnInstruction::Assert),
+                    Instruction::AssertionContext(AssertionContext::ID(181_i128)),
+                    // _ acc field_size
+                    Instruction::Instruction(AnInstruction::Add),
+                    Instruction::Instruction(AnInstruction::AddI(BFE::new(1_u64))),
+                    // _ final_size
+                ]);
+            }
+
+            instructions
+        ));
+
+        rust
+    }
+
+    /// Generate the rust code for `TasmStruct::get_field(…)`, which will then
+    /// generate tasm code to get a field.
+    ///
+    /// For example, calling `TasmStruct::get_field("field_i")` will generate
+    /// tasm code that
+    /// - assumes the stack is in the state `_ *struct`
+    /// - leaves the stack in the state `_ *field_i`
+    fn generate_code_for_fn_get_field(&self, struct_name: &syn::Ident) -> TokenStream {
+        debug_assert_eq!(self.field_types.len(), self.field_names.len());
+
+        let mut fields = self
+            .field_names
+            .iter()
+            .map(|n| n.to_string())
+            .zip(&self.field_types);
+
+        let Some(first_field) = fields.next_back() else {
+            let struct_name = struct_name.to_string();
+            return quote!(panic!("type `{}` has no fields", #struct_name););
+        };
+
+        let path_abbreviations = Self::path_abbreviations();
+        let mut rust = quote! {
+            #path_abbreviations
+            let mut instructions = ::std::vec::Vec::new();
+        };
+
+        for (field_name, field_ty) in fields {
+            let field_ptr_hint = Self::top_of_stack_pointer_type_hint(&field_name);
+            rust.extend(quote!(
+                if field_name == #field_name {
+                    if <#field_ty as crate::twenty_first::math::bfield_codec::BFieldCodec>
+                        ::static_length().is_none()
+                    {
+                        // shift pointer from size indicator to actual field
+                        instructions.push(
+                            Instruction::Instruction(AnInstruction::AddI(BFE::new(1_u64))),
+                        );
+                    }
+                    instructions.push(#field_ptr_hint);
+                    return instructions;
+                }
+
+                // move pointer to next field (or next field's size indicator)
+                if let Some(size) =
+                    <#field_ty as crate::twenty_first::math::bfield_codec::BFieldCodec>
+                        ::static_length()
+                {
+                    instructions.extend([
+                        #field_ptr_hint,
+                        // _ *field
+                        Instruction::Instruction(AnInstruction::AddI(BFE::from(size))),
+                        // _ *next_field_or_next_field_si
+                    ]);
+                } else {
+                    instructions.extend([
+                        // _ *field_si
+                        Instruction::Instruction(AnInstruction::ReadMem(N::N1)),
+                        // _ field_size (*field_si - 1)
+                        Instruction::Instruction(AnInstruction::AddI(BFE::new(2_u64))),
+                        #field_ptr_hint,
+                        // _ field_size *field
+                        Instruction::Instruction(AnInstruction::Pick(ST::ST1)),
+                        // _ *field field_size
+                        Instruction::Instruction(AnInstruction::Push(BFE::from(Self::MAX_OFFSET))),
+                        Instruction::Instruction(AnInstruction::Dup(ST::ST1)),
+                        Instruction::Instruction(AnInstruction::Lt),
+                        Instruction::Instruction(AnInstruction::Assert),
+                        Instruction::AssertionContext(AssertionContext::ID(184_i128)),
+                        // _ *field field_size
+                        Instruction::Instruction(AnInstruction::Add),
+                        // _ *next_field_or_next_field_si
+                    ]);
+                }
+            ));
+        }
+
+        let (first_field_name, first_field_ty) = first_field;
+        let struct_name = struct_name.to_string();
+        rust.extend(quote!(
+            if field_name != #first_field_name {
+                panic!("unknown field name `{field_name}` for type `{}`", #struct_name);
+            }
+            if <#first_field_ty as crate::twenty_first::math::bfield_codec::BFieldCodec>
+                ::static_length().is_none()
+            {
+                // shift final pointer from size indicator to actual field
+                instructions.push(
+                    Instruction::Instruction(AnInstruction::AddI(BFE::new(1_u64))),
+                );
+            }
+        ));
+
+        let first_field_type_hint = Self::top_of_stack_pointer_type_hint(&first_field_name);
+        rust.extend(quote!(instructions.push(#first_field_type_hint);));
+        rust.extend(quote!(instructions));
+        rust
+    }
+
+    /// Generate the rust code for `TasmStruct::get_field_with_size(…)`, which will
+    /// then generate tasm code to get a field and its size.
+    ///
+    /// For example, calling `TasmStruct::get_field_with_size("field_i")` will
+    /// generate tasm code that
+    /// - assumes the stack is in the state `_ *struct`
+    /// - leaves the stack in the state `_ *field_i size_of_field_i`
+    fn generate_code_for_fn_get_field_with_size(&self, struct_name: &syn::Ident) -> TokenStream {
+        debug_assert_eq!(self.field_types.len(), self.field_names.len());
+
+        let mut fields = self
+            .field_names
+            .iter()
+            .map(|n| n.to_string())
+            .zip(&self.field_types);
+        let Some(first_field) = fields.next_back() else {
+            let struct_name = struct_name.to_string();
+            return quote!(panic!("type `{}` has no fields", #struct_name););
+        };
+
+        let path_abbreviations = Self::path_abbreviations();
+        let mut rust = quote! {
+            #path_abbreviations
+            let mut instructions = ::std::vec::Vec::new();
+        };
+
+        for (field_name, field_ty) in fields {
+            let field_ptr_hint = Self::top_of_stack_pointer_type_hint(&field_name);
+            rust.extend(quote!(
+                if field_name == #field_name {
+                    if let Some(size) =
+                        <#field_ty as crate::twenty_first::math::bfield_codec::BFieldCodec>
+                            ::static_length()
+                    {
+                        instructions.extend([
+                            #field_ptr_hint,
+                            Instruction::Instruction(AnInstruction::Push(BFE::from(size))),
+                        ]);
+                    } else {
+                        let max_offset = BFE::from(Self::MAX_OFFSET);
+                        instructions.extend([
+                            // _ *field_si
+                            Instruction::Instruction(AnInstruction::ReadMem(N::N1)),
+                            // _ field_size (*field_si - 1)
+                            Instruction::Instruction(AnInstruction::AddI(BFE::new(2_u64))),
+                            #field_ptr_hint,
+                            // _ field_size *field
+                            Instruction::Instruction(AnInstruction::Pick(ST::ST1)),
+                            // _ *field field_size
+                            Instruction::Instruction(AnInstruction::Push(max_offset)),
+                            Instruction::Instruction(AnInstruction::Dup(ST::ST1)),
+                            Instruction::Instruction(AnInstruction::Lt),
+                            Instruction::Instruction(AnInstruction::Assert),
+                            Instruction::AssertionContext(AssertionContext::ID(185_i128)),
+                            // _ *field field_size
+                        ]);
+                    }
+                    return instructions;
+                }
+
+                // move pointer to next field (or next field's size indicator)
+                if let Some(size) =
+                    <#field_ty as crate::twenty_first::math::bfield_codec::BFieldCodec>
+                        ::static_length()
+                {
+                    instructions.extend([
+                        #field_ptr_hint,
+                        // _ *field
+                        Instruction::Instruction(AnInstruction::AddI(BFE::from(size))),
+                        // _ *next_field_or_next_field_si
+                    ]);
+                } else {
+                    instructions.extend([
+                        // _ *field_si
+                        Instruction::Instruction(AnInstruction::ReadMem(N::N1)),
+                        // _ field_size (*field_si - 1)
+                        Instruction::Instruction(AnInstruction::AddI(BFE::new(2_u64))),
+                        #field_ptr_hint,
+                        // _ field_size *field
+                        Instruction::Instruction(AnInstruction::Pick(ST::ST1)),
+                        // _ *field field_size
+                        Instruction::Instruction(AnInstruction::Push(BFE::from(Self::MAX_OFFSET))),
+                        Instruction::Instruction(AnInstruction::Dup(ST::ST1)),
+                        Instruction::Instruction(AnInstruction::Lt),
+                        Instruction::Instruction(AnInstruction::Assert),
+                        Instruction::AssertionContext(AssertionContext::ID(185_i128)),
+                        // _ *field field_size
+                        Instruction::Instruction(AnInstruction::Add),
+                        // _ *next_field_or_next_field_si
+                    ]);
+                }
+            ));
+        }
+
+        let (first_field_name, first_field_ty) = first_field;
+        let struct_name = struct_name.to_string();
+        let first_field_type_hint = Self::top_of_stack_pointer_type_hint(&first_field_name);
+        rust.extend(quote!(
+            if field_name != #first_field_name {
+                panic!("unknown field name `{field_name}` for type `{}`", #struct_name);
+            }
+            if let Some(size) =
+                <#first_field_ty as crate::twenty_first::math::bfield_codec::BFieldCodec>
+                    ::static_length()
+            {
+                instructions.extend([
+                    #first_field_type_hint,
+                    Instruction::Instruction(AnInstruction::Push(BFE::from(size))),
+                ]);
+            } else {
+                instructions.extend([
+                    // _ *field_si
+                    Instruction::Instruction(AnInstruction::ReadMem(N::N1)),
+                    // _ field_size (*field_si - 1)
+                    Instruction::Instruction(AnInstruction::AddI(BFE::new(2_u64))),
+                    #first_field_type_hint,
+                    // _ field_size *field
+                    Instruction::Instruction(AnInstruction::Pick(ST::ST1)),
+                    // _ *field field_size
+                    Instruction::Instruction(AnInstruction::Push(BFE::from(Self::MAX_OFFSET))),
+                    Instruction::Instruction(AnInstruction::Dup(ST::ST1)),
+                    Instruction::Instruction(AnInstruction::Lt),
+                    Instruction::Instruction(AnInstruction::Assert),
+                    Instruction::AssertionContext(AssertionContext::ID(185_i128)),
+                    // _ *field field_size
+                ]);
+            }
+
+            instructions
+        ));
+
+        rust
+    }
+
+    /// Generate the rust code for `TasmStruct::destructure()`, which will then
+    /// generate tasm code that
+    /// - assumes the stack is in the state `_ *struct`
+    /// - leaves the stack in the state `_ *field_n *field_(n-1) … *field_0`
+    fn generate_code_for_fn_destructure(&self) -> TokenStream {
+        debug_assert_eq!(self.field_types.len(), self.field_names.len());
+
+        let mut fields = self
+            .field_names
+            .iter()
+            .map(|n| n.to_string())
+            .zip(&self.field_types);
+
+        let path_abbreviations = Self::path_abbreviations();
+        let Some(first_field) = fields.next_back() else {
+            return quote! {
+                #path_abbreviations
+                [Instruction::Instruction(AnInstruction::Pop(N::N1))].to_vec()
+            };
+        };
+
+        let mut rust = quote! {
+            #path_abbreviations
+            let mut instructions = ::std::vec::Vec::new();
+        };
+
+        for (field_name, field_ty) in fields {
+            let field_ptr_hint = Self::top_of_stack_pointer_type_hint(&field_name);
+            rust.extend(quote!(
+            if let Some(size) =
+                <#field_ty as crate::twenty_first::math::bfield_codec::BFieldCodec>::static_length()
+            {
                 instructions.extend([
                     #field_ptr_hint,
                     // _ *field
-                    crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::Dup(crate::triton_vm::isa::op_stack::OpStackElement::ST0)),
+                    Instruction::Instruction(AnInstruction::Dup(ST::ST0)),
                     // _ *field *field
-                    crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::AddI(crate::BFieldElement::from(size))),
+                    Instruction::Instruction(AnInstruction::AddI(BFE::from(size))),
                     // _ *field *next_field_or_next_field_si
                 ]);
             } else {
                 instructions.extend([
                     // _ *field_si
-                    crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::ReadMem(crate::triton_vm::isa::op_stack::NumberOfWords::N1)),
+                    Instruction::Instruction(AnInstruction::ReadMem(N::N1)),
                     // _ field_size (*field_si - 1)
-                    crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::AddI(crate::BFieldElement::new(2u64))),
+                    Instruction::Instruction(AnInstruction::AddI(BFE::new(2_u64))),
                     #field_ptr_hint,
                     // _ field_size *field
-                    crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::Dup(crate::triton_vm::isa::op_stack::OpStackElement::ST0)),
+                    Instruction::Instruction(AnInstruction::Dup(ST::ST0)),
                     // _ field_size *field *field
-                    crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::Pick(crate::triton_vm::isa::op_stack::OpStackElement::ST2)),
+                    Instruction::Instruction(AnInstruction::Pick(ST::ST2)),
                     // _ *field *field field_size
-                    crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::Push(crate::triton_vm::prelude::BFieldElement::new(Self::MAX_OFFSET.into()))),
-                    crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::Dup(crate::triton_vm::isa::op_stack::OpStackElement::ST1)),
-                    crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::Lt),
-                    crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::Assert),
-                    crate::triton_vm::isa::instruction::LabelledInstruction::AssertionContext(crate::triton_vm::isa::instruction::AssertionContext::ID(183_i128)),
+                    Instruction::Instruction(AnInstruction::Push(BFE::from(Self::MAX_OFFSET))),
+                    Instruction::Instruction(AnInstruction::Dup(ST::ST1)),
+                    Instruction::Instruction(AnInstruction::Lt),
+                    Instruction::Instruction(AnInstruction::Assert),
+                    Instruction::AssertionContext(AssertionContext::ID(183_i128)),
                     // _ *field *field field_size
-                    crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::Add),
+                    Instruction::Instruction(AnInstruction::Add),
                     // _ *field *next_field_or_next_field_si
                 ]);
             }
         ));
         }
 
-        let (first_field_ty, first_field_name) = first_field;
-        let first_field_name = first_field_name.to_string();
-        let first_field_ptr_hint = quote!(
-            crate::triton_vm::isa::instruction::LabelledInstruction::TypeHint(
-                crate::triton_vm::isa::instruction::TypeHint {
+        let (first_field_name, first_field_ty) = first_field;
+        rust.extend(quote!(
+            if <#first_field_ty as crate::twenty_first::math::bfield_codec::BFieldCodec>
+                ::static_length().is_none()
+            {
+                // shift final pointer from size indicator to actual field
+                instructions.push(Instruction::Instruction(AnInstruction::AddI(BFE::new(1_u64))));
+            }
+        ));
+
+        let first_field_type_hint = Self::top_of_stack_pointer_type_hint(&first_field_name);
+        rust.extend(quote!(instructions.push(#first_field_type_hint);));
+        rust.extend(quote!(instructions));
+        rust
+    }
+
+    fn top_of_stack_pointer_type_hint(field_name: &str) -> TokenStream {
+        quote!(
+            Instruction::TypeHint(
+                TypeHint {
                     starting_index: 0,
                     length: 1,
                     type_name: ::std::option::Option::Some("Pointer".to_string()),
-                    variable_name: ::std::string::String::from(#first_field_name),
+                    variable_name: ::std::string::String::from(#field_name),
                 }
             )
-        );
-
-        tasm.extend(quote!(
-            if <#first_field_ty as crate::twenty_first::math::bfield_codec::BFieldCodec>::static_length().is_none() {
-                // shift final pointer from size indicator to actual field
-                instructions.push(
-                    crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::AddI(crate::BFieldElement::new(1u64))),
-                );
-            }
-            instructions.push(#first_field_ptr_hint);
-        ));
-
-        tasm.extend(quote!(instructions));
-        tasm
+        )
     }
-}
-
-fn generate_integral_size_indicators_code(parse_result: &ParseResult) -> TokenStream {
-    let mut integral_size_indicators_code = quote! {};
-    for field_type in parse_result.field_types.iter() {
-        // INVARIANT: accumulated_size *field_start
-        integral_size_indicators_code = quote! {
-            #integral_size_indicators_code
-            // _ accumulated_size *field_start
-            if let Some(static_length) = <#field_type as crate::triton_vm::twenty_first::math::bfield_codec::BFieldCodec>::static_length() {
-                let addi_len = crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::AddI(crate::BFieldElement::from(static_length)));
-                [
-                    // _ accumulated_size *field
-                    addi_len.clone(),
-                    pick1.clone(),
-                    addi_len.clone(),
-                    place1.clone(),
-                    // _ accumulated_size' *next_field
-                ].to_vec()
-            } else {
-                [
-                    [
-                        // _ accumulated_size *indicated_field_size
-                        read_mem1.clone(),
-                        // _ accumulated_size indicated_field_size (*field-2)
-
-                        pushmax.clone(),
-                        dup2.clone(),
-                        lt.clone(),
-                        // _ accumulated_size indicated_field_size (*field-2) (MAX > indicated_field_size)
-
-                        assert.clone(),
-                        assertion_context_field_size_too_big.clone(),
-                        // _ accumulated_size indicated_field_size (*field-2)
-
-                        addi2.clone(),
-                        // _ accumulated_size indicated_field_size *field
-
-                        dup0.clone(),
-                        // _ accumulated_size indicated_field_size *field *field
-                    ].to_vec(),
-                    <#field_type as crate::tasm_lib::structure::tasm_object::TasmObject>::compute_size_and_assert_valid_size_indicator(library),
-                    // _ accumulated_size indicated_field_size *field computed_size
-                    [
-                        dup2.clone(),
-                        // _ accumulated_size indicated_field_size *field computed_size indicated_field_size
-                        eq.clone(),
-                        // _ accumulated_size indicated_field_size *field (computed_size == indicated_field_size)
-                        assert.clone(),
-                        assertion_context_field_size_unequal_computed.clone(),
-                        // _ accumulated_size indicated_field_size *field
-
-                        dup1.clone(),
-                        add.clone(),
-                        // _ accumulated_size indicated_field_size *next_field
-
-                        place2.clone(),
-                        // _  *next_field accumulated_size indicated_field_size
-
-                        /* Add one for size-indicator on this struct */
-                        add.clone(),
-                        addi1.clone(),
-                        // _ *next_field accumulated_size'
-
-                        pick1.clone(),
-                        // _ accumulated_size' *next_field
-                    ].to_vec(),
-                ].concat()
-            },
-        };
-    }
-
-    integral_size_indicators_code = quote! {
-        let push0 = crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::Push(0u64.into()));
-        let pushmax = crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::Push(Self::MAX_OFFSET.into()));
-        let dup0 = crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::Dup(crate::triton_vm::isa::op_stack::OpStackElement::ST0));
-        let dup1 = crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::Dup(crate::triton_vm::isa::op_stack::OpStackElement::ST1));
-        let dup2 = crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::Dup(crate::triton_vm::isa::op_stack::OpStackElement::ST2));
-        let pick1 = crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::Pick(crate::triton_vm::isa::op_stack::OpStackElement::ST1));
-        let place1 = crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::Place(crate::triton_vm::isa::op_stack::OpStackElement::ST1));
-        let place2 = crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::Place(crate::triton_vm::isa::op_stack::OpStackElement::ST2));
-        let lt = crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::Lt);
-        let assert = crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::Assert);
-        let assertion_context_field_size_too_big = crate::triton_vm::isa::instruction::LabelledInstruction::AssertionContext(crate::triton_vm::isa::instruction::AssertionContext::ID(180_i128));
-        let assertion_context_field_size_unequal_computed = crate::triton_vm::isa::instruction::LabelledInstruction::AssertionContext(crate::triton_vm::isa::instruction::AssertionContext::ID(181_i128));
-        let eq = crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::Eq);
-        let add = crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::Add);
-        let read_mem1 = crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::ReadMem(crate::triton_vm::isa::op_stack::NumberOfWords::N1));
-        let addi1 = crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::AddI(crate::BFieldElement::new(1u64)));
-        let addi2 = crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::AddI(crate::BFieldElement::new(2u64)));
-        let pop1 = crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::Pop(crate::triton_vm::isa::op_stack::NumberOfWords::N1));
-        let hint_acc_size = [
-                    crate::triton_vm::isa::instruction::LabelledInstruction::TypeHint(
-                        crate::triton_vm::isa::instruction::TypeHint {
-                            starting_index: 1,
-                            length: 1,
-                            type_name: ::std::option::Option::<::std::string::String>::None,
-                            variable_name: ::std::string::String::from("acc_size"),
-                        }
-                    )
-                ].to_vec();
-        let hint_field_ptr = [
-            crate::triton_vm::isa::instruction::LabelledInstruction::TypeHint(
-                crate::triton_vm::isa::instruction::TypeHint {
-                    starting_index: 0,
-                    length: 1,
-                    type_name: ::std::option::Option::<::std::string::String>::None,
-                    variable_name: ::std::string::String::from("field_ptr"),
-                }
-            )
-        ].to_vec();
-        [
-            [
-                push0.clone(),
-                place1.clone(),
-            ].to_vec(),
-            hint_acc_size,
-            hint_field_ptr,
-            #integral_size_indicators_code
-            [
-                // _ acc_size *EOF
-                pop1.clone(),
-                // _ acc_size
-            ].to_vec(),
-        ].concat()
-    };
-
-    integral_size_indicators_code
 }
 
 fn impl_tasm_object_derive_macro(ast: DeriveInput) -> TokenStream {
-    let parse_result = generate_parse_result(&ast);
+    let parsed_struct = ParsedStruct::new(&ast);
     let name = &ast.ident;
     let name_as_string = ast.ident.to_string();
 
-    // generate clauses for match statements
-    let get_current_field_start_with_jump = (0..parse_result.field_names.len()).map(|index| {
-        let jumper = &parse_result.jumpers[index];
-        match index {
-            0 => jumper.to_owned(),
-            not_zero => {
-                let previous_field_name_as_string = &parse_result.field_names[not_zero - 1].to_string();
-                quote! {
-                    [
-                        Self::get_field_start_with_jump_distance(#previous_field_name_as_string),
-                            // _ *prev_field_start prev_jump_amount
-                        [crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::Add)].to_vec(),
-                            // _ *current_field_start
-                        { #jumper },
-                            // _ *current_field_start current_field_jump_amount
-                    ].concat()
-                }
-            }
-        }
-    });
-
-    let just_field_clauses = parse_result
-        .field_names
-        .iter()
-        .zip(parse_result.getters.iter())
-        .zip(get_current_field_start_with_jump.clone())
-        .map(|((name, getter), current)| {
-            let name_as_string = name.to_string();
-            quote! {
-                #name_as_string => {
-                    let current = { #current }; // _ *current_field_start current_field_jump_amount
-                    let getter = { #getter };   // _ *current_field
-                    [current, getter].concat()
-                }
-            }
-        });
-    let get_field_code = if parse_result.field_names.is_empty() {
-        quote!(panic!("{} has no fields", #name_as_string);)
+    let (impl_generics, ty_generics, where_clause) = ast.generics.split_for_impl();
+    let ignored_field_types = parsed_struct.ignored_fields.iter().map(|f| f.ty.clone());
+    let new_where_clause = if let Some(old_where_clause) = where_clause {
+        quote! { #old_where_clause #(#ignored_field_types : Default ),* }
     } else {
-        quote!(
-            let field_getter = match field_name {
-                #( #just_field_clauses ,)*
-                unknown_field_name => panic!("Cannot match on field name `{unknown_field_name}`."),
-            };
-            let hint_appendix = [
-                crate::triton_vm::isa::instruction::LabelledInstruction::TypeHint(
-                    crate::triton_vm::isa::instruction::TypeHint {
-                        starting_index: 0,
-                        length: 1,
-                        type_name: ::std::option::Option::<::std::string::String>::None,
-                        variable_name: ::std::string::String::from(field_name),
-                    }
-                )
-            ].to_vec();
-            [field_getter, hint_appendix].concat()
-        )
+        quote! { where #(#ignored_field_types : Default ),* }
     };
 
-    let field_with_size_clauses = parse_result
-        .field_names
-        .iter()
-        .zip(parse_result.sizers.iter())
-        .zip(get_current_field_start_with_jump.clone())
-        .map(|((name, getter_sizer), current)| {
-            let name_as_string = name.to_string();
-            quote! {
-                #name_as_string => {
-                    let current = { #current };             // _ *current_field_start current_field_jump_amount
-                    let getter_sizer = { #getter_sizer };   // _ *current_field current_field_size
-                    [current,  getter_sizer].concat()
-                }
-            }
-        });
-    let get_field_with_size_code = if parse_result.field_names.is_empty() {
-        quote!(panic!("{} has no fields", #name_as_string);)
-    } else {
-        quote!(
-            let field_getter = match field_name {
-                #( #field_with_size_clauses ,)*
-                unknown_field_name => panic!("Cannot match on field name `{unknown_field_name}`."),
-            };
-            let hint_appendix = [
-                crate::triton_vm::isa::instruction::LabelledInstruction::TypeHint(
-                    crate::triton_vm::isa::instruction::TypeHint {
-                        starting_index: 0,
-                        length: 1,
-                        type_name: ::std::option::Option::Some(::std::string::String::from("u32")),
-                        variable_name: ::std::string::String::from("size"),
-                    }
-                ),
-                crate::triton_vm::isa::instruction::LabelledInstruction::TypeHint(
-                    crate::triton_vm::isa::instruction::TypeHint {
-                        starting_index: 1,
-                        length: 1,
-                        type_name: ::std::option::Option::<::std::string::String>::None,
-                        variable_name: ::std::string::String::from(field_name),
-                    }
-                )
-            ].to_vec();
-
-            [field_getter, hint_appendix].concat()
-        )
-    };
-
-    let field_starter_clauses = parse_result.field_names
-        .iter()
-        .zip(parse_result.jumpers.iter())
-        .enumerate()
-        .map(|(index, (name, jumper))| {
-            let field_name = name.to_string();
-            match index {
-                0 => quote!{
-                    #field_name => { #jumper }
-                },
-                not_zero => {
-                    let previous_field_name = parse_result.field_names[not_zero-1].to_string();
-                    quote! {
-                        #field_name => {
-                            let prev =
-                            [
-                                Self::get_field_start_with_jump_distance(#previous_field_name),
-                                    // _ *prev_field_start prev_field_size
-                                [crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::Add)].to_vec(),
-                                    // _ *current_field_start
-                            ].concat();
-                            let jumper = { #jumper }; // _ *current_field current_field_jump_amount
-                            [prev,  jumper].concat()
-                        }
-                    }
-                }
-            }
-        });
-
-    let field_decoders = parse_result
+    let field_decoders = parsed_struct
         .field_names
         .iter()
         .cloned()
-        .zip(parse_result.field_types.iter().cloned())
-        .map(|(fnm, ftp)| get_field_decoder(fnm, ftp));
+        .zip(parsed_struct.field_types.iter().cloned())
+        .map(|(field_name, field_ty)| field_decoder(field_name, field_ty));
+    let struct_builder = parsed_struct.struct_builder.clone();
 
-    let field_names = parse_result.field_names.clone();
-    let ignored_field_names = parse_result
-        .ignored_fields
-        .iter()
-        .map(|f| f.ident.clone())
-        .collect::<Vec<_>>();
-
-    let self_builder = match &ast.data {
-        syn::Data::Struct(syn::DataStruct {
-            fields: syn::Fields::Named(_),
-            ..
-        }) => {
-            quote! { Self { #( #field_names ,)* #( #ignored_field_names : Default::default(), )* } }
-        }
-        syn::Data::Struct(syn::DataStruct {
-            fields: syn::Fields::Unnamed(_),
-            ..
-        }) => {
-            let reversed_field_names = parse_result.field_names.iter().rev();
-            let defaults = vec![quote! { Default::default() }; ignored_field_names.len()];
-            quote! { Self( #( #reversed_field_names ,)* #( #defaults , )* ) }
-        }
-        _ => unreachable!("expected a struct with named fields, or with unnamed fields"),
-    };
-
-    let (impl_generics, ty_generics, where_clause) = ast.generics.split_for_impl();
-    let ignored_field_types = parse_result.ignored_fields.iter().map(|f| f.ty.clone());
-    let new_where_clause = if let Some(old_where_clause) = where_clause {
-        quote! {
-            #old_where_clause,
-            #(#ignored_field_types : Default ,)*
-        }
-    } else {
-        quote! {
-            where #(#ignored_field_types : Default ,)*
-        }
-    };
-
-    let integral_size_indicators_code = generate_integral_size_indicators_code(&parse_result);
-    let destructuring_tasm = parse_result.generate_tasm_for_destructuring();
+    let code_for_fn_compute_size_and_assert_valid_size_indicator =
+        parsed_struct.generate_code_for_fn_compute_size_and_assert_valid_size_indicator();
+    let code_for_fn_get_field = parsed_struct.generate_code_for_fn_get_field(&ast.ident);
+    let code_for_fn_get_field_with_size =
+        parsed_struct.generate_code_for_fn_get_field_with_size(&ast.ident);
+    let code_for_fn_destructure = parsed_struct.generate_code_for_fn_destructure();
 
     quote! {
         impl #impl_generics crate::tasm_lib::structure::tasm_object::TasmObject
@@ -508,10 +727,10 @@ fn impl_tasm_object_derive_macro(ast: DeriveInput) -> TokenStream {
             fn compute_size_and_assert_valid_size_indicator(
                 library: &mut crate::tasm_lib::library::Library
             ) -> ::std::vec::Vec<crate::triton_vm::isa::instruction::LabelledInstruction> {
-                #integral_size_indicators_code
+                #code_for_fn_compute_size_and_assert_valid_size_indicator
             }
 
-            fn decode_iter<Itr: Iterator<Item=crate::BFieldElement>>(
+            fn decode_iter<Itr: Iterator<Item = crate::triton_vm::prelude::BFieldElement>>(
                 iterator: &mut Itr
             ) -> ::std::result::Result<
                     ::std::boxed::Box<Self>,
@@ -523,7 +742,7 @@ fn impl_tasm_object_derive_macro(ast: DeriveInput) -> TokenStream {
                 >
             {
                 #( #field_decoders )*
-                ::std::result::Result::Ok(::std::boxed::Box::new(#self_builder))
+                ::std::result::Result::Ok(::std::boxed::Box::new(#struct_builder))
             }
         }
 
@@ -532,244 +751,28 @@ fn impl_tasm_object_derive_macro(ast: DeriveInput) -> TokenStream {
             fn get_field(
                 field_name: &str
             ) -> ::std::vec::Vec<crate::triton_vm::isa::instruction::LabelledInstruction> {
-                #get_field_code
+                #code_for_fn_get_field
             }
 
             fn get_field_with_size(
                 field_name: &str
             ) -> ::std::vec::Vec<crate::triton_vm::isa::instruction::LabelledInstruction> {
-                #get_field_with_size_code
-            }
-
-            fn get_field_start_with_jump_distance(
-                field_name: &str
-            ) -> ::std::vec::Vec<crate::triton_vm::isa::instruction::LabelledInstruction> {
-                match field_name {
-                    #( #field_starter_clauses ,)*
-                    unknown_field_name => panic!("Cannot match on field name `{unknown_field_name}`."),
-                }
+                #code_for_fn_get_field_with_size
             }
 
             fn destructure(
             ) -> ::std::vec::Vec<crate::triton_vm::isa::instruction::LabelledInstruction> {
-                #destructuring_tasm
+                #code_for_fn_destructure
             }
         }
     }
 }
 
-fn generate_parse_result(ast: &DeriveInput) -> ParseResult {
-    match &ast.data {
-        syn::Data::Struct(syn::DataStruct {
-            fields: syn::Fields::Named(fields),
-            ..
-        }) => generate_tokens_for_struct_with_named_fields(fields),
-        syn::Data::Struct(syn::DataStruct {
-            fields: syn::Fields::Unnamed(fields),
-            ..
-        }) => generate_tokens_for_struct_with_unnamed_fields(fields),
-        _ => panic!("expected a struct with named fields, or with unnamed fields"),
-    }
-}
-
-fn field_is_ignored(field: &syn::Field) -> bool {
-    for attribute in field.attrs.iter() {
-        if !attribute.path().is_ident("tasm_object") {
-            continue;
-        }
-        attribute
-            .parse_nested_meta(|meta| match meta.path.get_ident() {
-                Some(ident) if ident == "ignore" => Ok(()),
-                Some(ident) => Err(meta.error(format!("Unknown identifier \"{ident}\"."))),
-                _ => Err(meta.error("Expected an identifier.")),
-            })
-            .unwrap();
-        return true;
-    }
-    false
-}
-
-fn generate_tokens_for_struct_with_named_fields(fields: &syn::FieldsNamed) -> ParseResult {
-    let ignored_fields = fields
-        .named
-        .iter()
-        .rev()
-        .filter(|f| field_is_ignored(f))
-        .cloned()
-        .collect::<Vec<_>>();
-    let named_fields = fields.named.iter().rev().filter(|f| !field_is_ignored(f));
-
-    let field_names = named_fields
-        .clone()
-        .map(|field| field.ident.as_ref().unwrap().to_owned());
-    let field_names_list = field_names.clone().collect::<Vec<_>>();
-
-    let getters = named_fields
-        .clone()
-        .enumerate()
-        .map(|(i, _f)| {
-            generate_tasm_for_getter_postprocess(
-                &named_fields.clone().cloned().collect::<Vec<_>>()[i].ty,
-            )
-        })
-        .collect::<Vec<_>>();
-
-    let sizers = named_fields
-        .clone()
-        .map(|f| generate_tasm_for_sizer_postprocess(&f.ty))
-        .collect::<Vec<_>>();
-
-    let jumpers = named_fields
-        .clone()
-        .map(|f| generate_tasm_for_extend_field_start_with_jump_amount(&f.ty))
-        .collect::<Vec<_>>();
-
-    let field_types = named_fields
-        .clone()
-        .map(|f| f.ty.clone())
-        .collect::<Vec<_>>();
-
-    ParseResult {
-        field_names: field_names_list,
-        field_types,
-        getters,
-        sizers,
-        jumpers,
-        ignored_fields,
-    }
-}
-
-/// This function generates tasm code that
-///  - assumes the stack is in the state _ *field_start field_jump_amount
-///  - leaves the stack in the state _ *field
-///
-/// The complication arises from *field_start == *field when the field size is statically
-/// known, but otherwise *field_start+1 == *field.
-fn generate_tasm_for_getter_postprocess(field_type: &syn::Type) -> TokenStream {
+fn field_decoder(field_name: syn::Ident, field_type: syn::Type) -> TokenStream {
     quote! {
-        if <#field_type as crate::twenty_first::math::bfield_codec::BFieldCodec>::static_length().is_some() {
-            [
-                crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::Pop(crate::triton_vm::isa::op_stack::NumberOfWords::N1)),
-            ].to_vec()
-        } else {
-            [
-                crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::Pop(crate::triton_vm::isa::op_stack::NumberOfWords::N1)),
-                crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::AddI(crate::BFieldElement::new(1u64))),
-            ].to_vec()
-        }
-    }
-}
-
-/// This function generates tasm code that
-///  - assumes the stack is in the state _ *field_start field_jump_amount
-///  - leaves the stack in the state _ *field field_size
-///
-/// The complication arises from *field_start == *field when the field size is statically
-/// known, but otherwise *field_start+1 == *field.
-fn generate_tasm_for_sizer_postprocess(field_type: &syn::Type) -> TokenStream {
-    quote! {
-        if <#field_type as crate::twenty_first::math::bfield_codec::BFieldCodec>::static_length().is_some() {
-            ::std::vec::Vec::<crate::triton_vm::isa::instruction::LabelledInstruction>::new()
-        } else {
-            [
-                crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::AddI(-crate::BFieldElement::new(1u64))),
-                crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::Pick(crate::triton_vm::isa::op_stack::OpStackElement::ST1)),
-                crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::AddI(crate::BFieldElement::new(1u64))),
-                crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::Place(crate::triton_vm::isa::op_stack::OpStackElement::ST1)),
-            ].to_vec()
-        }
-    }
-}
-
-/// This function generates tasm code that
-///  - assumes the stack is in the state _ *field_start
-///  - leaves the stack in the state _ *field_start jump_amount
-fn generate_tasm_for_extend_field_start_with_jump_amount(field_type: &syn::Type) -> TokenStream {
-    quote! {
-        if let Some(size) = <#field_type as crate::twenty_first::math::bfield_codec::BFieldCodec>::static_length() {
-            [
-                crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::Push(crate::BFieldElement::from(size)))
-            ].to_vec()
-        } else {
-            [
-                // _ *object
-                crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::ReadMem(crate::triton_vm::isa::op_stack::NumberOfWords::N1)),
-                // _ si (*object-1)
-                crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::Push(crate::triton_vm::prelude::BFieldElement::new(Self::MAX_OFFSET.into()))),
-                // _ si (*object-1) MAX
-                crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::Dup(crate::triton_vm::isa::op_stack::OpStackElement::ST2)),
-                // _ si (*object-1) MAX si
-                crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::Lt),
-                // _ si (*object-1) (si < MAX)
-                crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::Assert),
-                crate::triton_vm::isa::instruction::LabelledInstruction::AssertionContext(crate::triton_vm::isa::instruction::AssertionContext::ID(182_i128)),
-                // _ si (*object-1)
-                crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::AddI(crate::BFieldElement::new(1u64))),
-                // _ si *object
-                crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::Place(crate::triton_vm::isa::op_stack::OpStackElement::ST1)),
-                // _ *object si
-                crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::AddI(crate::BFieldElement::new(1u64))),
-                // _ *object (si + 1)
-                // _ *object jummp_amount
-            ].to_vec()
-        }
-    }
-}
-
-fn generate_tokens_for_struct_with_unnamed_fields(fields: &syn::FieldsUnnamed) -> ParseResult {
-    let fields_iterator = fields.unnamed.iter().rev();
-    let ignored_fields = fields_iterator
-        .clone()
-        .filter(|f| field_is_ignored(f))
-        .cloned()
-        .collect::<Vec<_>>();
-
-    let field_count = fields_iterator.clone().count();
-    let field_names = fields_iterator
-        .clone()
-        .filter(|f| !field_is_ignored(f))
-        .enumerate()
-        .map(|(i, _f)| quote::format_ident!("field_{}", field_count - 1 - i))
-        .collect::<Vec<_>>();
-
-    let getters = fields_iterator
-        .clone()
-        .enumerate()
-        .map(|(i, _f)| {
-            generate_tasm_for_getter_postprocess(
-                &fields_iterator.clone().nth(i).cloned().unwrap().ty,
-            )
-        })
-        .collect::<Vec<_>>();
-
-    let sizers = fields_iterator
-        .clone()
-        .map(|f| generate_tasm_for_sizer_postprocess(&f.ty))
-        .collect::<Vec<_>>();
-
-    let jumpers = fields_iterator
-        .clone()
-        .map(|f| generate_tasm_for_extend_field_start_with_jump_amount(&f.ty))
-        .collect::<Vec<_>>();
-
-    let field_types = fields_iterator
-        .clone()
-        .map(|field| field.ty.clone())
-        .collect::<Vec<_>>();
-
-    ParseResult {
-        field_names,
-        field_types,
-        getters,
-        sizers,
-        jumpers,
-        ignored_fields,
-    }
-}
-
-fn get_field_decoder(field_name: syn::Ident, field_type: syn::Type) -> TokenStream {
-    quote! {
-        let length: usize = if let Some(static_length) = <#field_type as crate::twenty_first::math::bfield_codec::BFieldCodec>::static_length() {
+        let length = if let Some(static_length) =
+            <#field_type as crate::twenty_first::math::bfield_codec::BFieldCodec>::static_length()
+        {
             static_length
         } else {
             iterator.next().ok_or("iterator exhausted")?.try_into()?
@@ -778,7 +781,8 @@ fn get_field_decoder(field_name: syn::Ident, field_type: syn::Type) -> TokenStre
             .map(|_| iterator.next())
             .collect::<::std::option::Option<::std::vec::Vec<_>>>()
             .ok_or("iterator exhausted")?;
-        let #field_name : #field_type = *crate::twenty_first::math::bfield_codec::BFieldCodec::decode(&sequence)?;
+        let #field_name : #field_type =
+            *crate::twenty_first::math::bfield_codec::BFieldCodec::decode(&sequence)?;
     }
 }
 
@@ -789,7 +793,6 @@ mod tests {
     use super::*;
 
     #[test]
-    #[should_panic] // unit structs are not supported (yet?)
     fn unit_struct() {
         let ast = parse_quote! {
             #[derive(TasmObject)]
@@ -886,5 +889,35 @@ mod tests {
             }
         };
         let _rust_code = impl_tasm_object_derive_macro(ast);
+    }
+
+    #[test]
+    fn where_clause_with_trailing_comma() {
+        let ast = parse_quote! {
+            #[derive(BFieldCodec, TasmObject)]
+            struct Foo<T>
+            where
+                T: BFieldCodec, { }
+            //                ^
+            //               this trailing comma
+        };
+        let rust_code = impl_tasm_object_derive_macro(ast);
+        println!("{}", prettyplease::unparse(&parse_quote!(#rust_code)));
+    }
+
+    #[test]
+    fn where_clause_with_trailing_comma_and_ignored_field() {
+        let ast = parse_quote! {
+            #[derive(BFieldCodec, TasmObject)]
+            struct Foo<S, T>
+            where
+                T: BFieldCodec, // <- this trailing comma
+            {
+                #[tasm_object(ignore)]
+                s: S,
+            }
+        };
+        let rust_code = impl_tasm_object_derive_macro(ast);
+        println!("{}", prettyplease::unparse(&parse_quote!(#rust_code)));
     }
 }

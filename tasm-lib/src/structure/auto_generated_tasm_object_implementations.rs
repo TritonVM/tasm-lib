@@ -44,10 +44,6 @@ macro_rules! derive_tasm_object_for {
                 $fake::get_field_with_size(field_name)
             }
 
-            fn get_field_start_with_jump_distance(field_name: &str) -> Vec<LabelledInstruction> {
-                $fake::get_field_start_with_jump_distance(field_name)
-            }
-
             fn destructure() -> Vec<LabelledInstruction> {
                 $fake::destructure()
             }
@@ -118,10 +114,6 @@ impl TasmStruct for MmrAccumulator {
 
     fn get_field_with_size(field_name: &str) -> Vec<LabelledInstruction> {
         FakeMmrAccumulator::get_field_with_size(field_name)
-    }
-
-    fn get_field_start_with_jump_distance(field_name: &str) -> Vec<LabelledInstruction> {
-        FakeMmrAccumulator::get_field_start_with_jump_distance(field_name)
     }
 
     fn destructure() -> Vec<LabelledInstruction> {
