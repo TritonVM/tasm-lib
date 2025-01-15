@@ -1,291 +1,194 @@
-use itertools::Itertools;
-use rand::prelude::*;
+use std::collections::HashMap;
+
 use triton_vm::prelude::*;
-use twenty_first::prelude::U32s;
 
-use crate::empty_stack;
 use crate::prelude::*;
-use crate::push_encodable;
-use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::InitVmState;
+use crate::traits::basic_snippet::Reviewer;
+use crate::traits::basic_snippet::SignOffFingerprint;
 
-#[derive(Clone, Debug)]
+/// Multiply two `u64`s and crash on overflow.
+///
+/// ### Behavior
+///
+/// ```text
+/// BEFORE: _ [right: u64] [left: u64]
+/// AFTER:  _ [right · left: u64]
+/// ```
+///
+/// ### Preconditions
+///
+/// - all input arguments are properly [`BFieldCodec`] encoded
+/// - the product of `left` and `right` is less than or equal to [`u64::MAX`]
+///
+/// ### Postconditions
+///
+/// - the output is the product of the input
+/// - the output is properly [`BFieldCodec`] encoded
+///
+/// [bitand]: core::ops::BitAnd
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct SafeMul;
 
-impl DeprecatedSnippet for SafeMul {
-    fn entrypoint_name(&self) -> String {
+impl BasicSnippet for SafeMul {
+    fn inputs(&self) -> Vec<(DataType, String)> {
+        ["rhs", "lhs"]
+            .map(|side| (DataType::U64, side.to_string()))
+            .to_vec()
+    }
+
+    fn outputs(&self) -> Vec<(DataType, String)> {
+        vec![(DataType::U64, "product".to_string())]
+    }
+
+    fn entrypoint(&self) -> String {
         "tasmlib_arithmetic_u64_safe_mul".to_string()
     }
 
-    fn input_field_names(&self) -> Vec<String> {
-        vec![
-            "lhs_hi".to_string(),
-            "lhs_lo".to_string(),
-            "rhs_hi".to_string(),
-            "rhs_lo".to_string(),
-        ]
-    }
-
-    fn input_types(&self) -> Vec<DataType> {
-        vec![DataType::U64, DataType::U64]
-    }
-
-    fn output_field_names(&self) -> Vec<String> {
-        vec!["prod_hi".to_string(), "prod_lo".to_string()]
-    }
-
-    fn output_types(&self) -> Vec<DataType> {
-        vec![DataType::U64]
-    }
-
-    fn stack_diff(&self) -> isize {
-        -2
-    }
-
-    fn function_code(&self, _library: &mut Library) -> String {
-        let entrypoint = self.entrypoint_name();
-
+    fn code(&self, _: &mut Library) -> Vec<LabelledInstruction> {
         triton_asm!(
-                // BEFORE: _ rhs_hi rhs_lo lhs_hi lhs_lo
-                // AFTER:  _ prod_hi prod_lo
-                {entrypoint}:
-                    // `lhs_lo * rhs_lo`:
-                    dup 0 dup 3 mul
-                    // _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs_lo * rhs_lo)
+            // BEFORE: _ right_hi right_lo left_hi left_lo
+            // AFTER:  _ prod_hi prod_lo
+            {self.entrypoint()}:
+                /* left_lo · right_lo */
+                dup 0
+                dup 3
+                mul
+                // _ right_hi right_lo left_hi left_lo (left_lo · right_lo)
 
-                    // `rhs_hi * lhs_lo` (consume and `lhs_lo`):
-                    swap 4
-                    swap 1
-                    dup 1
-                    mul
-                    // _ (lhs_lo * rhs_lo) rhs_lo lhs_hi rhs_hi (lhs_lo * rhs_hi)
+                /* left_lo · right_hi (consume left_lo) */
+                dup 4
+                pick 2
+                mul
+                // _ right_hi right_lo left_hi (left_lo · right_lo) (left_lo · right_hi)
 
-                    // `rhs_lo * lhs_hi` (consume `rhs_lo`):
-                    swap 3
-                    dup 2
-                    mul
-                    // _ (lhs_lo * rhs_lo) (lhs_lo * rhs_hi) lhs_hi rhs_hi (rhs_lo * lhs_hi)
+                /* left_hi · right_lo (consume right_lo) */
+                pick 3
+                dup 3
+                mul
+                // _ right_hi left_hi (left_lo · right_lo) (left_lo · right_hi) (left_hi · right_lo)
 
-                    // `lhs_hi * rhs_hi` (consume `lhs_hi` and `rhs_hi`):
-                    swap 2
-                    mul
-                    // _ (lhs_lo * rhs_lo) (lhs_lo * rhs_hi) (rhs_lo * lhs_hi) (lhs_hi * rhs_hi)
+                /* left_hi · right_hi (consume left_hi and right_hi) */
+                pick 4
+                pick 4
+                mul
+                // _ (left_lo · right_lo) (left_lo · right_hi) (left_hi · right_lo) (left_hi · right_hi)
 
-                    // crash if `lhs_hi * rhs_hi != 0`
-                    push 0
-                    eq
-                    assert error_id 100
-                    // _ (lhs_lo * rhs_lo) (lhs_lo * rhs_hi) (rhs_lo * lhs_hi)
+                /* assert left_hi · right_hi == 0 */
+                push 0
+                eq
+                assert error_id 100
+                // _ (left_lo · right_lo) (left_lo · right_hi) (left_hi · right_lo)
+                // _ lolo                 lohi                 hilo
 
-                    // rename to: a, b, c:
-                    // _ a b c
+                /* prod_hi = lolo_hi + lohi_lo + hilo_lo */
+                split
+                pick 1
+                push 0
+                eq
+                assert error_id 101
+                // _ lolo lohi hilo_lo
 
-                    // Calculate `prod_hi = a_hi + b_lo + c_lo`:
-                    split
-                    swap 1
-                    push 0
-                    eq
-                    assert error_id 101
-                    // _ a b c_lo
+                pick 1
+                split
+                pick 1
+                push 0
+                eq
+                assert error_id 102
+                // _ lolo hilo_lo lohi_lo
 
-                    swap 1
-                    split
-                    swap 1
-                    push 0
-                    eq
-                    assert error_id 102
-                    // _ a c_lo b_lo
 
-                    swap 2
-                    split
-                    // _ b_lo c_lo a_hi a_lo
+                pick 2
+                split
+                // _ hilo_lo lohi_lo lolo_hi lolo_lo
+                // _ hilo_lo lohi_lo lolo_hi prod_lo
 
-                    swap 3
-                    // _ a_lo c_lo a_hi b_lo
+                place 3
+                add
+                add
+                // _ prod_lo (hilo_lo + lohi_lo + lolo_hi)
 
-                    add
-                    add
-                    // _ a_lo (c_lo + a_hi + b_lo)
+                split
+                pick 1
+                push 0
+                eq
+                assert error_id 103
+                // _ prod_lo (hilo_lo + lohi_lo + lolo_hi)_lo
+                // _ prod_lo prod_hi
 
-                    split
-                    swap 1
-                    push 0
-                    eq
-                    assert error_id 103
-                    // _ a_lo (c_lo + a_hi + b_lo)_lo
-
-                    swap 1
-                    // _ (c_lo + a_hi + b_lo)_lo a_lo
-
-                    // _ prod_hi prod_lo
-
-                    return
+                place 1
+                return
         )
-        .iter()
-        .join("\n")
     }
 
-    fn crash_conditions(&self) -> Vec<String> {
-        vec!["Product is greater than u64::MAX".to_string()]
+    fn sign_offs(&self) -> HashMap<Reviewer, SignOffFingerprint> {
+        let mut sign_offs = HashMap::new();
+        sign_offs.insert(Reviewer("ferdinand"), 0xaaa2259189834687.into());
+        sign_offs
     }
-
-    fn gen_input_states(&self) -> Vec<InitVmState> {
-        let mut rng = rand::thread_rng();
-
-        let mut ret = vec![];
-        for _ in 0..10 {
-            ret.push(prepare_state(rng.next_u32() as u64, rng.next_u32() as u64));
-        }
-
-        ret.push(prepare_state(u32::MAX as u64, u32::MAX as u64));
-        ret.push(prepare_state(u32::MAX as u64 - 1, u32::MAX as u64));
-        ret.push(prepare_state(u32::MAX as u64, u32::MAX as u64 - 1));
-        ret.push(prepare_state(u32::MAX as u64 - 1, u32::MAX as u64 - 1));
-        ret.push(prepare_state(u32::MAX as u64 - 2, u32::MAX as u64));
-        ret.push(prepare_state(u32::MAX as u64, u32::MAX as u64 - 2));
-
-        ret
-    }
-
-    fn common_case_input_state(&self) -> InitVmState {
-        prepare_state(1 << 31, (1 << 25) - 1)
-    }
-
-    fn worst_case_input_state(&self) -> InitVmState {
-        prepare_state(1 << 31, (1 << 31) - 1)
-    }
-
-    fn rust_shadowing(
-        &self,
-        stack: &mut Vec<BFieldElement>,
-        _std_in: Vec<BFieldElement>,
-        _secret_in: Vec<BFieldElement>,
-        _memory: &mut std::collections::HashMap<BFieldElement, BFieldElement>,
-    ) {
-        // top element on stack
-        let a_lo: u32 = stack.pop().unwrap().try_into().unwrap();
-        let a_hi: u32 = stack.pop().unwrap().try_into().unwrap();
-        let a = ((a_hi as u64) << 32) + a_lo as u64;
-
-        let b_lo: u32 = stack.pop().unwrap().try_into().unwrap();
-        let b_hi: u32 = stack.pop().unwrap().try_into().unwrap();
-        let b = ((b_hi as u64) << 32) + b_lo as u64;
-
-        // let prod = a.wrapping_mul(b);
-        let (safe_mul_prod, overflow) = a.overflowing_mul(b);
-        assert!(!overflow, "u64 mul result overflowed");
-
-        stack.push(BFieldElement::new(safe_mul_prod >> 32));
-        stack.push(BFieldElement::new(safe_mul_prod & u32::MAX as u64));
-    }
-}
-
-fn prepare_state(a: u64, b: u64) -> InitVmState {
-    let a = U32s::<2>::try_from(a).unwrap();
-    let b = U32s::<2>::try_from(b).unwrap();
-    let mut init_stack = empty_stack();
-    push_encodable(&mut init_stack, &a);
-    push_encodable(&mut init_stack, &b);
-    InitVmState::with_stack(init_stack)
 }
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-
-    use num::Zero;
-
     use super::*;
-    use crate::test_helpers::test_assertion_failure;
-    use crate::test_helpers::test_rust_equivalence_given_input_values_deprecated;
-    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
-    use crate::traits::basic_snippet::BasicSnippet;
-    use crate::traits::deprecated_snippet::tests::DeprecatedSnippetWrapper;
+    use crate::test_prelude::*;
 
-    impl SafeMul {
-        fn initial_test_state(lhs: u64, rhs: u64) -> InitVmState {
-            let mut stack = Self.init_stack_for_isolated_run();
-            push_encodable(&mut stack, &U32s::<2>::try_from(rhs).unwrap());
-            push_encodable(&mut stack, &U32s::<2>::try_from(lhs).unwrap());
+    impl Closure for SafeMul {
+        type Args = (u64, u64);
 
-            InitVmState::with_stack(stack)
+        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
+            let (right, left) = pop_encodable::<Self::Args>(stack);
+            let (product, is_overflow) = left.overflowing_mul(right);
+            assert!(!is_overflow);
+            push_encodable(stack, &product);
+        }
+
+        fn pseudorandom_args(
+            &self,
+            seed: [u8; 32],
+            bench_case: Option<BenchmarkCase>,
+        ) -> Self::Args {
+            let Some(bench_case) = bench_case else {
+                let mut rng = StdRng::from_seed(seed);
+                return (rng.next_u32().into(), rng.next_u32().into());
+            };
+
+            match bench_case {
+                BenchmarkCase::CommonCase => (1 << 31, (1 << 25) - 1),
+                BenchmarkCase::WorstCase => (1 << 31, (1 << 31) - 1),
+            }
         }
     }
 
     #[test]
-    fn safe_mul_u64_test() {
-        test_rust_equivalence_multiple_deprecated(&SafeMul, true);
+    fn rust_shadow() {
+        ShadowedClosure::new(SafeMul).test();
     }
 
     #[test]
-    fn overflow_test_1() {
-        // Crash because (rhs_hi * lhs_hi) != 0
+    fn overflow_tests() {
+        let failure_conditions = [
+            (1 << 32, 1 << 32, 100),             // (left_hi · right_hi) != 0
+            (1 << 31, 1 << 33, 101),             // (left_lo · right_hi)_hi != 0
+            (1 << 33, 1 << 31, 102),             // (left_hi · right_lo)_hi != 0
+            ((1 << 31) - 1, (1 << 33) + 5, 103), // (hilo_lo + lohi_lo + lolo_hi)_hi != 0
+        ];
 
-        test_assertion_failure(
-            &DeprecatedSnippetWrapper::new(SafeMul),
-            SafeMul::initial_test_state(1 << 32, 1 << 32),
-            &[100],
-        );
-    }
-
-    #[test]
-    fn overflow_test_2() {
-        // Crash because (rhs_lo * lhs_hi)_hi != 0
-        test_assertion_failure(
-            &DeprecatedSnippetWrapper::new(SafeMul),
-            SafeMul::initial_test_state(1 << 31, 1 << 33),
-            &[102],
-        );
-    }
-
-    #[test]
-    fn overflow_test_3() {
-        // Crash because (lhs_lo * rhs_hi)_hi != 0
-        test_assertion_failure(
-            &DeprecatedSnippetWrapper::new(SafeMul),
-            SafeMul::initial_test_state(1 << 33, 1 << 31),
-            &[101],
-        );
-    }
-
-    #[test]
-    fn overflow_test_4() {
-        // Crash because (c_lo + a_hi + b_lo)_hi != 0
-        test_assertion_failure(
-            &DeprecatedSnippetWrapper::new(SafeMul),
-            SafeMul::initial_test_state((1 << 33) + 5, (1 << 31) - 1),
-            &[103],
-        );
-    }
-
-    #[test]
-    fn safe_mul_u64_simple() {
-        let mut init_stack = empty_stack();
-        init_stack.push(BFieldElement::zero());
-        init_stack.push(BFieldElement::new(100));
-        init_stack.push(BFieldElement::zero());
-        init_stack.push(BFieldElement::new(200));
-
-        let mut expected = empty_stack();
-        expected.push(BFieldElement::zero());
-        expected.push(BFieldElement::new(20_000));
-        test_rust_equivalence_given_input_values_deprecated(
-            &SafeMul,
-            &init_stack,
-            &[],
-            HashMap::default(),
-            Some(&expected),
-        );
+        for (left, right, error_id) in failure_conditions {
+            let safe_mul = ShadowedClosure::new(SafeMul);
+            let stack = SafeMul.set_up_test_stack((left, right));
+            let vm_state = InitVmState::with_stack(stack);
+            test_assertion_failure(&safe_mul, vm_state, &[error_id]);
+        }
     }
 }
 
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::snippet_bencher::bench_and_write;
+    use crate::test_prelude::*;
 
     #[test]
-    fn safe_u64_benchmark() {
-        bench_and_write(SafeMul);
+    fn benchmark() {
+        ShadowedClosure::new(SafeMul).bench();
     }
 }
