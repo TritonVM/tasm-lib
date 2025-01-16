@@ -1,208 +1,130 @@
-use rand::prelude::*;
-use triton_vm::prelude::*;
-use twenty_first::prelude::U32s;
+use std::collections::HashMap;
 
-use crate::empty_stack;
+use triton_vm::prelude::*;
+
 use crate::prelude::*;
-use crate::push_encodable;
-use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::InitVmState;
+use crate::traits::basic_snippet::Reviewer;
+use crate::traits::basic_snippet::SignOffFingerprint;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct WrappingMul;
 
-impl DeprecatedSnippet for WrappingMul {
-    fn entrypoint_name(&self) -> String {
+impl BasicSnippet for WrappingMul {
+    fn inputs(&self) -> Vec<(DataType, String)> {
+        ["rhs", "lhs"]
+            .map(|side| (DataType::U64, side.to_string()))
+            .to_vec()
+    }
+
+    fn outputs(&self) -> Vec<(DataType, String)> {
+        vec![(DataType::U64, "product".to_string())]
+    }
+
+    fn entrypoint(&self) -> String {
         "tasmlib_arithmetic_u64_wrapping_mul".to_string()
     }
 
-    fn input_field_names(&self) -> Vec<String> {
-        vec![
-            "lhs_hi".to_string(),
-            "lhs_lo".to_string(),
-            "rhs_hi".to_string(),
-            "rhs_lo".to_string(),
-        ]
-    }
+    fn code(&self, _: &mut Library) -> Vec<LabelledInstruction> {
+        triton_asm!(
+            // BEFORE: _ right_hi right_lo left_hi left_lo
+            // AFTER:  _ prod_hi prod_lo
+            {self.entrypoint()}:
+                /* left_lo · right_lo */
+                dup 0
+                dup 3
+                mul
+                // _ right_hi right_lo left_hi left_lo (left_lo · right_lo)
 
-    fn input_types(&self) -> Vec<DataType> {
-        vec![DataType::U64, DataType::U64]
-    }
+                /* left_lo · right_hi (consume both) */
+                swap 4
+                mul
+                // _ (left_lo · right_lo) right_lo left_hi (left_lo · right_hi)
 
-    fn output_field_names(&self) -> Vec<String> {
-        vec!["prod_hi".to_string(), "prod_lo".to_string()]
-    }
+                /* left_hi · right_lo (consume both) */
+                swap 2
+                mul
+                // _ (left_lo · right_lo) (left_lo · right_hi) (left_hi · right_lo)
+                // _ lolo                 lohi                 hilo
 
-    fn output_types(&self) -> Vec<DataType> {
-        vec![DataType::U64]
-    }
+                /* prod_hi = lolo_hi + lohi_lo + hilo_lo */
+                split
+                pick 1
+                pop 1
+                // _ lolo lohi hilo_lo
 
-    fn stack_diff(&self) -> isize {
-        -2
-    }
+                pick 1
+                split
+                pick 1
+                pop 1
+                // _ lolo hilo_lo lohi_lo
 
-    fn function_code(&self, _library: &mut Library) -> String {
-        let entrypoint = self.entrypoint_name();
+                pick 2
+                split
+                // _ hilo_lo lohi_lo lolo_hi lolo_lo
+                // _ hilo_lo lohi_lo lolo_hi prod_lo
 
-        format!(
-            "
-                // BEFORE: _ rhs_hi rhs_lo lhs_hi lhs_lo
-                // AFTER:  _ prod_hi prod_lo
-                {entrypoint}:
-                    // `lhs_lo * rhs_lo`:
-                    dup 0 dup 3 mul
-                    // _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs_lo * rhs_lo)
+                place 3
+                add
+                add
+                // _ prod_lo (hilo_lo + lohi_lo + lolo_hi)
 
-                    // `rhs_hi * lhs_lo` (consume `rhs_hi` and `lhs_lo`):
-                    swap 4
-                    mul
-                    // _ (lhs_lo * rhs_lo) rhs_lo lhs_hi (lhs_lo * rhs_hi)
+                split
+                pick 1
+                pop 1
+                // _ prod_lo (hilo_lo + lohi_lo + lolo_hi)_lo
+                // _ prod_lo prod_hi
 
-                    // `rhs_lo * lhs_hi` (consume `rhs_lo` and `lhs_hi`):
-                    swap 2
-                    mul
-                    // _ (lhs_lo * rhs_lo) (lhs_lo * rhs_hi) (lhs_hi * rhs_lo)
-
-                    // rename to: a, b, c:
-                    // _ a b c
-
-                    // Calculate `prod_hi = a_hi + b_lo + c_lo`:
-                    split
-                    swap 1
-                    pop 1
-                    // _ a b c_lo
-
-                    swap 1
-                    split
-                    swap 1
-                    pop 1
-                    // _ a c_lo b_lo
-
-                    swap 2
-                    split
-                    // _ b_lo c_lo a_hi a_lo
-
-                    swap 3
-                    // _ a_lo c_lo a_hi b_lo
-
-                    add
-                    add
-                    // _ a_lo (c_lo + a_hi + b_lo)
-
-                    split
-                    swap 1
-                    pop 1
-                    // _ a_lo (c_lo + a_hi + b_lo)_lo
-
-                    swap 1
-                    // _ (c_lo + a_hi + b_lo)_lo a_lo
-
-                    // _ prod_hi prod_lo
-
-                    return
-                    "
+                place 1
+                return
         )
     }
 
-    fn crash_conditions(&self) -> Vec<String> {
-        todo!()
+    fn sign_offs(&self) -> HashMap<Reviewer, SignOffFingerprint> {
+        let mut sign_offs = HashMap::new();
+        sign_offs.insert(Reviewer("ferdinand"), 0x98526c7c401009ed.into());
+        sign_offs
     }
-
-    fn gen_input_states(&self) -> Vec<InitVmState> {
-        let mut rng = rand::thread_rng();
-
-        let mut ret = vec![];
-        for _ in 0..10 {
-            ret.push(prepare_state(rng.next_u64(), rng.next_u64()));
-        }
-
-        ret
-    }
-
-    fn common_case_input_state(&self) -> InitVmState {
-        prepare_state(1 << 60, (1 << 42) - 1)
-    }
-
-    fn worst_case_input_state(&self) -> InitVmState {
-        prepare_state(1 << 60, (1 << 42) - 1)
-    }
-
-    fn rust_shadowing(
-        &self,
-        stack: &mut Vec<BFieldElement>,
-        _std_in: Vec<BFieldElement>,
-        _secret_in: Vec<BFieldElement>,
-        _memory: &mut std::collections::HashMap<BFieldElement, BFieldElement>,
-    ) {
-        // top element on stack
-        let a_lo: u32 = stack.pop().unwrap().try_into().unwrap();
-        let a_hi: u32 = stack.pop().unwrap().try_into().unwrap();
-        let a = ((a_hi as u64) << 32) + a_lo as u64;
-
-        let b_lo: u32 = stack.pop().unwrap().try_into().unwrap();
-        let b_hi: u32 = stack.pop().unwrap().try_into().unwrap();
-        let b = ((b_hi as u64) << 32) + b_lo as u64;
-
-        let prod = a.wrapping_mul(b);
-
-        stack.push(BFieldElement::new(prod >> 32));
-        stack.push(BFieldElement::new(prod & u32::MAX as u64));
-    }
-}
-
-fn prepare_state(a: u64, b: u64) -> InitVmState {
-    let a = U32s::<2>::try_from(a).unwrap();
-    let b = U32s::<2>::try_from(b).unwrap();
-    let mut init_stack = empty_stack();
-    push_encodable(&mut init_stack, &a);
-    push_encodable(&mut init_stack, &b);
-    InitVmState::with_stack(init_stack)
 }
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-
-    use num::Zero;
-
     use super::*;
-    use crate::empty_stack;
-    use crate::test_helpers::test_rust_equivalence_given_input_values_deprecated;
-    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
+    use crate::test_prelude::*;
 
-    #[test]
-    fn wrapping_mul_u64_test() {
-        test_rust_equivalence_multiple_deprecated(&WrappingMul, true);
+    impl Closure for WrappingMul {
+        type Args = (u64, u64);
+
+        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
+            let (right, left) = pop_encodable::<Self::Args>(stack);
+            push_encodable(stack, &left.wrapping_mul(right));
+        }
+
+        fn pseudorandom_args(
+            &self,
+            seed: [u8; 32],
+            bench_case: Option<BenchmarkCase>,
+        ) -> Self::Args {
+            match bench_case {
+                Some(BenchmarkCase::CommonCase) => (1 << 31, (1 << 25) - 1),
+                Some(BenchmarkCase::WorstCase) => (1 << 53, (1 << 33) - 1),
+                None => StdRng::from_seed(seed).gen(),
+            }
+        }
     }
 
     #[test]
-    fn wrapping_mul_u64_simple() {
-        let mut init_stack = empty_stack();
-        init_stack.push(BFieldElement::zero());
-        init_stack.push(BFieldElement::new(100));
-        init_stack.push(BFieldElement::zero());
-        init_stack.push(BFieldElement::new(200));
-
-        let mut expected = empty_stack();
-        expected.push(BFieldElement::zero());
-        expected.push(BFieldElement::new(20_000));
-        test_rust_equivalence_given_input_values_deprecated(
-            &WrappingMul,
-            &init_stack,
-            &[],
-            HashMap::default(),
-            Some(&expected),
-        );
+    fn rust_shadow() {
+        ShadowedClosure::new(WrappingMul).test();
     }
 }
 
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::snippet_bencher::bench_and_write;
+    use crate::test_prelude::*;
 
     #[test]
-    fn wrappingmul_u64_benchmark() {
-        bench_and_write(WrappingMul);
+    fn benchmark() {
+        ShadowedClosure::new(WrappingMul).bench();
     }
 }
