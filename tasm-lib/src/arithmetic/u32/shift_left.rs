@@ -9,11 +9,11 @@ use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::InitVmState;
 
 #[derive(Clone, Debug)]
-pub struct Shiftright;
+pub struct ShiftLeft;
 
-impl DeprecatedSnippet for Shiftright {
+impl DeprecatedSnippet for ShiftLeft {
     fn entrypoint_name(&self) -> String {
-        "tasmlib_arithmetic_u32_shiftright".to_string()
+        "tasmlib_arithmetic_u32_shift_left".to_string()
     }
 
     fn input_field_names(&self) -> Vec<String> {
@@ -25,7 +25,7 @@ impl DeprecatedSnippet for Shiftright {
     }
 
     fn output_field_names(&self) -> Vec<String> {
-        vec!["value >> shift".to_string()]
+        vec!["value << shift".to_string()]
     }
 
     fn output_types(&self) -> Vec<DataType> {
@@ -39,10 +39,11 @@ impl DeprecatedSnippet for Shiftright {
     fn function_code(&self, _library: &mut Library) -> String {
         let entrypoint = self.entrypoint_name();
 
+        // I'm unsure if we should do a bounds check to check if `shift < 32`
         format!(
             "
             // BEFORE: _ value shift
-            // AFTER:  _ (value >> shift)
+            // AFTER:  _ (value << shift)
             {entrypoint}:
                 // Bounds check. May be superfluous but this mimics Rust's behavior.
                 push 32
@@ -50,20 +51,12 @@ impl DeprecatedSnippet for Shiftright {
                 lt
                 assert
 
-                push -1
-                mul
-                push 32
-                add
                 push 2
                 pow
-                // _ value (2 ^ (32 - shift))
-
                 mul
-                // _ (value << (32 - shift))
-
                 split
+                swap 1
                 pop 1
-                // _ (value >> shift))
 
                 return
                 "
@@ -71,7 +64,10 @@ impl DeprecatedSnippet for Shiftright {
     }
 
     fn crash_conditions(&self) -> Vec<String> {
-        vec!["shift is outside of the allowed range [0, 31]".to_string()]
+        vec![
+            "inputs are not valid u32s".to_string(),
+            "attempting to left shift with a value greater than 31".to_string(),
+        ]
     }
 
     fn gen_input_states(&self) -> Vec<InitVmState> {
@@ -91,7 +87,7 @@ impl DeprecatedSnippet for Shiftright {
     }
 
     fn worst_case_input_state(&self) -> InitVmState {
-        prepare_state(u32::MAX, 1)
+        prepare_state(u32::MAX, 31)
     }
 
     fn rust_shadowing(
@@ -107,7 +103,7 @@ impl DeprecatedSnippet for Shiftright {
         // Original value
         let value: u32 = stack.pop().unwrap().try_into().unwrap();
 
-        let ret = value >> shift_amount;
+        let ret = value << shift_amount;
         stack.push((ret as u64).into());
     }
 }
@@ -129,14 +125,14 @@ mod tests {
     use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
 
     #[test]
-    fn shift_right_test() {
-        test_rust_equivalence_multiple_deprecated(&Shiftright, true);
+    fn shift_left_test() {
+        test_rust_equivalence_multiple_deprecated(&ShiftLeft, true);
     }
 
     #[test]
-    fn shift_right_max_value_test() {
+    fn shift_left_max_value_test() {
         for i in 0..32 {
-            prop_shift_right(u32::MAX, i);
+            prop_shift_left(u32::MAX, i);
         }
     }
 
@@ -146,21 +142,21 @@ mod tests {
         let mut init_stack = empty_stack();
         init_stack.push(BFieldElement::new(u32::MAX as u64));
         init_stack.push(32u64.into());
-        Shiftright.link_and_run_tasm_from_state_for_test(&mut InitVmState::with_stack(init_stack));
+        ShiftLeft.link_and_run_tasm_from_state_for_test(&mut InitVmState::with_stack(init_stack));
     }
 
-    fn prop_shift_right(value: u32, shift_amount: u32) {
+    fn prop_shift_left(value: u32, shift_amount: u32) {
         let mut init_stack = empty_stack();
         init_stack.push(BFieldElement::new(value as u64));
         init_stack.push(BFieldElement::new(shift_amount as u64));
 
-        let expected_u32 = value >> shift_amount;
+        let expected_u32 = value << shift_amount;
 
         let mut expected_stack = empty_stack();
         expected_stack.push((expected_u32 as u64).into());
 
         test_rust_equivalence_given_input_values_deprecated(
-            &Shiftright,
+            &ShiftLeft,
             &init_stack,
             &[],
             HashMap::default(),
@@ -175,7 +171,7 @@ mod benches {
     use crate::snippet_bencher::bench_and_write;
 
     #[test]
-    fn shift_right_benchmark() {
-        bench_and_write(Shiftright);
+    fn shift_left_benchmark() {
+        bench_and_write(ShiftLeft);
     }
 }

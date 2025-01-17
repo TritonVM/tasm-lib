@@ -10,11 +10,11 @@ use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::InitVmState;
 
 #[derive(Clone, Debug)]
-pub struct Isodd;
+pub struct IsOdd;
 
-impl DeprecatedSnippet for Isodd {
+impl DeprecatedSnippet for IsOdd {
     fn entrypoint_name(&self) -> String {
-        "tasmlib_arithmetic_u32_isodd".to_string()
+        "tasmlib_arithmetic_u32_is_odd".to_string()
     }
 
     fn input_field_names(&self) -> Vec<String> {
@@ -105,7 +105,7 @@ mod tests {
 
     #[test]
     fn is_odd_u32_test() {
-        test_rust_equivalence_multiple_deprecated(&Isodd, true);
+        test_rust_equivalence_multiple_deprecated(&IsOdd, true);
     }
 
     #[test]
@@ -135,7 +135,7 @@ mod tests {
         expected_stack.push(BFieldElement::new((value % 2) as u64));
 
         test_rust_equivalence_given_input_values_deprecated(
-            &Isodd,
+            &IsOdd,
             &init_stack,
             &[],
             HashMap::default(),
@@ -151,6 +151,6 @@ mod benches {
 
     #[test]
     fn is_odd_u32_benchmark() {
-        bench_and_write(Isodd);
+        bench_and_write(IsOdd);
     }
 }

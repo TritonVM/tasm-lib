@@ -3,9 +3,9 @@ use triton_vm::prelude::*;
 use crate::prelude::*;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
-pub struct Overflowingadd;
+pub struct OverflowingAdd;
 
-impl BasicSnippet for Overflowingadd {
+impl BasicSnippet for OverflowingAdd {
     fn inputs(&self) -> Vec<(DataType, String)> {
         vec![
             (DataType::U32, "lhs".to_owned()),
@@ -21,7 +21,7 @@ impl BasicSnippet for Overflowingadd {
     }
 
     fn entrypoint(&self) -> String {
-        "tasmlib_arithmetic_u32_overflowingadd".to_string()
+        "tasmlib_arithmetic_u32_overflowing_add".to_string()
     }
 
     fn code(&self, _: &mut Library) -> Vec<LabelledInstruction> {
@@ -40,7 +40,7 @@ mod tests {
     use super::*;
     use crate::test_prelude::*;
 
-    impl Closure for Overflowingadd {
+    impl Closure for OverflowingAdd {
         type Args = (u32, u32);
 
         fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
@@ -66,7 +66,7 @@ mod tests {
 
     #[test]
     fn u32_overflowing_add_pbt() {
-        ShadowedClosure::new(Overflowingadd).test()
+        ShadowedClosure::new(OverflowingAdd).test()
     }
 
     #[test]
@@ -80,13 +80,13 @@ mod tests {
             (1 << 31, 1 << 31),
             (u32::MAX, u32::MAX),
         ] {
-            let initial_stack = Overflowingadd.set_up_test_stack((lhs, rhs));
+            let initial_stack = OverflowingAdd.set_up_test_stack((lhs, rhs));
 
             let mut expected_final_stack = initial_stack.clone();
-            Overflowingadd.rust_shadow(&mut expected_final_stack);
+            OverflowingAdd.rust_shadow(&mut expected_final_stack);
 
             let _vm_output_state = test_rust_equivalence_given_complete_state(
-                &ShadowedClosure::new(Overflowingadd),
+                &ShadowedClosure::new(OverflowingAdd),
                 &initial_stack,
                 &[],
                 &NonDeterminism::default(),
@@ -104,6 +104,6 @@ mod benches {
 
     #[test]
     fn benchmark() {
-        ShadowedClosure::new(Overflowingadd).bench()
+        ShadowedClosure::new(OverflowingAdd).bench()
     }
 }

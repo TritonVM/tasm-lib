@@ -1,3 +1,4 @@
+use num::Zero;
 use rand::prelude::*;
 use triton_vm::prelude::*;
 
@@ -6,18 +7,16 @@ use crate::prelude::*;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::InitVmState;
 
-/// If the inputs, are valid u32s, then the output is guaranteed to be to.
-/// Crashes on overflow.
 #[derive(Clone, Debug)]
-pub struct Safemul;
+pub struct SafeSub;
 
-impl DeprecatedSnippet for Safemul {
+impl DeprecatedSnippet for SafeSub {
     fn entrypoint_name(&self) -> String {
-        "tasmlib_arithmetic_u32_safemul".to_string()
+        "tasmlib_arithmetic_u32_safe_sub".to_string()
     }
 
     fn input_field_names(&self) -> Vec<String> {
-        vec!["lhs".to_string(), "rhs".to_string()]
+        vec!["rhs".to_string(), "lhs".to_string()]
     }
 
     fn input_types(&self) -> Vec<DataType> {
@@ -25,7 +24,7 @@ impl DeprecatedSnippet for Safemul {
     }
 
     fn output_field_names(&self) -> Vec<String> {
-        vec!["lhs * rhs".to_string()]
+        vec!["lhs - rhs".to_string()]
     }
 
     fn output_types(&self) -> Vec<DataType> {
@@ -41,34 +40,37 @@ impl DeprecatedSnippet for Safemul {
         format!(
             "
                 // BEFORE: _ rhs lhs
-                // AFTER:  _ (lhs * rhs)
+                // AFTER:  _ (lhs - rhs)
                 {entrypoint}:
+                    swap 1
+                    push -1
                     mul
-                    dup 0  // _ (lhs * rhs) (lhs * rhs)
-                    split  // _ (lhs * rhs) hi lo
-                    pop 1  // _ (lhs * rhs) hi
-                    push 0 // _ (lhs * rhs) hi 0
-                    eq     // _ (lhs * rhs) (hi == 0)
-                    assert // _ (lhs * rhs)
+                    add
+                    dup 0  // _ (lhs - rhs) (lhs - rhs)
+                    split  // _ (lhs - rhs) hi lo
+                    pop 1  // _ (lhs - rhs) hi
+                    push 0 // _ (lhs - rhs) hi 0
+                    eq     // _ (lhs - rhs) (hi == 0)
+                    assert // _ (lhs - rhs)
                     return
                     "
         )
     }
 
     fn crash_conditions(&self) -> Vec<String> {
-        vec!["result overflows u32".to_string()]
+        vec!["u32 overflow".to_string()]
     }
 
     fn gen_input_states(&self) -> Vec<InitVmState> {
         let mut ret: Vec<InitVmState> = vec![];
         for _ in 0..10 {
             let mut stack = empty_stack();
-            let lhs = thread_rng().gen_range(0..(1 << 16));
-            let rhs = thread_rng().gen_range(0..(1 << 16));
+            let lhs = thread_rng().gen_range(0..u32::MAX / 2);
+            let rhs = thread_rng().gen_range(0..=lhs);
             let lhs = BFieldElement::new(lhs as u64);
             let rhs = BFieldElement::new(rhs as u64);
-            stack.push(lhs);
             stack.push(rhs);
+            stack.push(lhs);
             ret.push(InitVmState::with_stack(stack));
         }
 
@@ -79,7 +81,7 @@ impl DeprecatedSnippet for Safemul {
         InitVmState::with_stack(
             [
                 empty_stack(),
-                vec![BFieldElement::new(1 << 8), BFieldElement::new(1 << 9)],
+                vec![BFieldElement::new(1 << 15), BFieldElement::new(1 << 16)],
             ]
             .concat(),
         )
@@ -89,10 +91,7 @@ impl DeprecatedSnippet for Safemul {
         InitVmState::with_stack(
             [
                 empty_stack(),
-                vec![
-                    BFieldElement::new((1 << 15) - 1),
-                    BFieldElement::new((1 << 16) - 1),
-                ],
+                vec![BFieldElement::zero(), BFieldElement::new((1 << 32) - 1)],
             ]
             .concat(),
         )
@@ -108,8 +107,8 @@ impl DeprecatedSnippet for Safemul {
         let lhs: u32 = stack.pop().unwrap().try_into().unwrap();
         let rhs: u32 = stack.pop().unwrap().try_into().unwrap();
 
-        let prod = lhs * rhs;
-        stack.push(BFieldElement::new(prod as u64));
+        let diff = lhs - rhs;
+        stack.push(BFieldElement::new(diff as u64));
     }
 }
 
@@ -117,51 +116,49 @@ impl DeprecatedSnippet for Safemul {
 mod tests {
     use std::collections::HashMap;
 
-    use num::Zero;
-
     use super::*;
     use crate::test_helpers::test_rust_equivalence_given_input_values_deprecated;
     use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
 
     #[test]
     fn snippet_test() {
-        test_rust_equivalence_multiple_deprecated(&Safemul, true);
+        test_rust_equivalence_multiple_deprecated(&SafeSub, true);
     }
 
     #[test]
     fn safe_sub_simple_test() {
-        prop_safe_mul(1000, 1, Some(1000));
-        prop_safe_mul(10_000, 900, Some(9_000_000));
-        prop_safe_mul(1, 1, Some(1));
-        prop_safe_mul(10_000, 10_000, Some(100_000_000));
-        prop_safe_mul(u32::MAX, 1, Some(u32::MAX));
-        prop_safe_mul(1, u32::MAX, Some(u32::MAX));
+        prop_safe_sub(1000, 1, Some(999));
+        prop_safe_sub(10_000, 900, Some(9_100));
+        prop_safe_sub(123, 123, Some(0));
+        prop_safe_sub(1230, 230, Some(1000));
+        prop_safe_sub(1 << 31, 1 << 30, Some(1 << 30));
+        prop_safe_sub(u32::MAX, 0, Some(u32::MAX));
+        prop_safe_sub(u32::MAX, u32::MAX, Some(0));
     }
 
     #[should_panic]
     #[test]
     fn overflow_test() {
-        prop_safe_mul(1 << 16, 1 << 16, None);
+        prop_safe_sub(1 << 31, (1 << 31) + 1000, None);
     }
 
     #[should_panic]
     #[test]
     fn overflow_test_2() {
-        prop_safe_mul(1 << 31, 2, None);
+        prop_safe_sub(0, 1, None);
     }
 
     #[should_panic]
     #[test]
     fn overflow_test_3() {
-        prop_safe_mul(2, 1 << 31, None);
+        prop_safe_sub(0, u32::MAX, None);
     }
 
-    fn prop_safe_mul(lhs: u32, rhs: u32, _expected: Option<u32>) {
+    fn prop_safe_sub(lhs: u32, rhs: u32, _expected: Option<u32>) {
         let mut init_stack = empty_stack();
         init_stack.push(BFieldElement::new(rhs as u64));
         init_stack.push(BFieldElement::new(lhs as u64));
-
-        let expected = lhs.checked_mul(rhs);
+        let expected = lhs.checked_sub(rhs);
         let expected = [
             empty_stack(),
             vec![expected
@@ -171,7 +168,7 @@ mod tests {
         .concat();
 
         test_rust_equivalence_given_input_values_deprecated(
-            &Safemul,
+            &SafeSub,
             &init_stack,
             &[],
             HashMap::default(),
@@ -186,7 +183,7 @@ mod benches {
     use crate::snippet_bencher::bench_and_write;
 
     #[test]
-    fn safe_mul_benchmark() {
-        bench_and_write(Safemul);
+    fn safe_sub_benchmark() {
+        bench_and_write(SafeSub);
     }
 }

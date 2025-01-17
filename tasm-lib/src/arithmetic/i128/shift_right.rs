@@ -1,8 +1,8 @@
 use triton_vm::prelude::*;
 
-use crate::arithmetic::u32::isu32::Isu32;
-use crate::arithmetic::u32::shiftleft::Shiftleft;
-use crate::arithmetic::u32::shiftright::Shiftright;
+use crate::arithmetic::u32::is_u32::IsU32;
+use crate::arithmetic::u32::shift_left::ShiftLeft as ShlU32;
+use crate::arithmetic::u32::shift_right::ShiftRight as ShrU32;
 use crate::prelude::*;
 
 /// Right-shift for 128-bit integers AKA [right-shift for `i128`][shr].
@@ -63,9 +63,9 @@ impl BasicSnippet for ShiftRight {
         let clean_up_for_early_return = format!("{entrypoint}_early_return");
         let entrypoint = self.entrypoint();
 
-        let is_u32 = library.import(Box::new(Isu32));
-        let shr_u32 = library.import(Box::new(Shiftright));
-        let shl_u32 = library.import(Box::new(Shiftleft));
+        let is_u32 = library.import(Box::new(IsU32));
+        let shr_u32 = library.import(Box::new(ShrU32));
+        let shl_u32 = library.import(Box::new(ShlU32));
 
         triton_asm! {
             // BEFORE: _ arg3 arg2 arg1 arg0 shamt

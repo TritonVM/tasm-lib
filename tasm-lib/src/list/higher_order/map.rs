@@ -600,7 +600,7 @@ mod tests {
 
         fn function_code(&self, library: &mut Library) -> String {
             let entrypoint = self.entrypoint_name();
-            let unused_import = library.import(Box::new(arithmetic::u32::safeadd::Safeadd));
+            let unused_import = library.import(Box::new(arithmetic::u32::safe_add::SafeAdd));
             triton_asm!(
                 // BEFORE: _ x2 x1 x0
                 // AFTER:  _ d4 d3 d2 d1 d0

@@ -6,8 +6,8 @@ use rand::prelude::*;
 use triton_vm::prelude::*;
 use twenty_first::prelude::U32s;
 
-use crate::arithmetic::u32::safeadd::Safeadd;
-use crate::arithmetic::u32::safesub::Safesub;
+use crate::arithmetic::u32::safe_add::SafeAdd;
+use crate::arithmetic::u32::safe_sub::SafeSub;
 use crate::arithmetic::u64::and::And;
 use crate::arithmetic::u64::leading_zeros::LeadingZeros;
 use crate::arithmetic::u64::lt::Lt;
@@ -67,9 +67,9 @@ impl DeprecatedSnippet for DivMod {
         let lt_u64 = library.import(Box::new(Lt));
         let or_u64 = library.import(Box::new(Or));
         let sub_u64 = library.import(Box::new(Sub));
-        let sub_u32 = library.import(Box::new(Safesub));
+        let sub_u32 = library.import(Box::new(SafeSub));
         let leading_zeros_u64 = library.import(Box::new(LeadingZeros));
-        let add_u32 = library.import(Box::new(Safeadd));
+        let add_u32 = library.import(Box::new(SafeAdd));
         let spilled_divisor_alloc = library.kmalloc(2);
 
         // The below code has been compiled from a Rust implementation of an LLVM function

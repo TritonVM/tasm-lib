@@ -70,19 +70,22 @@ pub fn name_to_snippet(fn_name: &str) -> Option<Box<dyn BasicSnippet>> {
         }
 
         // u32
-        "tasmlib_arithmetic_u32_isodd" => Some(Box::new(u32::isodd::Isodd)),
-        "tasmlib_arithmetic_u32_isu32" => Some(Box::new(u32::isu32::Isu32)),
-        "tasmlib_arithmetic_u32_safeadd" => Some(Box::new(u32::safeadd::Safeadd)),
-        "tasmlib_arithmetic_u32_safesub" => Some(Box::new(u32::safesub::Safesub)),
-        "tasmlib_arithmetic_u32_safemul" => Some(Box::new(u32::safemul::Safemul)),
-        "tasmlib_arithmetic_u32_shiftright" => Some(Box::new(u32::shiftright::Shiftright)),
-        "tasmlib_arithmetic_u32_shiftleft" => Some(Box::new(u32::shiftleft::Shiftleft)),
-        "tasmlib_arithmetic_u32_or" => Some(Box::new(u32::or::Or)),
+        "tasmlib_arithmetic_u32_is_odd" => Some(Box::new(u32::is_odd::IsOdd)),
+        "tasmlib_arithmetic_u32_is_u32" => Some(Box::new(u32::is_u32::IsU32)),
         "tasmlib_arithmetic_u32_leading_zeros" => Some(Box::new(u32::leading_zeros::LeadingZeros)),
-        "tasmlib_arithmetic_u32_safepow" => Some(Box::new(u32::safepow::Safepow)),
-        "tasmlib_arithmetic_u32_overflowingadd" => {
-            Some(Box::new(u32::overflowingadd::Overflowingadd))
+        "tasmlib_arithmetic_u32_next_power_of_two" => {
+            Some(Box::new(u32::next_power_of_two::NextPowerOfTwo))
         }
+        "tasmlib_arithmetic_u32_or" => Some(Box::new(u32::or::Or)),
+        "tasmlib_arithmetic_u32_overflowing_add" => {
+            Some(Box::new(u32::overflowing_add::OverflowingAdd))
+        }
+        "tasmlib_arithmetic_u32_safe_add" => Some(Box::new(u32::safe_add::SafeAdd)),
+        "tasmlib_arithmetic_u32_safe_mul" => Some(Box::new(u32::safe_mul::SafeMul)),
+        "tasmlib_arithmetic_u32_safe_pow" => Some(Box::new(u32::safe_pow::SafePow)),
+        "tasmlib_arithmetic_u32_safe_sub" => Some(Box::new(u32::safe_sub::SafeSub)),
+        "tasmlib_arithmetic_u32_shift_left" => Some(Box::new(u32::shift_left::ShiftLeft)),
+        "tasmlib_arithmetic_u32_shift_right" => Some(Box::new(u32::shift_right::ShiftRight)),
         "tasmlib_arithmetic_u32_trailing_zeros" => {
             Some(Box::new(u32::trailing_zeros::TrailingZeros))
         }

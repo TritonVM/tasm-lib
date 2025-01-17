@@ -7,11 +7,11 @@ use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::InitVmState;
 
 #[derive(Clone, Debug)]
-pub struct Safeadd;
+pub struct SafeAdd;
 
-impl DeprecatedSnippet for Safeadd {
+impl DeprecatedSnippet for SafeAdd {
     fn entrypoint_name(&self) -> String {
-        "tasmlib_arithmetic_u32_safeadd".to_string()
+        "tasmlib_arithmetic_u32_safe_add".to_string()
     }
 
     fn input_field_names(&self) -> Vec<String> {
@@ -121,7 +121,7 @@ mod tests {
 
     #[test]
     fn snippet_test() {
-        test_rust_equivalence_multiple_deprecated(&Safeadd, true);
+        test_rust_equivalence_multiple_deprecated(&SafeAdd, true);
     }
 
     #[test]
@@ -150,8 +150,8 @@ mod tests {
         ]
         .concat();
 
-        test_rust_equivalence_given_input_values_deprecated::<Safeadd>(
-            &Safeadd,
+        test_rust_equivalence_given_input_values_deprecated::<SafeAdd>(
+            &SafeAdd,
             &init_stack,
             &[],
             HashMap::default(),
@@ -167,6 +167,6 @@ mod benches {
 
     #[test]
     fn safe_add_benchmark() {
-        bench_and_write(Safeadd);
+        bench_and_write(SafeAdd);
     }
 }

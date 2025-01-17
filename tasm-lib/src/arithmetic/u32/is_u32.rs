@@ -12,11 +12,11 @@ use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::InitVmState;
 
 #[derive(Clone, Debug)]
-pub struct Isu32;
+pub struct IsU32;
 
-impl DeprecatedSnippet for Isu32 {
+impl DeprecatedSnippet for IsU32 {
     fn entrypoint_name(&self) -> String {
-        "tasmlib_arithmetic_u32_isu32".to_string()
+        "tasmlib_arithmetic_u32_is_u32".to_string()
     }
 
     fn input_field_names(&self) -> Vec<String> {
@@ -110,7 +110,7 @@ mod tests {
 
     #[test]
     fn is_u32_test() {
-        test_rust_equivalence_multiple_deprecated(&Isu32, true);
+        test_rust_equivalence_multiple_deprecated(&IsU32, true);
     }
 
     #[test]
@@ -151,8 +151,8 @@ mod tests {
         let mut init_stack = empty_stack();
         init_stack.push(some_value);
 
-        test_rust_equivalence_given_input_values_deprecated::<Isu32>(
-            &Isu32,
+        test_rust_equivalence_given_input_values_deprecated::<IsU32>(
+            &IsU32,
             &init_stack,
             &[],
             HashMap::default(),
@@ -168,6 +168,6 @@ mod benches {
 
     #[test]
     fn is_u32_benchmark() {
-        bench_and_write(Isu32);
+        bench_and_write(IsU32);
     }
 }

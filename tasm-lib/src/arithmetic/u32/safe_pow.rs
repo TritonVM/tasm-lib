@@ -4,9 +4,9 @@ use crate::prelude::*;
 
 /// A u32 `pow` that behaves like Rustc's `pow` method on `u32`, crashing in case of overflow.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
-pub struct Safepow;
+pub struct SafePow;
 
-impl BasicSnippet for Safepow {
+impl BasicSnippet for SafePow {
     fn inputs(&self) -> Vec<(DataType, String)> {
         vec![
             (DataType::U32, "base".to_owned()),
@@ -19,7 +19,7 @@ impl BasicSnippet for Safepow {
     }
 
     fn entrypoint(&self) -> String {
-        "tasmlib_arithmetic_u32_safepow".to_string()
+        "tasmlib_arithmetic_u32_safe_pow".to_string()
     }
 
     fn code(&self, _: &mut Library) -> Vec<LabelledInstruction> {
@@ -145,7 +145,7 @@ mod tests {
     use super::*;
     use crate::test_prelude::*;
 
-    impl Closure for Safepow {
+    impl Closure for SafePow {
         type Args = (u32, u32);
 
         fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
@@ -178,7 +178,7 @@ mod tests {
 
     #[test]
     fn ruts_shadow() {
-        ShadowedClosure::new(Safepow).test()
+        ShadowedClosure::new(SafePow).test()
     }
 
     #[test]
@@ -211,12 +211,12 @@ mod tests {
             (1, u32::MAX - 3),
             (0, u32::MAX - 3),
         ] {
-            let initial_stack = Safepow.set_up_test_stack((base, exp));
+            let initial_stack = SafePow.set_up_test_stack((base, exp));
             let mut expected_final_stack = initial_stack.clone();
-            Safepow.rust_shadow(&mut expected_final_stack);
+            SafePow.rust_shadow(&mut expected_final_stack);
 
             let _vm_output_state = test_rust_equivalence_given_complete_state(
-                &ShadowedClosure::new(Safepow),
+                &ShadowedClosure::new(SafePow),
                 &initial_stack,
                 &[],
                 &NonDeterminism::default(),
@@ -261,8 +261,8 @@ mod tests {
             (1 << 8, 32),
         ] {
             test_assertion_failure(
-                &ShadowedClosure::new(Safepow),
-                InitVmState::with_stack(Safepow.set_up_test_stack((base, exp))),
+                &ShadowedClosure::new(SafePow),
+                InitVmState::with_stack(SafePow.set_up_test_stack((base, exp))),
                 &[120, 121],
             );
         }
@@ -276,6 +276,6 @@ mod benches {
 
     #[test]
     fn benchmark() {
-        ShadowedClosure::new(Safepow).bench()
+        ShadowedClosure::new(SafePow).bench()
     }
 }

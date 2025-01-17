@@ -1,6 +1,6 @@
 [
   {
-    "name": "tasmlib_arithmetic_u32_isodd",
+    "name": "tasmlib_arithmetic_u32_is_odd",
     "benchmark_result": {
       "clock_cycle_count": 8,
       "hash_table_height": 12,
@@ -11,7 +11,7 @@
     "case": "CommonCase"
   },
   {
-    "name": "tasmlib_arithmetic_u32_isodd",
+    "name": "tasmlib_arithmetic_u32_is_odd",
     "benchmark_result": {
       "clock_cycle_count": 8,
       "hash_table_height": 12,
