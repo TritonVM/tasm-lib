@@ -1,16 +1,27 @@
+use std::collections::HashMap;
+
 use triton_vm::prelude::*;
 
 use crate::prelude::*;
+use crate::traits::basic_snippet::Reviewer;
+use crate::traits::basic_snippet::SignOffFingerprint;
 
-/// Test Less-Than for `U128`s.
+/// Less-Than for `U128`s.
 ///
-/// Consumes arguments from stack and leaves a boolean behind. When the
-/// arguments are not 8 u32s, the behavior is undefined.
+/// ### Behavior
 ///
 /// ```text
 /// BEFORE: _ [rhs; 4] [lhs; 4]
 /// AFTER:  _ (lhs < rhs)
 /// ```
+///
+/// ### Preconditions
+///
+/// - all input arguments are properly [`BFieldCodec`] encoded
+///
+/// ### Postconditions
+///
+/// - the output is properly [`BFieldCodec`] encoded
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct Lt;
 
@@ -67,6 +78,12 @@ impl BasicSnippet for Lt {
                 // _ (l < r)
                 return
         }
+    }
+
+    fn sign_offs(&self) -> HashMap<Reviewer, SignOffFingerprint> {
+        let mut sign_offs = HashMap::new();
+        sign_offs.insert(Reviewer("ferdinand"), 0x4e24d1cf57cfa49d.into());
+        sign_offs
     }
 }
 
