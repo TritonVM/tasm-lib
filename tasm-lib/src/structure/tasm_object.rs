@@ -107,7 +107,8 @@ pub trait TasmStruct: TasmObject {
     /// the program and asserts that the extracted value matches the original `bar`
     /// value.
     ///
-    /// ```ignore // derive macro `BFieldCodec` does not behave nicely; todo
+    /// ```no_compile
+    /// #  // ^^^^^^^ derive macro `BFieldCodec` does not behave nicely; todo
     /// # use tasm_lib::prelude::*;
     /// # use tasm_lib::triton_vm::prelude::*;
     /// # use tasm_lib::memory::encode_to_memory;
