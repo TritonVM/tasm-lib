@@ -28,7 +28,8 @@ pub fn test_rust_equivalence_multiple_deprecated<T: DeprecatedSnippet>(
     // function call. The data type value is a dummy value for all
     // snippets except those that handle lists.
     if export_snippet {
-        let looked_up_snippet = exported_snippets::name_to_snippet(&snippet_struct.entrypoint());
+        let looked_up_snippet =
+            exported_snippets::name_to_snippet(&snippet_struct.entrypoint()).unwrap();
         assert_eq!(
             snippet_struct.entrypoint(),
             looked_up_snippet.entrypoint(),
