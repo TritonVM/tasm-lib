@@ -1,11 +1,15 @@
 use const_format::formatcp;
 use triton_vm::air::challenge_id::ChallengeId;
 use triton_vm::challenges::Challenges;
+use triton_vm::prelude::Stark;
 use triton_vm::proof_item::ProofItemVariant;
 use triton_vm::table::master_table::MasterAuxTable;
 use triton_vm::table::NUM_QUOTIENT_SEGMENTS;
 
+use crate::arithmetic::i128;
 use crate::arithmetic::u128;
+use crate::arithmetic::u128::shift_left_static::ShiftLeftStatic as SShlU128;
+use crate::arithmetic::u128::shift_right_static::ShiftRightStatic as SShrU128;
 use crate::arithmetic::u32;
 use crate::arithmetic::u64;
 use crate::array::horner_evaluation::HornerEvaluation;
@@ -27,11 +31,14 @@ use crate::mmr::calculate_new_peaks_from_append::CalculateNewPeaksFromAppend;
 use crate::mmr::calculate_new_peaks_from_leaf_mutation::MmrCalculateNewPeaksFromLeafMutationMtIndices;
 use crate::mmr::leaf_index_to_mt_index_and_peak_index::MmrLeafIndexToMtIndexAndPeakIndex;
 use crate::mmr::verify_from_memory::MmrVerifyFromMemory;
+use crate::mmr::verify_from_secret_in_leaf_index_on_stack::MmrVerifyFromSecretInLeafIndexOnStack;
 use crate::mmr::verify_from_secret_in_secret_leaf_index::MmrVerifyFromSecretInSecretLeafIndex;
+use crate::mmr::verify_mmr_successor::VerifyMmrSuccessor;
 use crate::neptune::mutator_set::commit::Commit;
 use crate::neptune::mutator_set::get_swbf_indices::GetSwbfIndices;
 use crate::other_snippets::bfe_add::BfeAdd;
 use crate::prelude::*;
+use crate::verifier;
 use crate::verifier::challenges;
 use crate::verifier::challenges::new_empty_input_and_output::NewEmptyInputAndOutput;
 use crate::verifier::challenges::new_generic_dyn_claim::NewGenericDynClaim;
@@ -62,12 +69,20 @@ const CHALLENGES_NEW_FROM_DYN_CLAIM: &str = formatcp!(
 
 pub fn name_to_snippet(fn_name: &str) -> Option<Box<dyn BasicSnippet>> {
     match fn_name {
+        // BFieldElement
+        "tasmlib_arithmetic_bfe_primitive_root_of_unity" => Some(Box::new(
+            crate::arithmetic::bfe::primitive_root_of_unity::PrimitiveRootOfUnity,
+        )),
+
         // XFieldElement
         "tasmlib_arithmetic_xfe_square" => Some(Box::new(crate::arithmetic::xfe::square::Square)),
         "tasmlib_arithmetic_xfe_cube" => Some(Box::new(crate::arithmetic::xfe::cube::Cube)),
         "tasmlib_arithmetic_xfe_to_the_fourth" => {
             Some(Box::new(crate::arithmetic::xfe::to_the_fourth::ToTheFourth))
         }
+        "tasmlib_arithmetic_xfe_to_the_power_of_power_of_2" => Some(Box::new(
+            crate::arithmetic::xfe::to_the_power_of_power_of_2::ToThePowerOfPowerOf2,
+        )),
 
         // u32
         "tasmlib_arithmetic_u32_is_odd" => Some(Box::new(u32::is_odd::IsOdd)),
@@ -127,208 +142,100 @@ pub fn name_to_snippet(fn_name: &str) -> Option<Box<dyn BasicSnippet>> {
 
         // u128
         "tasmlib_arithmetic_u128_lt" => Some(Box::new(u128::lt::Lt)),
+        "tasmlib_arithmetic_u128_overflowing_add" => {
+            Some(Box::new(u128::overflowing_add::OverflowingAdd))
+        }
         "tasmlib_arithmetic_u128_safe_add" => Some(Box::new(u128::safe_add::SafeAdd)),
         "tasmlib_arithmetic_u128_safe_mul" => Some(Box::new(u128::safe_mul::SafeMul)),
         "tasmlib_arithmetic_u128_shift_left" => Some(Box::new(u128::shift_left::ShiftLeft)),
         "tasmlib_arithmetic_u128_shift_right" => Some(Box::new(u128::shift_right::ShiftRight)),
         "tasmlib_arithmetic_u128_sub" => Some(Box::new(u128::sub::Sub)),
 
-        "tasmlib_arithmetic_u128_shift_left_static_1" => {
-            Some(Box::new(u128::shift_left_static::ShiftLeftStatic::<1>))
-        }
-        "tasmlib_arithmetic_u128_shift_left_static_2" => {
-            Some(Box::new(u128::shift_left_static::ShiftLeftStatic::<2>))
-        }
-        "tasmlib_arithmetic_u128_shift_left_static_3" => {
-            Some(Box::new(u128::shift_left_static::ShiftLeftStatic::<3>))
-        }
-        "tasmlib_arithmetic_u128_shift_left_static_4" => {
-            Some(Box::new(u128::shift_left_static::ShiftLeftStatic::<4>))
-        }
-        "tasmlib_arithmetic_u128_shift_left_static_5" => {
-            Some(Box::new(u128::shift_left_static::ShiftLeftStatic::<5>))
-        }
-        "tasmlib_arithmetic_u128_shift_left_static_6" => {
-            Some(Box::new(u128::shift_left_static::ShiftLeftStatic::<6>))
-        }
-        "tasmlib_arithmetic_u128_shift_left_static_7" => {
-            Some(Box::new(u128::shift_left_static::ShiftLeftStatic::<7>))
-        }
-        "tasmlib_arithmetic_u128_shift_left_static_8" => {
-            Some(Box::new(u128::shift_left_static::ShiftLeftStatic::<8>))
-        }
-        "tasmlib_arithmetic_u128_shift_left_static_9" => {
-            Some(Box::new(u128::shift_left_static::ShiftLeftStatic::<9>))
-        }
-        "tasmlib_arithmetic_u128_shift_left_static_10" => {
-            Some(Box::new(u128::shift_left_static::ShiftLeftStatic::<10>))
-        }
-        "tasmlib_arithmetic_u128_shift_left_static_11" => {
-            Some(Box::new(u128::shift_left_static::ShiftLeftStatic::<11>))
-        }
-        "tasmlib_arithmetic_u128_shift_left_static_12" => {
-            Some(Box::new(u128::shift_left_static::ShiftLeftStatic::<12>))
-        }
-        "tasmlib_arithmetic_u128_shift_left_static_13" => {
-            Some(Box::new(u128::shift_left_static::ShiftLeftStatic::<13>))
-        }
-        "tasmlib_arithmetic_u128_shift_left_static_14" => {
-            Some(Box::new(u128::shift_left_static::ShiftLeftStatic::<14>))
-        }
-        "tasmlib_arithmetic_u128_shift_left_static_15" => {
-            Some(Box::new(u128::shift_left_static::ShiftLeftStatic::<15>))
-        }
-        "tasmlib_arithmetic_u128_shift_left_static_16" => {
-            Some(Box::new(u128::shift_left_static::ShiftLeftStatic::<16>))
-        }
-        "tasmlib_arithmetic_u128_shift_left_static_17" => {
-            Some(Box::new(u128::shift_left_static::ShiftLeftStatic::<17>))
-        }
-        "tasmlib_arithmetic_u128_shift_left_static_18" => {
-            Some(Box::new(u128::shift_left_static::ShiftLeftStatic::<18>))
-        }
-        "tasmlib_arithmetic_u128_shift_left_static_19" => {
-            Some(Box::new(u128::shift_left_static::ShiftLeftStatic::<19>))
-        }
-        "tasmlib_arithmetic_u128_shift_left_static_20" => {
-            Some(Box::new(u128::shift_left_static::ShiftLeftStatic::<20>))
-        }
-        "tasmlib_arithmetic_u128_shift_left_static_21" => {
-            Some(Box::new(u128::shift_left_static::ShiftLeftStatic::<21>))
-        }
-        "tasmlib_arithmetic_u128_shift_left_static_22" => {
-            Some(Box::new(u128::shift_left_static::ShiftLeftStatic::<22>))
-        }
-        "tasmlib_arithmetic_u128_shift_left_static_23" => {
-            Some(Box::new(u128::shift_left_static::ShiftLeftStatic::<23>))
-        }
-        "tasmlib_arithmetic_u128_shift_left_static_24" => {
-            Some(Box::new(u128::shift_left_static::ShiftLeftStatic::<24>))
-        }
-        "tasmlib_arithmetic_u128_shift_left_static_25" => {
-            Some(Box::new(u128::shift_left_static::ShiftLeftStatic::<25>))
-        }
-        "tasmlib_arithmetic_u128_shift_left_static_26" => {
-            Some(Box::new(u128::shift_left_static::ShiftLeftStatic::<26>))
-        }
-        "tasmlib_arithmetic_u128_shift_left_static_27" => {
-            Some(Box::new(u128::shift_left_static::ShiftLeftStatic::<27>))
-        }
-        "tasmlib_arithmetic_u128_shift_left_static_28" => {
-            Some(Box::new(u128::shift_left_static::ShiftLeftStatic::<28>))
-        }
-        "tasmlib_arithmetic_u128_shift_left_static_29" => {
-            Some(Box::new(u128::shift_left_static::ShiftLeftStatic::<29>))
-        }
-        "tasmlib_arithmetic_u128_shift_left_static_30" => {
-            Some(Box::new(u128::shift_left_static::ShiftLeftStatic::<30>))
-        }
-        "tasmlib_arithmetic_u128_shift_left_static_31" => {
-            Some(Box::new(u128::shift_left_static::ShiftLeftStatic::<31>))
-        }
-        "tasmlib_arithmetic_u128_shift_left_static_32" => {
-            Some(Box::new(u128::shift_left_static::ShiftLeftStatic::<32>))
-        }
+        "tasmlib_arithmetic_u128_shift_left_static_1" => Some(Box::new(SShlU128::<1>)),
+        "tasmlib_arithmetic_u128_shift_left_static_2" => Some(Box::new(SShlU128::<2>)),
+        "tasmlib_arithmetic_u128_shift_left_static_3" => Some(Box::new(SShlU128::<3>)),
+        "tasmlib_arithmetic_u128_shift_left_static_4" => Some(Box::new(SShlU128::<4>)),
+        "tasmlib_arithmetic_u128_shift_left_static_5" => Some(Box::new(SShlU128::<5>)),
+        "tasmlib_arithmetic_u128_shift_left_static_6" => Some(Box::new(SShlU128::<6>)),
+        "tasmlib_arithmetic_u128_shift_left_static_7" => Some(Box::new(SShlU128::<7>)),
+        "tasmlib_arithmetic_u128_shift_left_static_8" => Some(Box::new(SShlU128::<8>)),
+        "tasmlib_arithmetic_u128_shift_left_static_9" => Some(Box::new(SShlU128::<9>)),
+        "tasmlib_arithmetic_u128_shift_left_static_10" => Some(Box::new(SShlU128::<10>)),
+        "tasmlib_arithmetic_u128_shift_left_static_11" => Some(Box::new(SShlU128::<11>)),
+        "tasmlib_arithmetic_u128_shift_left_static_12" => Some(Box::new(SShlU128::<12>)),
+        "tasmlib_arithmetic_u128_shift_left_static_13" => Some(Box::new(SShlU128::<13>)),
+        "tasmlib_arithmetic_u128_shift_left_static_14" => Some(Box::new(SShlU128::<14>)),
+        "tasmlib_arithmetic_u128_shift_left_static_15" => Some(Box::new(SShlU128::<15>)),
+        "tasmlib_arithmetic_u128_shift_left_static_16" => Some(Box::new(SShlU128::<16>)),
+        "tasmlib_arithmetic_u128_shift_left_static_17" => Some(Box::new(SShlU128::<17>)),
+        "tasmlib_arithmetic_u128_shift_left_static_18" => Some(Box::new(SShlU128::<18>)),
+        "tasmlib_arithmetic_u128_shift_left_static_19" => Some(Box::new(SShlU128::<19>)),
+        "tasmlib_arithmetic_u128_shift_left_static_20" => Some(Box::new(SShlU128::<20>)),
+        "tasmlib_arithmetic_u128_shift_left_static_21" => Some(Box::new(SShlU128::<21>)),
+        "tasmlib_arithmetic_u128_shift_left_static_22" => Some(Box::new(SShlU128::<22>)),
+        "tasmlib_arithmetic_u128_shift_left_static_23" => Some(Box::new(SShlU128::<23>)),
+        "tasmlib_arithmetic_u128_shift_left_static_24" => Some(Box::new(SShlU128::<24>)),
+        "tasmlib_arithmetic_u128_shift_left_static_25" => Some(Box::new(SShlU128::<25>)),
+        "tasmlib_arithmetic_u128_shift_left_static_26" => Some(Box::new(SShlU128::<26>)),
+        "tasmlib_arithmetic_u128_shift_left_static_27" => Some(Box::new(SShlU128::<27>)),
+        "tasmlib_arithmetic_u128_shift_left_static_28" => Some(Box::new(SShlU128::<28>)),
+        "tasmlib_arithmetic_u128_shift_left_static_29" => Some(Box::new(SShlU128::<29>)),
+        "tasmlib_arithmetic_u128_shift_left_static_30" => Some(Box::new(SShlU128::<30>)),
+        "tasmlib_arithmetic_u128_shift_left_static_31" => Some(Box::new(SShlU128::<31>)),
+        "tasmlib_arithmetic_u128_shift_left_static_32" => Some(Box::new(SShlU128::<32>)),
 
-        "tasmlib_arithmetic_u128_shift_right_static_1" => {
-            Some(Box::new(u128::shift_right_static::ShiftRightStatic::<1>))
-        }
-        "tasmlib_arithmetic_u128_shift_right_static_2" => {
-            Some(Box::new(u128::shift_right_static::ShiftRightStatic::<2>))
-        }
-        "tasmlib_arithmetic_u128_shift_right_static_3" => {
-            Some(Box::new(u128::shift_right_static::ShiftRightStatic::<3>))
-        }
-        "tasmlib_arithmetic_u128_shift_right_static_4" => {
-            Some(Box::new(u128::shift_right_static::ShiftRightStatic::<4>))
-        }
-        "tasmlib_arithmetic_u128_shift_right_static_5" => {
-            Some(Box::new(u128::shift_right_static::ShiftRightStatic::<5>))
-        }
-        "tasmlib_arithmetic_u128_shift_right_static_6" => {
-            Some(Box::new(u128::shift_right_static::ShiftRightStatic::<6>))
-        }
-        "tasmlib_arithmetic_u128_shift_right_static_7" => {
-            Some(Box::new(u128::shift_right_static::ShiftRightStatic::<7>))
-        }
-        "tasmlib_arithmetic_u128_shift_right_static_8" => {
-            Some(Box::new(u128::shift_right_static::ShiftRightStatic::<8>))
-        }
-        "tasmlib_arithmetic_u128_shift_right_static_9" => {
-            Some(Box::new(u128::shift_right_static::ShiftRightStatic::<9>))
-        }
-        "tasmlib_arithmetic_u128_shift_right_static_10" => {
-            Some(Box::new(u128::shift_right_static::ShiftRightStatic::<10>))
-        }
-        "tasmlib_arithmetic_u128_shift_right_static_11" => {
-            Some(Box::new(u128::shift_right_static::ShiftRightStatic::<11>))
-        }
-        "tasmlib_arithmetic_u128_shift_right_static_12" => {
-            Some(Box::new(u128::shift_right_static::ShiftRightStatic::<12>))
-        }
-        "tasmlib_arithmetic_u128_shift_right_static_13" => {
-            Some(Box::new(u128::shift_right_static::ShiftRightStatic::<13>))
-        }
-        "tasmlib_arithmetic_u128_shift_right_static_14" => {
-            Some(Box::new(u128::shift_right_static::ShiftRightStatic::<14>))
-        }
-        "tasmlib_arithmetic_u128_shift_right_static_15" => {
-            Some(Box::new(u128::shift_right_static::ShiftRightStatic::<15>))
-        }
-        "tasmlib_arithmetic_u128_shift_right_static_16" => {
-            Some(Box::new(u128::shift_right_static::ShiftRightStatic::<16>))
-        }
-        "tasmlib_arithmetic_u128_shift_right_static_17" => {
-            Some(Box::new(u128::shift_right_static::ShiftRightStatic::<17>))
-        }
-        "tasmlib_arithmetic_u128_shift_right_static_18" => {
-            Some(Box::new(u128::shift_right_static::ShiftRightStatic::<18>))
-        }
-        "tasmlib_arithmetic_u128_shift_right_static_19" => {
-            Some(Box::new(u128::shift_right_static::ShiftRightStatic::<19>))
-        }
-        "tasmlib_arithmetic_u128_shift_right_static_20" => {
-            Some(Box::new(u128::shift_right_static::ShiftRightStatic::<20>))
-        }
-        "tasmlib_arithmetic_u128_shift_right_static_21" => {
-            Some(Box::new(u128::shift_right_static::ShiftRightStatic::<21>))
-        }
-        "tasmlib_arithmetic_u128_shift_right_static_22" => {
-            Some(Box::new(u128::shift_right_static::ShiftRightStatic::<22>))
-        }
-        "tasmlib_arithmetic_u128_shift_right_static_23" => {
-            Some(Box::new(u128::shift_right_static::ShiftRightStatic::<23>))
-        }
-        "tasmlib_arithmetic_u128_shift_right_static_24" => {
-            Some(Box::new(u128::shift_right_static::ShiftRightStatic::<24>))
-        }
-        "tasmlib_arithmetic_u128_shift_right_static_25" => {
-            Some(Box::new(u128::shift_right_static::ShiftRightStatic::<25>))
-        }
-        "tasmlib_arithmetic_u128_shift_right_static_26" => {
-            Some(Box::new(u128::shift_right_static::ShiftRightStatic::<26>))
-        }
-        "tasmlib_arithmetic_u128_shift_right_static_27" => {
-            Some(Box::new(u128::shift_right_static::ShiftRightStatic::<27>))
-        }
-        "tasmlib_arithmetic_u128_shift_right_static_28" => {
-            Some(Box::new(u128::shift_right_static::ShiftRightStatic::<28>))
-        }
-        "tasmlib_arithmetic_u128_shift_right_static_29" => {
-            Some(Box::new(u128::shift_right_static::ShiftRightStatic::<29>))
-        }
-        "tasmlib_arithmetic_u128_shift_right_static_30" => {
-            Some(Box::new(u128::shift_right_static::ShiftRightStatic::<30>))
-        }
-        "tasmlib_arithmetic_u128_shift_right_static_31" => {
-            Some(Box::new(u128::shift_right_static::ShiftRightStatic::<31>))
-        }
-        "tasmlib_arithmetic_u128_shift_right_static_32" => {
-            Some(Box::new(u128::shift_right_static::ShiftRightStatic::<32>))
-        }
+        "tasmlib_arithmetic_u128_shift_right_static_1" => Some(Box::new(SShrU128::<1>)),
+        "tasmlib_arithmetic_u128_shift_right_static_2" => Some(Box::new(SShrU128::<2>)),
+        "tasmlib_arithmetic_u128_shift_right_static_3" => Some(Box::new(SShrU128::<3>)),
+        "tasmlib_arithmetic_u128_shift_right_static_4" => Some(Box::new(SShrU128::<4>)),
+        "tasmlib_arithmetic_u128_shift_right_static_5" => Some(Box::new(SShrU128::<5>)),
+        "tasmlib_arithmetic_u128_shift_right_static_6" => Some(Box::new(SShrU128::<6>)),
+        "tasmlib_arithmetic_u128_shift_right_static_7" => Some(Box::new(SShrU128::<7>)),
+        "tasmlib_arithmetic_u128_shift_right_static_8" => Some(Box::new(SShrU128::<8>)),
+        "tasmlib_arithmetic_u128_shift_right_static_9" => Some(Box::new(SShrU128::<9>)),
+        "tasmlib_arithmetic_u128_shift_right_static_10" => Some(Box::new(SShrU128::<10>)),
+        "tasmlib_arithmetic_u128_shift_right_static_11" => Some(Box::new(SShrU128::<11>)),
+        "tasmlib_arithmetic_u128_shift_right_static_12" => Some(Box::new(SShrU128::<12>)),
+        "tasmlib_arithmetic_u128_shift_right_static_13" => Some(Box::new(SShrU128::<13>)),
+        "tasmlib_arithmetic_u128_shift_right_static_14" => Some(Box::new(SShrU128::<14>)),
+        "tasmlib_arithmetic_u128_shift_right_static_15" => Some(Box::new(SShrU128::<15>)),
+        "tasmlib_arithmetic_u128_shift_right_static_16" => Some(Box::new(SShrU128::<16>)),
+        "tasmlib_arithmetic_u128_shift_right_static_17" => Some(Box::new(SShrU128::<17>)),
+        "tasmlib_arithmetic_u128_shift_right_static_18" => Some(Box::new(SShrU128::<18>)),
+        "tasmlib_arithmetic_u128_shift_right_static_19" => Some(Box::new(SShrU128::<19>)),
+        "tasmlib_arithmetic_u128_shift_right_static_20" => Some(Box::new(SShrU128::<20>)),
+        "tasmlib_arithmetic_u128_shift_right_static_21" => Some(Box::new(SShrU128::<21>)),
+        "tasmlib_arithmetic_u128_shift_right_static_22" => Some(Box::new(SShrU128::<22>)),
+        "tasmlib_arithmetic_u128_shift_right_static_23" => Some(Box::new(SShrU128::<23>)),
+        "tasmlib_arithmetic_u128_shift_right_static_24" => Some(Box::new(SShrU128::<24>)),
+        "tasmlib_arithmetic_u128_shift_right_static_25" => Some(Box::new(SShrU128::<25>)),
+        "tasmlib_arithmetic_u128_shift_right_static_26" => Some(Box::new(SShrU128::<26>)),
+        "tasmlib_arithmetic_u128_shift_right_static_27" => Some(Box::new(SShrU128::<27>)),
+        "tasmlib_arithmetic_u128_shift_right_static_28" => Some(Box::new(SShrU128::<28>)),
+        "tasmlib_arithmetic_u128_shift_right_static_29" => Some(Box::new(SShrU128::<29>)),
+        "tasmlib_arithmetic_u128_shift_right_static_30" => Some(Box::new(SShrU128::<30>)),
+        "tasmlib_arithmetic_u128_shift_right_static_31" => Some(Box::new(SShrU128::<31>)),
+        "tasmlib_arithmetic_u128_shift_right_static_32" => Some(Box::new(SShrU128::<32>)),
+
+        // i128
+        "tasmlib_arithmetic_i128_lt" => Some(Box::new(i128::lt::Lt)),
+        "tasmlib_arithmetic_i128_shift_right" => Some(Box::new(i128::shift_right::ShiftRight)),
 
         // Hashing
+        "tasmlib_hashing_absorb_multiple" => {
+            Some(Box::new(hashing::absorb_multiple::AbsorbMultiple))
+        }
         "tasmlib_hashing_eq_digest" => Some(Box::new(hashing::eq_digest::EqDigest)),
+        "tasmlib_hashing_merkle_root" => Some(Box::new(hashing::merkle_root::MerkleRoot)),
+        "tasmlib_hashing_merkle_root_from_xfes_generic" => Some(Box::new(
+            hashing::merkle_root_from_xfes_generic::MerkleRootFromXfesGeneric,
+        )),
+        "tasmlib_hashing_merkle_step_mem_u64_index" => {
+            Some(Box::new(hashing::merkle_step_mem_u64_index::MerkleStepMemU64Index))
+        },
+        "tasmlib_hashing_merkle_step_u64_index" => {
+            Some(Box::new(hashing::merkle_step_u64_index::MerkleStepU64Index))
+        }
         "tasmlib_hashing_merkle_verify" => Some(Box::new(hashing::merkle_verify::MerkleVerify)),
         "tasmlib_hashing_reverse_digest" => Some(Box::new(hashing::reverse_digest::ReverseDigest)),
         "tasmlib_hashing_swap_digest" => Some(Box::new(hashing::swap_digest::SwapDigest)),
@@ -515,6 +422,7 @@ pub fn name_to_snippet(fn_name: &str) -> Option<Box<dyn BasicSnippet>> {
         }
 
         // MMR
+        "tasmlib_mmr_bag_peaks" => Some(Box::new(BagPeaks)),
         "tasmlib_mmr_calculate_new_peaks_from_append" => {
             Some(Box::new(CalculateNewPeaksFromAppend))
         }
@@ -524,11 +432,16 @@ pub fn name_to_snippet(fn_name: &str) -> Option<Box<dyn BasicSnippet>> {
         "tasmlib_mmr_leaf_index_to_mt_index_and_peak_index" => {
             Some(Box::new(MmrLeafIndexToMtIndexAndPeakIndex))
         }
+        "tasmlib_mmr_verify_from_memory" => Some(Box::new(MmrVerifyFromMemory)),
+        "tasmlib_mmr_verify_from_secret_in_leaf_index_on_stack" => {
+            Some(Box::new(MmrVerifyFromSecretInLeafIndexOnStack))
+        }
         "tasmlib_mmr_verify_from_secret_in_secret_leaf_index" => {
             Some(Box::new(MmrVerifyFromSecretInSecretLeafIndex))
         }
-        "tasmlib_mmr_bag_peaks" => Some(Box::new(BagPeaks)),
-        "tasmlib_mmr_verify_from_memory" => Some(Box::new(MmrVerifyFromMemory)),
+        "tasm_lib_mmr_verify_mmr_successor" => {
+            Some(Box::new(VerifyMmrSuccessor))
+        }
 
         // other
         "tasmlib_other_bfe_add" => Some(Box::new(BfeAdd)),
@@ -594,6 +507,13 @@ pub fn name_to_snippet(fn_name: &str) -> Option<Box<dyn BasicSnippet>> {
                 proof_item: ProofItemVariant::FriResponse,
             }))
         }
+        "tasmlib_verifier_vm_proof_iter_drop" => {
+            Some(Box::new(verifier::vm_proof_iter::drop::Drop))
+        }
+        "tasmlib_verifier_vm_proof_iter_new" => {
+            Some(Box::new(verifier::vm_proof_iter::new::New))
+        }
+
         "tasmlib_verifier_read_and_verify_own_program_digest_from_std_in" => {
             Some(Box::new(ReadAndVerifyOwnProgramDigestFromStdIn))
         }
@@ -609,6 +529,20 @@ pub fn name_to_snippet(fn_name: &str) -> Option<Box<dyn BasicSnippet>> {
             );
             Some(Box::new(challenge_snippet))
         }
+
+        "tasmlib_verifier_fri_barycentric_evaluation" => {
+            Some(Box::new(fri::barycentric_evaluation::BarycentricEvaluation))
+        }
+        "tasmlib_verifier_fri_derive_from_stark" => {
+            Some(Box::new(fri::derive_from_stark::DeriveFriFromStark{stark: Stark::default()}))
+        }
+        "tasmlib_verifier_fri_number_of_rounds" => {
+            Some(Box::new(fri::number_of_rounds::NumberOfRounds))
+        }
+        "tasmlib_verifier_fri_verify_fri_authentication_paths" => {
+            Some(Box::new(fri::verify_fri_authentication_paths::VerifyFriAuthenticationPaths))
+        }
+
         "tasmlib_verifier_master_table_air_constraint_evaluation" => Some(Box::new(
             AirConstraintEvaluation::with_conventional_dynamic_memory_layout(),
         )),
@@ -623,14 +557,17 @@ pub fn name_to_snippet(fn_name: &str) -> Option<Box<dyn BasicSnippet>> {
             Some(Box::new(VerifyTableRows::new(ColumnType::Quotient)))
         }
 
-        "tasmlib_verifier_fri_number_of_rounds" => {
-            Some(Box::new(fri::number_of_rounds::NumberOfRounds {}))
+        "tasmlib_verifier_out_of_domain_points" => {
+            Some(Box::new(verifier::out_of_domain_points::OutOfDomainPoints))
         }
 
         "tasmlib_array_inner_product_of_4_xfes" => Some(Box::new(InnerProductOfXfes::new(4))),
         WEIGHTS_QUOTIENTS_INNER_PRODUCT_ENTRYPOINT => {
             Some(Box::new(InnerProductOfXfes::new(NUM_CONSTRAINTS_TVM)))
         }
+        "tasmlib_list_horner_evaluation_dynamic_length" => Some(Box::new(
+            list::horner_evaluation_dynamic_length::HornerEvaluationDynamicLength,
+        )),
         HORNER_EVALUATION_FOR_SUM_OF_EVALUATED_OUT_OF_DOMAIN_QUOTIENT_SEGMENTS_ENTRYPOINT => {
             Some(Box::new(HornerEvaluation::new(NUM_QUOTIENT_SEGMENTS)))
         }
@@ -649,6 +586,14 @@ pub fn name_to_snippet(fn_name: &str) -> Option<Box<dyn BasicSnippet>> {
             ChallengeId::NUM_DERIVED_CHALLENGES,
             challenges::shared::conventional_challenges_pointer(),
         ))),
+
+        "tasmlib_verifier_eval_arg_compute_terminal_dyn_sized_dynamic_symbols" => Some(Box::new(
+            verifier::eval_arg
+                ::compute_terminal_dyn_sized_dynamic_symbols::ComputeTerminalDynSizedDynamicSymbols
+        )),
+        "tasmlib_verifier_eval_arg_compute_terminal_from_digest" => Some(Box::new(
+            verifier::eval_arg::compute_terminal_from_digest::ComputeTerminalFromDigestInitialIsOne
+        )),
 
         // memory
         "tasmlib_memory_dyn_malloc" => Some(Box::new(DynMalloc)),
