@@ -1,7 +1,29 @@
+use std::collections::HashMap;
+
 use triton_vm::prelude::*;
 
 use crate::prelude::*;
+use crate::traits::basic_snippet::Reviewer;
+use crate::traits::basic_snippet::SignOffFingerprint;
 
+/// ### Behavior
+///
+/// ```text
+/// BEFORE: _ [exp: u32] [base: XFieldElement]
+/// AFTER:  _ [base^(2^exp): XFieldElement]
+/// ```
+///
+/// ### Preconditions
+///
+/// - all input arguments are properly [`BFieldCodec`] encoded
+///
+/// ### Postconditions
+///
+/// None.
+//
+// todo: Explain the precondition. It seems to be a bit arbitrary. The tests
+//   only check `exp` in range 0..32, while the assembly should work fine with
+//   any number.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct ToThePowerOfPowerOf2;
 
@@ -21,11 +43,19 @@ impl BasicSnippet for ToThePowerOfPowerOf2 {
         "tasmlib_arithmetic_xfe_to_the_power_of_power_of_2".to_owned()
     }
 
-    fn code(&self, _library: &mut Library) -> Vec<LabelledInstruction> {
+    fn code(&self, _: &mut Library) -> Vec<LabelledInstruction> {
         let entrypoint = self.entrypoint();
-
         let loop_label = format!("{}_loop", entrypoint);
-        let loop_code = triton_asm!(
+
+        triton_asm!(
+            {entrypoint}:
+                call {loop_label}
+
+                pick 3
+                pop 1
+
+                return
+
             // INVARIANT: _ remainder [acc]
             {loop_label}:
                 // end condition: remainder == 0
@@ -42,29 +72,19 @@ impl BasicSnippet for ToThePowerOfPowerOf2 {
                 xx_mul
                 // _ remainder [acc^2]
 
-                swap 3
-                push -1
-                add
-                swap 3
+                pick 3
+                addi -1
+                place 3
                 // _ (remainder - 1) [acc^2]
 
                 recurse
-
-        );
-
-        triton_asm!(
-            {entrypoint}:
-                call {loop_label}
-
-                swap 1
-                swap 2
-                swap 3
-                pop 1
-
-                return
-
-            {&loop_code}
         )
+    }
+
+    fn sign_offs(&self) -> HashMap<Reviewer, SignOffFingerprint> {
+        let mut sign_offs = HashMap::new();
+        sign_offs.insert(Reviewer("ferdinand"), 0x7768250498bfbb26.into());
+        sign_offs
     }
 }
 
@@ -81,7 +101,7 @@ mod tests {
 
         fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
             let (exponent_log_2, base) = pop_encodable::<Self::Args>(stack);
-            let result = base.mod_pow_u32(2u32.pow(exponent_log_2));
+            let result = base.mod_pow_u32(2_u32.pow(exponent_log_2));
             push_encodable(stack, &result);
         }
 
@@ -109,56 +129,40 @@ mod tests {
     }
 
     #[test]
-    fn to_the_power_of_power_of_2_pbt() {
+    fn rust_shadow() {
         ShadowedClosure::new(ToThePowerOfPowerOf2).test()
     }
 
     #[test]
     fn compare_to_generic_pow_u32() {
-        let base: XFieldElement = random();
+        let base = random();
         for log_2_exponent in 0..32 {
-            let init_stack_pow_pow = [
-                ToThePowerOfPowerOf2.init_stack_for_isolated_run(),
-                vec![BFieldElement::new(log_2_exponent)],
-                base.coefficients.into_iter().rev().collect_vec(),
-            ]
-            .concat();
-            let final_state_pow_pow = test_rust_equivalence_given_complete_state(
+            let final_pow_pow_stack = test_rust_equivalence_given_complete_state(
                 &ShadowedClosure::new(ToThePowerOfPowerOf2),
-                &init_stack_pow_pow,
+                &ToThePowerOfPowerOf2.set_up_test_stack((log_2_exponent, base)),
                 &[],
                 &NonDeterminism::default(),
                 &None,
                 None,
-            );
+            )
+            .op_stack
+            .stack;
 
-            // Run snippet for generic pow
-            let init_stack_to_generic = [
-                XfeModPowU32Generic.init_stack_for_isolated_run(),
-                vec![BFieldElement::new(
-                    2u64.pow(log_2_exponent.try_into().unwrap()),
-                )],
-                base.coefficients.into_iter().rev().collect_vec(),
-            ]
-            .concat();
-            let final_state_from_generic = test_rust_equivalence_given_complete_state(
+            let final_generic_stack = test_rust_equivalence_given_complete_state(
                 &ShadowedClosure::new(XfeModPowU32Generic),
-                &init_stack_to_generic,
+                &XfeModPowU32Generic.set_up_test_stack((2_u32.pow(log_2_exponent), base)),
                 &[],
                 &NonDeterminism::default(),
                 &None,
                 None,
-            );
+            )
+            .op_stack
+            .stack;
 
             // Assert that height agrees, and the top-3 elements agree
-            assert_eq!(
-                final_state_from_generic.op_stack.stack.len(),
-                final_state_pow_pow.op_stack.stack.len()
-            );
-            assert_eq!(
-                final_state_from_generic.op_stack.stack[16..=18],
-                final_state_pow_pow.op_stack.stack[16..=18],
-            );
+            assert_eq!(19, final_pow_pow_stack.len());
+            assert_eq!(19, final_generic_stack.len());
+            assert_eq!(final_pow_pow_stack[16..=18], final_generic_stack[16..=18],);
         }
     }
 }
