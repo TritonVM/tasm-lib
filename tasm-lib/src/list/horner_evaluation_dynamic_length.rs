@@ -7,6 +7,7 @@ use crate::prelude::*;
 /// HornerEvaluationDynamicLength takes a list of XFieldElements, representing
 /// the coefficients of a polynomial, and evaluates it in a given indeterminate,
 /// which is also an XFieldElement.
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct HornerEvaluationDynamicLength;
 
 impl BasicSnippet for HornerEvaluationDynamicLength {

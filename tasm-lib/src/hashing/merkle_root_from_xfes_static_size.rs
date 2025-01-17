@@ -7,6 +7,7 @@ use crate::data_type::ArrayType;
 use crate::hashing::merkle_root_static_size::MerkleRootStaticSize;
 use crate::prelude::*;
 
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct MerkleRootFromXfesStaticSize {
     /// Aka `height` of the Merkle tree
     pub log2_length: u8,

@@ -2,6 +2,7 @@ use triton_vm::prelude::*;
 
 use crate::prelude::*;
 
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct ToThePowerOfPowerOf2;
 
 impl BasicSnippet for ToThePowerOfPowerOf2 {

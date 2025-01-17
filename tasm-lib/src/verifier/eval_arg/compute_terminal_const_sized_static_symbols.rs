@@ -10,6 +10,7 @@ use crate::prelude::*;
 /// and `symbols`. This amounts to evaluating polynomial
 /// `f(x) = initial·x^n + Σ_i symbols[n-i]·x^i`
 /// at point `challenge`, _i.e._, returns `f(challenge)`.
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct ComputeTerminalConstSizedStaticSymbols<const N: usize> {
     pub symbols: [BFieldElement; N],
     pub initial: XFieldElement,

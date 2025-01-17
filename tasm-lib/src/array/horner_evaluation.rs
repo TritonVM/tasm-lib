@@ -11,6 +11,7 @@ use crate::prelude::*;
 /// polynomial in that point. It can be used for univariate batching, whereby
 /// the object is to compute a random linear sum of a given set of points, and
 /// the weights are given by the powers of one challenge.
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct HornerEvaluation {
     pub num_coefficients: usize,
 }

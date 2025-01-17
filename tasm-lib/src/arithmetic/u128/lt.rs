@@ -11,6 +11,7 @@ use crate::prelude::*;
 /// BEFORE: _ [rhs; 4] [lhs; 4]
 /// AFTER:  _ (lhs < rhs)
 /// ```
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct Lt;
 
 impl BasicSnippet for Lt {

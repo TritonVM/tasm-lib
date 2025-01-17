@@ -23,6 +23,7 @@ use crate::prelude::*;
 /// # Panics
 ///
 ///  - If preconditions are not met.
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct Lt;
 
 impl BasicSnippet for Lt {

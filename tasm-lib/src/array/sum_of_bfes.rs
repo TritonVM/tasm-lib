@@ -5,6 +5,7 @@ use crate::data_type::ArrayType;
 use crate::memory::load_words_from_memory_pop_pointer;
 use crate::prelude::*;
 
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct SumOfBfes {
     length: usize,
 }

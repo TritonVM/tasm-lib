@@ -7,6 +7,7 @@ use crate::prelude::*;
 /// Calculate a Merkle root from a list of X-field elements.
 /// The input list must have a length that is a power of two
 /// and is not one. Can otherwise handle any length.
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct MerkleRootFromXfesGeneric;
 
 impl BasicSnippet for MerkleRootFromXfesGeneric {

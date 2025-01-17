@@ -333,6 +333,7 @@ mod tests {
 
     macro_rules! dummy_snippet {
         ($name:ident: $($instr:tt)+) => {
+            #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
             struct $name;
 
             impl BasicSnippet for $name {

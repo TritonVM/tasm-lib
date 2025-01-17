@@ -9,6 +9,7 @@ const MAX_CODEWORD_LENGTH: u32 = 1 << 15;
 /// Use the barycentric Lagrange evaluation formula to extrapolate the codeword
 /// to an out-of-domain location. Codeword must have a length that is a power
 /// of 2 and may not exceed `MAX_CODEWORD_LENGTH`.
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct BarycentricEvaluation;
 
 impl BasicSnippet for BarycentricEvaluation {

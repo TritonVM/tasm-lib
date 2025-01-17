@@ -3,6 +3,7 @@ use triton_vm::prelude::*;
 use crate::data_type::ArrayType;
 use crate::prelude::*;
 
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct InnerProductOfXfes {
     pub length: usize,
 }

@@ -11,6 +11,7 @@ use crate::verifier::challenges::shared::challenges_data_type;
 use crate::verifier::eval_arg::compute_terminal_const_sized_static_symbols::ComputeTerminalConstSizedStaticSymbols;
 use crate::verifier::eval_arg::compute_terminal_from_digest::ComputeTerminalFromDigestInitialIsOne;
 
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct NewEmptyInputAndOutput {
     // claim_input: Vec<BFieldElement>,
     // claim_output: Vec<BFieldElement>,

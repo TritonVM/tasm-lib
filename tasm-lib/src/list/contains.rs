@@ -7,6 +7,7 @@ use crate::prelude::*;
 /// This operation is *O*(*n*).
 ///
 /// Mirrors the `contains` method from Rust `core` as closely as possible.
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct Contains {
     pub element_type: DataType,
 }

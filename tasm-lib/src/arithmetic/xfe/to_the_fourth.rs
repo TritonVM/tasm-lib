@@ -21,6 +21,7 @@ use crate::traits::basic_snippet::SignOffFingerprint;
 /// ### Postconditions
 ///
 /// - the result is the argument raised to the fourth power
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct ToTheFourth;
 
 impl BasicSnippet for ToTheFourth {

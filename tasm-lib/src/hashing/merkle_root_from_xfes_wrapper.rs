@@ -5,6 +5,7 @@ use crate::prelude::*;
 
 /// Calculate a Merkle root from a list of X-field elements. List must have
 /// length 256, 512, or 1024.
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct MerkleRootFromXfesWrapper;
 
 const MAX_LENGTH_SUPPORTED: u32 = 1024;

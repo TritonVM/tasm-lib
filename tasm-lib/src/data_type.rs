@@ -14,7 +14,7 @@ use crate::memory::write_words_to_memory_leave_pointer;
 use crate::memory::write_words_to_memory_pop_pointer;
 use crate::pop_encodable;
 
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub enum DataType {
     Bool,
     U32,

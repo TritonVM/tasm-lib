@@ -8,7 +8,7 @@ use triton_vm::table::master_table::MasterTable;
 use crate::data_type::ArrayType;
 use crate::prelude::*;
 
-#[derive(Debug, Clone, Copy, Display, Arbitrary)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, Display, Arbitrary)]
 pub enum MainElementType {
     Bfe,
     Xfe,
@@ -29,6 +29,7 @@ impl From<MainElementType> for DataType {
 /// Calculate inner product of both main columns and auxiliary columns with weights. Returns one
 /// scalar in the form of an auxiliary-field element. Main column can be either a base field
 /// element, or an auxiliary-field element.
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct InnerProductOfThreeRowsWithWeights {
     main_length: usize,
     main_element_type: MainElementType,

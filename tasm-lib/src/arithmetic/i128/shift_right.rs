@@ -30,6 +30,7 @@ use crate::prelude::*;
 ///  - If preconditions are not met.
 ///
 /// [shr]: core::ops::Shr
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct ShiftRight;
 
 impl ShiftRight {

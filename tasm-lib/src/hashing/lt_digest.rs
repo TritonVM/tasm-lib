@@ -4,6 +4,7 @@ use triton_vm::prelude::*;
 use crate::prelude::*;
 
 /// Compare two digests
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct LtDigest;
 
 impl BasicSnippet for LtDigest {
