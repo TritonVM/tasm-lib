@@ -1,8 +1,28 @@
+use std::collections::HashMap;
+
 use triton_vm::prelude::*;
 
 use crate::data_type::ArrayType;
 use crate::prelude::*;
+use crate::traits::basic_snippet::Reviewer;
+use crate::traits::basic_snippet::SignOffFingerprint;
 
+/// Compute the inner product of two lists of [`XFieldElement`]s.
+///
+/// ### Behavior
+///
+/// ```text
+/// BEFORE: _ *a *b
+/// AFTER:  _ [inner_product: XFieldElement]
+/// ```
+///
+/// ### Preconditions
+///
+/// None.
+///
+/// ### Postconditions
+///
+/// None.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct InnerProductOfXfes {
     pub length: usize,
@@ -12,20 +32,18 @@ impl InnerProductOfXfes {
     pub fn new(length: usize) -> Self {
         Self { length }
     }
-
-    fn argument_type(&self) -> DataType {
-        DataType::Array(Box::new(ArrayType {
-            element_type: DataType::Xfe,
-            length: self.length,
-        }))
-    }
 }
 
 impl BasicSnippet for InnerProductOfXfes {
     fn inputs(&self) -> Vec<(DataType, String)> {
+        let argument_type = DataType::Array(Box::new(ArrayType {
+            element_type: DataType::Xfe,
+            length: self.length,
+        }));
+
         vec![
-            (self.argument_type(), "*a".to_owned()),
-            (self.argument_type(), "*b".to_owned()),
+            (argument_type.clone(), "*a".to_owned()),
+            (argument_type, "*b".to_owned()),
         ]
     }
 
@@ -37,210 +55,131 @@ impl BasicSnippet for InnerProductOfXfes {
         format!("tasmlib_array_inner_product_of_{}_xfes", self.length)
     }
 
-    fn code(&self, _library: &mut Library) -> Vec<LabelledInstruction> {
-        let entrypoint = self.entrypoint();
-
-        let accumulate_all_indices = triton_asm![xx_dot_step; self.length];
-
+    fn code(&self, _: &mut Library) -> Vec<LabelledInstruction> {
         triton_asm!(
-            {entrypoint}:
-                // _ *a *b
+            // BEFORE: _ *a *b
+            // AFTER:  _ [inner_product: XFieldElement]
+            {self.entrypoint()}:
 
                 push 0
                 push 0
                 push 0
-                // _ *a *b 0 0 0
+                // _ *a *b [0: XFE]
 
                 pick 4
                 pick 4
-                // _ 0 0 0 *a *b
+                // _ [0: XFE] *a *b
 
-                {&accumulate_all_indices}
-                // _ acc2 acc1 acc0 *garbage0 *garbage1
+                {&triton_asm![xx_dot_step; self.length]}
+                // _ [acc: XFE] *garbage0 *garbage1
 
                 pop 2
-                // _ acc2 acc1 acc0
+                // _ [acc: XFE]
 
                 return
         )
+    }
+
+    fn sign_offs(&self) -> HashMap<Reviewer, SignOffFingerprint> {
+        let mut sign_offs = HashMap::new();
+
+        if self.length == 4 {
+            sign_offs.insert(Reviewer("ferdinand"), 0x154bf4aa5a53bef7.into());
+        }
+
+        sign_offs
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use num::Zero;
-    use num_traits::ConstZero;
-    use twenty_first::math::x_field_element::EXTENSION_DEGREE;
-
     use super::*;
+    use crate::rust_shadowing_helper_functions::array::array_from_memory;
     use crate::rust_shadowing_helper_functions::array::insert_as_array;
     use crate::rust_shadowing_helper_functions::array::insert_random_array;
     use crate::test_prelude::*;
 
-    impl Function for InnerProductOfXfes {
+    impl Accessor for InnerProductOfXfes {
         fn rust_shadow(
             &self,
             stack: &mut Vec<BFieldElement>,
-            memory: &mut HashMap<BFieldElement, BFieldElement>,
+            memory: &HashMap<BFieldElement, BFieldElement>,
         ) {
-            fn read_xfe(
-                memory: &HashMap<BFieldElement, BFieldElement>,
-                address: BFieldElement,
-            ) -> XFieldElement {
-                let coefficients = [
-                    memory.get(&address),
-                    memory.get(&(address + bfe!(1))),
-                    memory.get(&(address + bfe!(2))),
-                ]
-                .map(|b| b.copied().unwrap_or(BFieldElement::ZERO));
-                xfe!(coefficients)
-            }
+            let b = array_from_memory::<XFieldElement>(stack.pop().unwrap(), self.length, memory);
+            let a = array_from_memory::<XFieldElement>(stack.pop().unwrap(), self.length, memory);
+            let inner_product: XFieldElement = a.into_iter().zip(b).map(|(a, b)| a * b).sum();
 
-            let mut array_pointer_b = stack.pop().unwrap();
-            let mut array_pointer_a = stack.pop().unwrap();
-            let mut acc = XFieldElement::zero();
-            for _ in 0..self.length {
-                let element_a = read_xfe(memory, array_pointer_a);
-                let element_b = read_xfe(memory, array_pointer_b);
-                acc += element_a * element_b;
-                array_pointer_b += bfe!(3);
-                array_pointer_a += bfe!(3);
-            }
-
-            for word in acc.coefficients.into_iter().rev() {
-                stack.push(word);
-            }
+            push_encodable(stack, &inner_product);
         }
 
         fn pseudorandom_initial_state(
             &self,
             seed: [u8; 32],
-            _bench_case: Option<BenchmarkCase>,
-        ) -> FunctionInitialState {
+            _: Option<BenchmarkCase>,
+        ) -> AccessorInitialState {
             let mut rng = StdRng::from_seed(seed);
-            let array_pointer_a = BFieldElement::new(rng.gen());
-            let mut array_pointer_b = BFieldElement::new(rng.gen());
-            while array_pointer_a.value().abs_diff(array_pointer_b.value())
-                < EXTENSION_DEGREE as u64 * self.length as u64
-            {
-                array_pointer_b = BFieldElement::new(rng.gen());
-            }
+            let pointer_a = rng.gen();
+            let pointer_b_offset = rng.gen_range(self.length..usize::MAX - self.length);
+            let pointer_b = pointer_a + bfe!(pointer_b_offset);
 
-            self.prepare_state(array_pointer_a, array_pointer_b)
+            let mut memory = HashMap::default();
+            insert_random_array(&DataType::Xfe, pointer_a, self.length, &mut memory);
+            insert_random_array(&DataType::Xfe, pointer_b, self.length, &mut memory);
+
+            let mut stack = self.init_stack_for_isolated_run();
+            stack.push(pointer_a);
+            stack.push(pointer_b);
+
+            AccessorInitialState { stack, memory }
         }
 
-        fn corner_case_initial_states(&self) -> Vec<FunctionInitialState> {
-            let all_zeros = {
-                let init_stack = [
-                    self.init_stack_for_isolated_run(),
-                    vec![BFieldElement::new(0), BFieldElement::new(1 << 40)],
-                ]
-                .concat();
-                FunctionInitialState {
-                    stack: init_stack,
-                    memory: HashMap::default(),
-                }
+        fn corner_case_initial_states(&self) -> Vec<AccessorInitialState> {
+            let all_zeros = AccessorInitialState {
+                stack: [self.init_stack_for_isolated_run(), bfe_vec![0, 1_u64 << 40]].concat(),
+                memory: HashMap::default(),
             };
 
             vec![all_zeros]
         }
     }
 
-    impl InnerProductOfXfes {
-        fn prepare_state(
-            &self,
-            array_pointer_a: BFieldElement,
-            array_pointer_b: BFieldElement,
-        ) -> FunctionInitialState {
-            let mut memory = HashMap::default();
-            insert_random_array(&DataType::Xfe, array_pointer_a, self.length, &mut memory);
-            insert_random_array(&DataType::Xfe, array_pointer_b, self.length, &mut memory);
-
-            let mut init_stack = self.init_stack_for_isolated_run();
-            init_stack.push(array_pointer_a);
-            init_stack.push(array_pointer_b);
-            FunctionInitialState {
-                stack: init_stack,
-                memory,
-            }
-        }
-    }
-
     #[test]
     fn inner_product_of_xfes_pbt() {
-        let snippets = (0..20)
-            .chain(100..110)
-            .map(|x| InnerProductOfXfes { length: x });
-        for test_case in snippets {
-            ShadowedFunction::new(test_case).test()
+        for test_case in (0..20).chain(100..110).map(InnerProductOfXfes::new) {
+            ShadowedAccessor::new(test_case).test()
         }
     }
 
     #[test]
     fn inner_product_unit_test() {
-        let a = vec![
-            XFieldElement::new([
-                BFieldElement::new(3),
-                BFieldElement::zero(),
-                BFieldElement::zero(),
-            ]),
-            XFieldElement::new([
-                BFieldElement::new(5),
-                BFieldElement::zero(),
-                BFieldElement::zero(),
-            ]),
-        ];
-        let b = vec![
-            XFieldElement::new([
-                BFieldElement::new(501),
-                BFieldElement::zero(),
-                BFieldElement::zero(),
-            ]),
-            XFieldElement::new([
-                BFieldElement::new(1003),
-                BFieldElement::zero(),
-                BFieldElement::zero(),
-            ]),
-        ];
+        let a = xfe_vec![[3, 0, 0], [5, 0, 0]];
+        let b = xfe_vec![[501, 0, 0], [1003, 0, 0]];
+        let inner_product = xfe!([3 * 501 + 5 * 1003, 0, 0]);
 
-        let expected_inner_product = XFieldElement::new([
-            BFieldElement::new(3 * 501 + 5 * 1003),
-            BFieldElement::zero(),
-            BFieldElement::zero(),
-        ]);
-        assert_eq!(
-            expected_inner_product,
-            a.iter()
-                .cloned()
-                .zip(b.iter().cloned())
-                .map(|(a, b)| a * b)
-                .sum::<XFieldElement>()
-        );
+        let rust_inner_product = a
+            .iter()
+            .zip(&b)
+            .map(|(&a, &b)| a * b)
+            .sum::<XFieldElement>();
+        debug_assert_eq!(inner_product, rust_inner_product);
 
         let mut memory = HashMap::default();
-        let array_pointer_a = BFieldElement::new(1u64 << 44);
-        insert_as_array(array_pointer_a, &mut memory, a);
-        let array_pointer_b = BFieldElement::new(1u64 << 45);
-        insert_as_array(array_pointer_b, &mut memory, b);
+        let pointer_a = bfe!(1_u64 << 44);
+        let pointer_b = bfe!(1_u64 << 45);
+        insert_as_array(pointer_a, &mut memory, a);
+        insert_as_array(pointer_b, &mut memory, b);
 
-        let snippet = InnerProductOfXfes { length: 2 };
-        let expected_final_stack = [
-            snippet.init_stack_for_isolated_run(),
-            expected_inner_product
-                .coefficients
-                .into_iter()
-                .rev()
-                .collect_vec(),
-        ]
-        .concat();
-        let init_stack = [
-            snippet.init_stack_for_isolated_run(),
-            vec![array_pointer_a, array_pointer_b],
-        ]
-        .concat();
+        let snippet = InnerProductOfXfes::new(2);
+        let mut initial_stack = snippet.init_stack_for_isolated_run();
+        initial_stack.push(pointer_a);
+        initial_stack.push(pointer_b);
+
+        let mut expected_final_stack = snippet.init_stack_for_isolated_run();
+        push_encodable(&mut expected_final_stack, &inner_product);
+
         test_rust_equivalence_given_complete_state(
-            &ShadowedFunction::new(snippet),
-            &init_stack,
+            &ShadowedAccessor::new(snippet),
+            &initial_stack,
             &[],
             &NonDeterminism::default().with_ram(memory),
             &None,
@@ -259,28 +198,12 @@ mod benches {
     use crate::test_prelude::*;
 
     #[test]
-    fn inner_product_xfes_bench_100() {
-        ShadowedFunction::new(InnerProductOfXfes { length: 100 }).bench();
-    }
+    fn benchmark() {
+        ShadowedAccessor::new(InnerProductOfXfes::new(100)).bench();
+        ShadowedAccessor::new(InnerProductOfXfes::new(200)).bench();
 
-    #[test]
-    fn inner_product_xfes_bench_200() {
-        ShadowedFunction::new(InnerProductOfXfes { length: 200 }).bench();
-    }
-
-    #[test]
-    fn inner_product_xfes_bench_num_columns_current_tvm() {
-        ShadowedFunction::new(InnerProductOfXfes {
-            length: MasterMainTable::NUM_COLUMNS + MasterAuxTable::NUM_COLUMNS,
-        })
-        .bench();
-    }
-
-    #[test]
-    fn inner_product_xfes_bench_num_constraints_current_tvm() {
-        ShadowedFunction::new(InnerProductOfXfes {
-            length: MasterAuxTable::NUM_CONSTRAINTS,
-        })
-        .bench();
+        let num_columns = MasterMainTable::NUM_COLUMNS + MasterAuxTable::NUM_COLUMNS;
+        ShadowedAccessor::new(InnerProductOfXfes::new(num_columns)).bench();
+        ShadowedAccessor::new(InnerProductOfXfes::new(MasterAuxTable::NUM_CONSTRAINTS)).bench();
     }
 }
