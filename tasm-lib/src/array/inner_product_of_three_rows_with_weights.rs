@@ -1,17 +1,35 @@
+use std::collections::HashMap;
+
 use arbitrary::Arbitrary;
 use strum::Display;
-use triton_vm::prelude::triton_asm;
+use triton_vm::prelude::*;
 use triton_vm::table::master_table::MasterAuxTable;
 use triton_vm::table::master_table::MasterMainTable;
 use triton_vm::table::master_table::MasterTable;
 
 use crate::data_type::ArrayType;
 use crate::prelude::*;
+use crate::traits::basic_snippet::Reviewer;
+use crate::traits::basic_snippet::SignOffFingerprint;
 
+/// The type of field element used in
+/// [`InnerProductOfThreeRowsWithWeights`].
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, Display, Arbitrary)]
 pub enum MainElementType {
+    /// Corresponds to [`BFieldElement`].
     Bfe,
+
+    /// Corresponds to [`XFieldElement`].
     Xfe,
+}
+
+impl MainElementType {
+    fn dot_step(&self) -> LabelledInstruction {
+        match self {
+            Self::Bfe => triton_instr!(xb_dot_step),
+            Self::Xfe => triton_instr!(xx_dot_step),
+        }
+    }
 }
 
 impl From<MainElementType> for DataType {
@@ -26,9 +44,25 @@ impl From<MainElementType> for DataType {
 /// Calculate inner products of Triton VM
 /// [execution trace](triton_vm::table::master_table) rows with weights.
 ///
-/// Calculate inner product of both main columns and auxiliary columns with weights. Returns one
-/// scalar in the form of an auxiliary-field element. Main column can be either a base field
-/// element, or an auxiliary-field element.
+/// Calculate inner product of both main columns and auxiliary columns with
+/// weights. Returns one scalar in the form of an auxiliary-field element.
+/// The main column can be either a base field element, or an auxiliary-field
+/// element; see also [`MainElementType`].
+///
+/// ### Behavior
+///
+/// ```text
+/// BEFORE: _
+/// AFTER:  _
+/// ```
+///
+/// ### Preconditions
+///
+/// None.
+///
+/// ### Postconditions
+///
+/// None.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct InnerProductOfThreeRowsWithWeights {
     main_length: usize,
@@ -82,46 +116,48 @@ impl BasicSnippet for InnerProductOfThreeRowsWithWeights {
         format!("tasmlib_array_inner_product_of_three_rows_with_weights_{element_ty}_mainrowelem")
     }
 
-    fn code(
-        &self,
-        _library: &mut crate::library::Library,
-    ) -> Vec<triton_vm::prelude::LabelledInstruction> {
-        let entrypoint = self.entrypoint();
-        let acc_all_main_rows = match self.main_element_type {
-            MainElementType::Bfe => triton_asm![xb_dot_step; self.main_length],
-            MainElementType::Xfe => triton_asm![xx_dot_step; self.main_length],
-        };
-        let acc_all_aux_rows = triton_asm![xx_dot_step; self.aux_length];
-
+    fn code(&self, _: &mut Library) -> Vec<LabelledInstruction> {
         triton_asm! {
             // BEFORE: _ *aux_row *main_row *weights
             // AFTER:  _ [inner_product; 3]
-            {entrypoint}:
+            {self.entrypoint()}:
                 push 0
                 push 0
                 push 0
-                // _ *aux_row *main_row *weights 0 0 0
+                // _ *aux_row *main_row *weights [0: XFE]
 
                 pick 3
                 pick 4
-                // _ *aux_row 0 0 0 *weights *main_row
+                // _ *aux_row [0: XFE] *weights *main_row
 
-                {&acc_all_main_rows}
-                // _ *aux_row acc2 acc1 acc0 *weights_next garbage
+                {&vec![self.main_element_type.dot_step(); self.main_length]}
+                // _ *aux_row [acc: XFE] *weights_next garbage
 
                 pop 1
                 pick 4
-                // _ acc2 acc1 acc0 *weights_next *aux_row
+                // _ [acc: XFE] *weights_next *aux_row
 
-                {&acc_all_aux_rows}
-                // _ acc2 acc1 acc0 garbage garbage
+                {&triton_asm![xx_dot_step; self.aux_length]}
+                // _ [acc: XFE] garbage garbage
 
                 pop 2
-                // _ result2 result1 result0
-                // _ [result; 3]
+                // _ [result: XFE]
 
                 return
         }
+    }
+
+    fn sign_offs(&self) -> HashMap<Reviewer, SignOffFingerprint> {
+        let mut sign_offs = HashMap::new();
+
+        if self == &Self::new(379, MainElementType::Bfe, 88) {
+            sign_offs.insert(Reviewer("ferdinand"), 0x7e46570df803d4b.into());
+        }
+        if self == &Self::new(379, MainElementType::Xfe, 88) {
+            sign_offs.insert(Reviewer("ferdinand"), 0x1c549ac8d61e6a70.into());
+        }
+
+        sign_offs
     }
 }
 
@@ -138,25 +174,21 @@ mod tests {
     fn three_rows_tvm_parameters_xfe_main_test() {
         let snippet =
             InnerProductOfThreeRowsWithWeights::triton_vm_parameters(MainElementType::Xfe);
-        ShadowedFunction::new(snippet).test()
+        ShadowedAccessor::new(snippet).test();
     }
 
     #[test]
     fn three_rows_tvm_parameters_bfe_main_test() {
         let snippet =
             InnerProductOfThreeRowsWithWeights::triton_vm_parameters(MainElementType::Bfe);
-        ShadowedFunction::new(snippet).test()
+        ShadowedAccessor::new(snippet).test();
     }
 
-    #[test]
-    fn works_with_main_or_aux_column_count_of_zero() {
-        for snippet in [
-            InnerProductOfThreeRowsWithWeights::new(0, MainElementType::Bfe, 8),
-            InnerProductOfThreeRowsWithWeights::new(0, MainElementType::Xfe, 14),
-            InnerProductOfThreeRowsWithWeights::new(12, MainElementType::Bfe, 0),
-            InnerProductOfThreeRowsWithWeights::new(16, MainElementType::Xfe, 0),
-        ] {
-            ShadowedFunction::new(snippet).test()
+    #[proptest(cases = 10)]
+    fn main_or_aux_column_count_can_be_zero(#[strategy(0_usize..500)] len: usize) {
+        for elt_ty in [MainElementType::Bfe, MainElementType::Xfe] {
+            ShadowedAccessor::new(InnerProductOfThreeRowsWithWeights::new(0, elt_ty, len)).test();
+            ShadowedAccessor::new(InnerProductOfThreeRowsWithWeights::new(len, elt_ty, 0)).test();
         }
     }
 
@@ -168,26 +200,23 @@ mod tests {
     ) {
         let snippet =
             InnerProductOfThreeRowsWithWeights::new(main_length, main_element_type, aux_length);
-        ShadowedFunction::new(snippet).test()
+        ShadowedAccessor::new(snippet).test();
     }
 
-    impl Function for InnerProductOfThreeRowsWithWeights {
+    impl Accessor for InnerProductOfThreeRowsWithWeights {
         fn rust_shadow(
             &self,
             stack: &mut Vec<BFieldElement>,
-            memory: &mut HashMap<BFieldElement, BFieldElement>,
+            memory: &HashMap<BFieldElement, BFieldElement>,
         ) {
-            // read stack: _ *e *b *w
             let weights_address = stack.pop().unwrap();
             let main_row_address = stack.pop().unwrap();
-            let auxiliary_row_address = stack.pop().unwrap();
+            let aux_row_address = stack.pop().unwrap();
 
-            // read arrays
             let weights_len = self.main_length + self.aux_length;
-            let weights: Vec<XFieldElement> =
-                array_from_memory(weights_address, weights_len, memory);
-            let aux_row: Vec<XFieldElement> =
-                array_from_memory(auxiliary_row_address, self.aux_length, memory);
+            let weights = array_from_memory::<XFieldElement>(weights_address, weights_len, memory);
+            let aux_row =
+                array_from_memory::<XFieldElement>(aux_row_address, self.aux_length, memory);
 
             let main_row_as_xfes = match self.main_element_type {
                 MainElementType::Bfe => {
@@ -201,7 +230,6 @@ mod tests {
                 }
             };
 
-            // compute inner product
             let inner_product = main_row_as_xfes
                 .into_iter()
                 .chain(aux_row)
@@ -209,15 +237,14 @@ mod tests {
                 .map(|(element, weight)| element * weight)
                 .sum::<XFieldElement>();
 
-            // write inner product back to stack
-            stack.extend(inner_product.coefficients.into_iter().rev());
+            push_encodable(stack, &inner_product)
         }
 
         fn pseudorandom_initial_state(
             &self,
             seed: [u8; 32],
-            _bench_case: Option<BenchmarkCase>,
-        ) -> FunctionInitialState {
+            _: Option<BenchmarkCase>,
+        ) -> AccessorInitialState {
             let mut rng = StdRng::from_seed(seed);
             let main_address = rng.gen();
             let aux_address = rng.gen();
@@ -241,7 +268,7 @@ mod tests {
             let mut stack = self.init_stack_for_isolated_run();
             stack.extend([aux_address, main_address, weights_address]);
 
-            FunctionInitialState { stack, memory }
+            AccessorInitialState { stack, memory }
         }
     }
 }
@@ -254,17 +281,17 @@ mod benches {
     /// Benchmark the calculation of the (in-domain) current rows that happen in the
     /// main-loop, where all revealed FRI values are verified.
     #[test]
-    fn inner_product_of_three_rows_bench_current_tvm_main_is_bfe() {
+    fn bench_current_tvm_bfe() {
         let snippet =
             InnerProductOfThreeRowsWithWeights::triton_vm_parameters(MainElementType::Bfe);
-        ShadowedFunction::new(snippet).bench();
+        ShadowedAccessor::new(snippet).bench();
     }
 
     /// Benchmark the calculation of the out-of-domain current and next row values.
     #[test]
-    fn inner_product_of_three_rows_bench_current_tvm_main_is_xfe() {
+    fn bench_current_tvm_xfe() {
         let snippet =
             InnerProductOfThreeRowsWithWeights::triton_vm_parameters(MainElementType::Xfe);
-        ShadowedFunction::new(snippet).bench();
+        ShadowedAccessor::new(snippet).bench();
     }
 }
