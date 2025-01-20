@@ -2,10 +2,10 @@
   {
     "name": "tasmlib_list_multiset_equality_digests",
     "benchmark_result": {
-      "clock_cycle_count": 590,
-      "hash_table_height": 266,
+      "clock_cycle_count": 524,
+      "hash_table_height": 260,
       "u32_table_height": 10,
-      "op_stack_table_height": 533,
+      "op_stack_table_height": 489,
       "ram_table_height": 42
     },
     "case": "CommonCase"
@@ -13,10 +13,10 @@
   {
     "name": "tasmlib_list_multiset_equality_digests",
     "benchmark_result": {
-      "clock_cycle_count": 7450,
-      "hash_table_height": 854,
+      "clock_cycle_count": 7384,
+      "hash_table_height": 848,
       "u32_table_height": 15,
-      "op_stack_table_height": 8373,
+      "op_stack_table_height": 8329,
       "ram_table_height": 2002
     },
     "case": "WorstCase"

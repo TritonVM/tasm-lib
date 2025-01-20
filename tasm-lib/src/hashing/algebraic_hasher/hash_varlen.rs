@@ -59,59 +59,56 @@ impl BasicSnippet for HashVarlen {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::VecDeque;
+
     use super::*;
     use crate::test_helpers::tasm_final_state;
     use crate::test_prelude::*;
 
     impl HashVarlen {
-        fn random_memory_state_read_k(&self, k: u32) -> ProcedureInitialState {
+        fn random_memory_state_read_k(&self, k: u32) -> MemPreserverInitialState {
             let memory_start: BFieldElement = random();
             let memory: HashMap<BFieldElement, BFieldElement> = (0..k)
                 .map(|i| (memory_start + BFieldElement::new(i as u64), random()))
                 .collect();
 
             let nondeterminism = NonDeterminism::default().with_ram(memory);
-            ProcedureInitialState {
+            MemPreserverInitialState {
                 stack: [
                     self.init_stack_for_isolated_run(),
                     vec![memory_start, BFieldElement::new(k as u64)],
                 ]
                 .concat(),
                 nondeterminism,
-                public_input: vec![],
-                sponge: None,
+                public_input: VecDeque::new(),
+                sponge_state: None,
             }
         }
     }
 
-    impl Procedure for HashVarlen {
+    impl MemPreserver for HashVarlen {
         fn rust_shadow(
             &self,
             stack: &mut Vec<BFieldElement>,
-            memory: &mut HashMap<BFieldElement, BFieldElement>,
-            nondeterminism: &NonDeterminism,
-            public_input: &[BFieldElement],
+            memory: &HashMap<BFieldElement, BFieldElement>,
+            nd_tokens: VecDeque<BFieldElement>,
+            nd_digests: VecDeque<Digest>,
+            stdin: VecDeque<BFieldElement>,
             sponge: &mut Option<Tip5>,
         ) -> Vec<BFieldElement> {
             *sponge = Some(Tip5::init());
 
             let absorb_snippet = AbsorbMultiple;
-            absorb_snippet.rust_shadow(stack, memory, nondeterminism, public_input, sponge);
+            absorb_snippet.rust_shadow(stack, memory, nd_tokens, nd_digests, stdin, sponge);
 
-            // Sponge-squeeze
             let mut squeezed = sponge.as_mut().unwrap().squeeze();
             squeezed.reverse();
             stack.extend(squeezed);
 
-            // Pop returned digest
             let digest = pop_encodable::<Digest>(stack);
-
-            // Remove 5 more words:
             for _ in 0..Digest::LEN {
                 stack.pop().unwrap();
             }
-
-            // Put digest back on stack
             push_encodable(stack, &digest);
 
             vec![]
@@ -121,7 +118,7 @@ mod tests {
             &self,
             seed: [u8; 32],
             bench_case: Option<BenchmarkCase>,
-        ) -> ProcedureInitialState {
+        ) -> MemPreserverInitialState {
             let preimage_length: u32 = match bench_case {
                 Some(BenchmarkCase::CommonCase) => 25,
                 Some(BenchmarkCase::WorstCase) => 1000,
@@ -137,7 +134,7 @@ mod tests {
 
     #[test]
     fn test() {
-        ShadowedProcedure::new(HashVarlen).test();
+        ShadowedMemPreserver::new(HashVarlen).test();
     }
 
     #[test]
@@ -146,9 +143,7 @@ mod tests {
         let mut seed = [0u8; 32];
         thread_rng().fill_bytes(&mut seed);
         let init_state = snippet.pseudorandom_initial_state(seed, None);
-        let init_sponge = Tip5 {
-            state: thread_rng().gen(),
-        };
+        let init_sponge = Tip5 { state: random() };
 
         let preimage_length: u32 = init_state.stack.last().unwrap().value().try_into().unwrap();
         let mut preimage_pointer = init_state.stack[init_state.stack.len() - 2];
@@ -159,7 +154,7 @@ mod tests {
         }
 
         let final_state = tasm_final_state(
-            &ShadowedProcedure::new(snippet.clone()),
+            &ShadowedMemPreserver::new(snippet.clone()),
             &init_state.stack,
             &[],
             init_state.nondeterminism,
@@ -181,6 +176,6 @@ mod benches {
 
     #[test]
     fn benchmark() {
-        ShadowedProcedure::new(HashVarlen).bench();
+        ShadowedMemPreserver::new(HashVarlen).bench();
     }
 }

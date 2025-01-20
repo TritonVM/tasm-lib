@@ -2,10 +2,10 @@
   {
     "name": "tasmlib_verifier_claim_instantiate_fiat_shamir_with_claim",
     "benchmark_result": {
-      "clock_cycle_count": 172,
-      "hash_table_height": 96,
+      "clock_cycle_count": 139,
+      "hash_table_height": 84,
       "u32_table_height": 10,
-      "op_stack_table_height": 127,
+      "op_stack_table_height": 105,
       "ram_table_height": 12
     },
     "case": "CommonCase"
@@ -13,10 +13,10 @@
   {
     "name": "tasmlib_verifier_claim_instantiate_fiat_shamir_with_claim",
     "benchmark_result": {
-      "clock_cycle_count": 292,
-      "hash_table_height": 216,
+      "clock_cycle_count": 259,
+      "hash_table_height": 204,
       "u32_table_height": 14,
-      "op_stack_table_height": 207,
+      "op_stack_table_height": 185,
       "ram_table_height": 212
     },
     "case": "WorstCase"

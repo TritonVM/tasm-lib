@@ -1,8 +1,27 @@
+use std::collections::HashMap;
+
 use triton_vm::prelude::*;
 
 use crate::prelude::*;
+use crate::traits::basic_snippet::Reviewer;
+use crate::traits::basic_snippet::SignOffFingerprint;
 
 /// Absorb a sequence of field elements stored in memory, into the Sponge.
+///
+/// ### Behavior
+///
+/// ```text
+/// BEFORE: _ *sequence [len: u32]
+/// AFTER:  _
+/// ```
+///
+/// ### Preconditions
+///
+/// - all input arguments are properly [`BFieldCodec`] encoded
+///
+/// ### Postconditions
+///
+/// None.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct AbsorbMultiple;
 
@@ -24,7 +43,7 @@ impl BasicSnippet for AbsorbMultiple {
 
     fn code(&self, _: &mut Library) -> Vec<LabelledInstruction> {
         let entrypoint = self.entrypoint();
-        let hash_all_full_chunks = format!("{entrypoint}_hash_all_full_chunks");
+        let absorb_all_full_chunks = format!("{entrypoint}_absorb_all_full_chunks");
         let pad_varnum_zeros = format!("{entrypoint}_pad_varnum_zeros");
         let read_remainder = format!("{entrypoint}_read_remainder");
 
@@ -32,49 +51,44 @@ impl BasicSnippet for AbsorbMultiple {
             // BEFORE: _ *bfe_sequence length
             // AFTER:  _
             {entrypoint}:
-                dup 0
                 push 10
-                swap 1
+                dup 1
                 div_mod     // _ *bfe_sequence length (length/10) (length%10)
-                swap 1
-                pop 1       // _ *bfe_sequence length (length%10)
+                place 2
+                pop 1       // _ *bfe_sequence (length%10) length
 
-                swap 1      // _ *bfe_sequence (length%10) length
                 dup 1       // _ *bfe_sequence (length%10) length (length%10)
-                push -1 mul // _ *bfe_sequence (length%10) length (-length%10)
+                push -1
+                mul         // _ *bfe_sequence (length%10) length (-length%10)
                 dup 3
-                add add     // _ *bfe_sequence (length%10) (*bfe_sequence + length - length%10)
+                add
+                add         // _ *bfe_sequence (length%10) (*bfe_sequence + length - length%10)
                             // _ *bfe_sequence (length%10) *remainder
 
-                swap 1
-                swap 2      // _ (length%10) *remainder *bfe_sequence
+                push 0
+                push 0
+                push 0
+                push 0      // _ *bfe_sequence (length%10) *remainder 0 0 0 0
+                pick 6      // _ (length%10) *remainder 0 0 0 0 *bfe_sequence
 
-                push 0
-                push 0
-                push 0
-                push 0
-                swap 4
-                // _ (length%10) *remainder 0 0 0 0 *bfe_sequence
-
-                call {hash_all_full_chunks}
+                call {absorb_all_full_chunks}
                             // _ (length%10) *remainder e f g h *remainder
                 pop 5       // _ (length%10) *remainder
 
                 /* Calculate stop condition for reading remainder */
-                push -1
-                add
-                // _ (length%10) (*remainder - 1)
-
-                push 9      // _ (length%10) (*remainder - 1) 9
-                dup 2       // _ (length%10) (*remainder - 1) 9 (length%10)
-                push -1     // _ (length%10) (*remainder - 1) 9 (length%10) -1
-                mul add     // _ (length%10) (*remainder - 1) (9-length%10)
+                addi -1     // _ (length%10) (*remainder - 1)
+                dup 1       // _ (length%10) (*remainder - 1) (length%10)
+                push -1     // _ (length%10) (*remainder - 1) (length%10) -1
+                mul         // _ (length%10) (*remainder - 1) (-length%10)
+                addi 9      // _ (length%10) (*remainder - 1) (9-length%10)
                 call {pad_varnum_zeros}
                             // _ [0; 9-length%10] (length%10) (*remainder - 1) 0
-                pop 1
+
+                pop 1       // _ [0; 9-length%10] (length%10) (*remainder - 1)
                 push 1      // _ [0; 9-length%10] (length%10) (*remainder - 1) 1
                 swap 2      // _ [0; 9-length%10] 1 (*remainder - 1) (length%10)
-                dup 1 add   // _ [0; 9-length%10] 1 (*remainder - 1) *last_word
+                dup 1
+                add         // _ [0; 9-length%10] 1 (*remainder - 1) *last_word
                 call {read_remainder}
                             // _ [last_chunk_padded; 10] (*remainder - 1) (*remainder - 1)
                 pop 2
@@ -84,7 +98,7 @@ impl BasicSnippet for AbsorbMultiple {
             // BEFORE:    _ *remainder 0 0 0 0 *bfe_sequence
             // INVARIANT: _ *remainder a b c d *bfe_sequence'
             // AFTER:     _ *remainder e f g h *remainder
-            {hash_all_full_chunks}:
+            {absorb_all_full_chunks}:
                 dup 5 dup 1 eq
                 skiz return
 
@@ -98,17 +112,13 @@ impl BasicSnippet for AbsorbMultiple {
             // INVARIANT: _ [0; i] (length%10) (*remainder - 1) (num_zeros - i)
             // AFTER:     _ [0; num_zeros] (length%10) (*remainder - 1) 0
             {pad_varnum_zeros}:
-                dup 0       // _ [0; i] (length%10) (*remainder - 1) (num_zeros - i)
-                push 0 eq   // _ [0; i] (length%10) (*remainder - 1) (num_zeros - i == 0)
+                dup 0
+                push 0 eq
                 skiz return
                             // _ [0; i] (length%10) (*remainder - 1) (num_zeros - i)
-
-                push 0      // _ [0; i] (length%10) (*remainder - 1) (num_zeros - i) 0
-                swap 3
-                swap 2
-                swap 1      // _ [0; i+1] (length%10) (*remainder - 1) (num_zeros - i)
-                push -1
-                add
+                push 0
+                place 3     // _ [0; i+1] (length%10) (*remainder - 1) (num_zeros - i)
+                addi -1
                 recurse
 
             // BEFORE:    _ (*remainder - 1) *last_word
@@ -119,50 +129,46 @@ impl BasicSnippet for AbsorbMultiple {
                 skiz return
                             // _ [elements; num_elements_read] (*remainder - 1) *some_addr
                 read_mem 1  // _ [elements; num_elements_read] (*remainder - 1) element (*addr-1)
-                swap 1      // _ [elements; num_elements_read] (*remainder - 1) (*addr-1) element
-                swap 2      // _ [elements; num_elements_read+1] (*addr-1) (*remainder - 1)
-                swap 1      // _ [elements; num_elements_read+1] (*remainder - 1) (*addr-1)
+                pick 1      // _ [elements; num_elements_read] (*remainder - 1) (*addr-1) element
+                place 2     // _ [elements; num_elements_read+1] (*remainder - 1) (*addr-1)
                 recurse
         }
+    }
+
+    fn sign_offs(&self) -> HashMap<Reviewer, SignOffFingerprint> {
+        let mut sign_offs = HashMap::new();
+        sign_offs.insert(Reviewer("ferdinand"), 0x66d806516fc1be22.into());
+        sign_offs
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use std::collections::VecDeque;
+
     use twenty_first::prelude::Sponge;
 
     use super::*;
     use crate::empty_stack;
+    use crate::rust_shadowing_helper_functions::array::array_from_memory;
     use crate::test_prelude::*;
 
-    impl Procedure for AbsorbMultiple {
+    impl MemPreserver for AbsorbMultiple {
         fn rust_shadow(
             &self,
             stack: &mut Vec<BFieldElement>,
-            memory: &mut HashMap<BFieldElement, BFieldElement>,
-            _: &NonDeterminism,
-            _: &[BFieldElement],
+            memory: &HashMap<BFieldElement, BFieldElement>,
+            _: VecDeque<BFieldElement>,
+            _: VecDeque<Digest>,
+            _: VecDeque<BFieldElement>,
             sponge: &mut Option<Tip5>,
         ) -> Vec<BFieldElement> {
-            // read arguments
-            let length = stack.pop().unwrap().value() as usize;
+            let length = pop_encodable::<u32>(stack).try_into().unwrap();
             let address = stack.pop().unwrap();
 
-            // read sequence from memory
-            let mut sequence = vec![];
-            for i in 0..length {
-                sequence.push(
-                    memory
-                        .get(&(address + BFieldElement::new(i as u64)))
-                        .copied()
-                        .unwrap(),
-                )
-            }
-
             let sponge = sponge.as_mut().expect("sponge must be initialized");
-            sponge.pad_and_absorb_all(&sequence);
+            sponge.pad_and_absorb_all(&array_from_memory::<BFieldElement>(address, length, memory));
 
-            // output empty
             vec![]
         }
 
@@ -170,84 +176,51 @@ mod tests {
             &self,
             seed: [u8; 32],
             bench_case: Option<BenchmarkCase>,
-        ) -> ProcedureInitialState {
+        ) -> MemPreserverInitialState {
             let mut rng = StdRng::from_seed(seed);
 
-            // sample address
-            let address = BFieldElement::new(rng.next_u64() % (1 << 20));
-
-            // sample sequence
+            let address = rng.gen::<BFieldElement>();
             let length = match bench_case {
                 Some(BenchmarkCase::CommonCase) => 102,
                 Some(BenchmarkCase::WorstCase) => 2002,
-                None => rng.next_u32() % 30,
+                None => rng.gen_range(0..=29),
             };
 
-            let sequence = (0..length)
-                .map(|_| rng.gen::<BFieldElement>())
-                .collect_vec();
-
-            // write to memory
-            let mut memory = HashMap::new();
-            for (i, s) in sequence.into_iter().enumerate() {
-                memory.insert(address + BFieldElement::new(i as u64), s);
-            }
-            let nondeterminism = NonDeterminism::default().with_ram(memory);
-
-            // leave address and length on stack
-            let mut stack = empty_stack();
-            stack.push(address);
-            stack.push(BFieldElement::new(length as u64));
-
-            let vm_hasher_state = Tip5 { state: rng.gen() };
-
-            ProcedureInitialState {
-                stack,
-                nondeterminism,
-                public_input: vec![],
-                sponge: Some(vm_hasher_state),
-            }
-        }
-
-        fn corner_case_initial_states(&self) -> Vec<ProcedureInitialState> {
-            vec![
-                Self::corner_case_initial_state_for_num_words(0),
-                Self::corner_case_initial_state_for_num_words(1),
-                Self::corner_case_initial_state_for_num_words(2),
-                Self::corner_case_initial_state_for_num_words(5),
-                Self::corner_case_initial_state_for_num_words(9),
-                Self::corner_case_initial_state_for_num_words(10),
-                Self::corner_case_initial_state_for_num_words(11),
-            ]
-        }
-    }
-
-    impl AbsorbMultiple {
-        fn corner_case_initial_state_for_num_words(num_words: u32) -> ProcedureInitialState {
-            let list_address = BFieldElement::new(0);
-            let list_length = BFieldElement::from(num_words);
-            let sequence = vec![BFieldElement::new(2); num_words as usize];
-
-            let stack = [empty_stack(), vec![list_address, list_length]].concat();
-            let ram: HashMap<_, _> = sequence
-                .into_iter()
-                .enumerate()
-                .map(|(i, bfe)| (BFieldElement::from(i as u32), bfe))
+            let memory: HashMap<_, _> = (0..length)
+                .map(|i| (address + bfe!(i), rng.gen()))
                 .collect();
-            let nondeterminism = NonDeterminism::default().with_ram(ram);
 
-            ProcedureInitialState {
-                stack,
-                nondeterminism,
-                public_input: vec![],
-                sponge: Some(Tip5::default()),
+            MemPreserverInitialState {
+                stack: [empty_stack(), bfe_vec![address, length]].concat(),
+                nondeterminism: NonDeterminism::default().with_ram(memory),
+                public_input: VecDeque::new(),
+                sponge_state: Some(Tip5 { state: rng.gen() }),
             }
+        }
+
+        fn corner_case_initial_states(&self) -> Vec<MemPreserverInitialState> {
+            let mut states = vec![];
+
+            // (all remainders) x {0, 1, 2 full absorptions}
+            for num_words in 0..=29 {
+                // populate RAM with 2s because padding consists of 0s and 1s
+                let ram: HashMap<_, _> = (0..num_words).map(|i| (bfe!(i), bfe!(2))).collect();
+
+                states.push(MemPreserverInitialState {
+                    stack: [empty_stack(), bfe_vec![0, num_words]].concat(),
+                    nondeterminism: NonDeterminism::default().with_ram(ram),
+                    public_input: VecDeque::new(),
+                    sponge_state: Some(Tip5::default()),
+                });
+            }
+
+            states
         }
     }
 
     #[test]
     fn test() {
-        ShadowedProcedure::new(AbsorbMultiple).test();
+        ShadowedMemPreserver::new(AbsorbMultiple).test();
     }
 }
 
@@ -258,6 +231,6 @@ mod benches {
 
     #[test]
     fn benchmark() {
-        ShadowedProcedure::new(AbsorbMultiple).bench();
+        ShadowedMemPreserver::new(AbsorbMultiple).bench();
     }
 }
