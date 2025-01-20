@@ -1,211 +1,95 @@
-use rand::prelude::*;
+use std::collections::HashMap;
+
 use triton_vm::prelude::*;
 
-use crate::empty_stack;
 use crate::prelude::*;
-use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::InitVmState;
+use crate::traits::basic_snippet::Reviewer;
+use crate::traits::basic_snippet::SignOffFingerprint;
 
-#[derive(Clone, Debug)]
+/// Compute the addition record for the mutator set AOCL from an `item`, the
+/// sender's randomness, and the receiver's digest.
+///
+/// ### Behavior
+///
+/// ```text
+/// BEFORE: _ [receiver_digest: Digest] [sender_randomness: Digest] [item: Digest]
+/// AFTER:  _ [commitment: Digest]
+/// ```
+///
+/// ### Preconditions
+///
+/// None.
+///
+/// ### Postconditions
+///
+/// None.
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct Commit;
 
-/// Commit computes the addition record for the mutator set AOCL from
-///  an item (which is a digest), the sender's randomness (also
-/// digest), and the receiver's digest (ditto). Note that the order
-/// is:
-///  (top of stack -->) - item 0
-///                     - item 1
-///                     - item 2
-///                     - item 3
-///                     - item 4
-///                     - sender_randomness 0
-///                     - sender_randomness 1
-///                     - sender_randomness 2
-///                     - sender_randomness 3
-///                     - sender_randomness 4
-///                     - receiver_digest 0
-///                     - receiver_digest 1
-///                     - receiver_digest 2
-///                     - receiver_digest 3
-///                     - receiver_digest 4
-impl Commit {
-    fn test_state() -> InitVmState {
-        let item: Digest = random();
-        let sender_randomness: Digest = random();
-        let receiver_digest: Digest = random();
-        let mut stack = empty_stack();
-        for d in [
-            item.values(),
-            sender_randomness.values(),
-            receiver_digest.values(),
-        ]
-        .concat()
-        .to_vec()
-        .iter()
-        .rev()
-        {
-            stack.push(*d);
-        }
-        InitVmState::with_stack(stack)
+impl BasicSnippet for Commit {
+    fn inputs(&self) -> Vec<(DataType, String)> {
+        ["receiver_digest", "sender_randomness", "item"]
+            .map(|name| (DataType::Digest, name.to_string()))
+            .to_vec()
     }
-}
 
-impl DeprecatedSnippet for Commit {
-    fn entrypoint_name(&self) -> String {
+    fn outputs(&self) -> Vec<(DataType, String)> {
+        vec![(DataType::Digest, "commitment".to_string())]
+    }
+
+    fn entrypoint(&self) -> String {
         "tasmlib_neptune_mutator_set_commit".to_string()
     }
 
-    fn input_field_names(&self) -> Vec<String>
-    where
-        Self: Sized,
-    {
-        vec![
-            "receiver_digest4".to_string(),
-            "receiver_digest3".to_string(),
-            "receiver_digest2".to_string(),
-            "receiver_digest1".to_string(),
-            "receiver_digest0".to_string(),
-            "sender_randomness4".to_string(),
-            "sender_randomness3".to_string(),
-            "sender_randomness2".to_string(),
-            "sender_randomness1".to_string(),
-            "sender_randomness0".to_string(),
-            "item4".to_string(),
-            "item3".to_string(),
-            "item2".to_string(),
-            "item1".to_string(),
-            "item0".to_string(),
-        ]
-    }
-
-    fn input_types(&self) -> Vec<crate::data_type::DataType> {
-        vec![DataType::Digest, DataType::Digest, DataType::Digest]
-    }
-
-    fn output_field_names(&self) -> Vec<String>
-    where
-        Self: Sized,
-    {
-        vec![
-            "commitment4".to_string(),
-            "commitment3".to_string(),
-            "commitment2".to_string(),
-            "commitment1".to_string(),
-            "commitment0".to_string(),
-        ]
-    }
-
-    fn output_types(&self) -> Vec<crate::data_type::DataType> {
-        vec![DataType::Digest]
-    }
-
-    fn stack_diff(&self) -> isize
-    where
-        Self: Sized,
-    {
-        -10
-    }
-
-    fn function_code(&self, _library: &mut crate::library::Library) -> String {
-        let entrypoint = self.entrypoint_name();
-
-        format!(
-            "
-            // BEFORE: _ r4 r3 r2 r1 r0 s4 s3 s2 s1 s0 i4 i3 i2 i1 i0
-            // AFTER:  _ c4 c3 c2 c1 c0
-            {entrypoint}:
+    fn code(&self, _: &mut Library) -> Vec<LabelledInstruction> {
+        triton_asm! {
+            {self.entrypoint()}:
                 hash
                 hash
                 return
-            "
-        )
+        }
     }
 
-    fn crash_conditions(&self) -> Vec<String>
-    where
-        Self: Sized,
-    {
-        vec!["Stack too shallow.".to_string()]
-    }
-
-    fn gen_input_states(&self) -> Vec<crate::InitVmState>
-    where
-        Self: Sized,
-    {
-        vec![Self::test_state()]
-    }
-
-    fn common_case_input_state(&self) -> crate::InitVmState
-    where
-        Self: Sized,
-    {
-        Self::test_state()
-    }
-
-    fn worst_case_input_state(&self) -> crate::InitVmState
-    where
-        Self: Sized,
-    {
-        Self::test_state()
-    }
-
-    fn rust_shadowing(
-        &self,
-        stack: &mut Vec<BFieldElement>,
-        _std_in: Vec<BFieldElement>,
-        _secret_in: Vec<BFieldElement>,
-        _memory: &mut std::collections::HashMap<BFieldElement, BFieldElement>,
-    ) where
-        Self: Sized,
-    {
-        let item = Digest::new([
-            stack.pop().unwrap(),
-            stack.pop().unwrap(),
-            stack.pop().unwrap(),
-            stack.pop().unwrap(),
-            stack.pop().unwrap(),
-        ]);
-        let sender_randomness = Digest::new([
-            stack.pop().unwrap(),
-            stack.pop().unwrap(),
-            stack.pop().unwrap(),
-            stack.pop().unwrap(),
-            stack.pop().unwrap(),
-        ]);
-        let receiver_digest = Digest::new([
-            stack.pop().unwrap(),
-            stack.pop().unwrap(),
-            stack.pop().unwrap(),
-            stack.pop().unwrap(),
-            stack.pop().unwrap(),
-        ]);
-        let commitment = Tip5::hash_pair(Tip5::hash_pair(item, sender_randomness), receiver_digest);
-        stack.push(commitment.values()[4]);
-        stack.push(commitment.values()[3]);
-        stack.push(commitment.values()[2]);
-        stack.push(commitment.values()[1]);
-        stack.push(commitment.values()[0]);
+    fn sign_offs(&self) -> HashMap<Reviewer, SignOffFingerprint> {
+        let mut sign_offs = HashMap::new();
+        sign_offs.insert(Reviewer("ferdinand"), 0xffeea8bfcb59f9f0.into());
+        sign_offs
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::Commit;
-    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
+    use super::*;
+    use crate::test_prelude::*;
+
+    impl Closure for Commit {
+        type Args = (Digest, Digest, Digest);
+
+        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
+            let (receiver_digest, sender_randomness, item) = pop_encodable::<Self::Args>(stack);
+            let commitment =
+                Tip5::hash_pair(Tip5::hash_pair(item, sender_randomness), receiver_digest);
+            push_encodable(stack, &commitment);
+        }
+
+        fn pseudorandom_args(&self, seed: [u8; 32], _: Option<BenchmarkCase>) -> Self::Args {
+            StdRng::from_seed(seed).gen()
+        }
+    }
 
     #[test]
-    fn new_prop_test() {
-        test_rust_equivalence_multiple_deprecated(&Commit, true);
+    fn rust_shadow() {
+        ShadowedClosure::new(Commit).test();
     }
 }
 
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::snippet_bencher::bench_and_write;
+    use crate::test_prelude::*;
 
     #[test]
-    fn commit_benchmark() {
-        bench_and_write(Commit);
+    fn benchmark() {
+        ShadowedClosure::new(Commit).bench();
     }
 }
