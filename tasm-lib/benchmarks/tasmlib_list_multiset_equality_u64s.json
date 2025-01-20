@@ -2,7 +2,7 @@
   {
     "name": "tasmlib_list_multiset_equality_u64s",
     "benchmark_result": {
-      "clock_cycle_count": 2551,
+      "clock_cycle_count": 2543,
       "hash_table_height": 428,
       "u32_table_height": 14,
       "op_stack_table_height": 2971,
@@ -13,7 +13,7 @@
   {
     "name": "tasmlib_list_multiset_equality_u64s",
     "benchmark_result": {
-      "clock_cycle_count": 9139,
+      "clock_cycle_count": 9131,
       "hash_table_height": 1076,
       "u32_table_height": 16,
       "op_stack_table_height": 10963,
