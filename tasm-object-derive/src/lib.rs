@@ -187,7 +187,7 @@ impl ParsedStruct {
     }
 
     /// Allows writing shorter paths while staying hygienic.
-    fn path_abbreviations() -> TokenStream {
+    fn type_aliases() -> TokenStream {
         quote! {
             type Instruction = crate::triton_vm::isa::instruction::LabelledInstruction;
             type AssertionContext = crate::triton_vm::isa::instruction::AssertionContext;
@@ -212,14 +212,14 @@ impl ParsedStruct {
             .map(|n| n.to_string())
             .zip(&self.field_types);
 
-        let path_abbreviations = Self::path_abbreviations();
+        let type_aliases = Self::type_aliases();
         let Some((_, first_field_ty)) = fields.next_back() else {
             return quote! {
-                #path_abbreviations
+                #type_aliases
 
                 [
                     Instruction::Instruction(AnInstruction::Pop(N::N1)),
-                    Instruction::Instruction(AnInstruction::Push(BFE::new(0_u64))),
+                    Instruction::Instruction(AnInstruction::Push(BFE::new(0))),
                 ]
                 .to_vec()
             };
@@ -236,9 +236,22 @@ impl ParsedStruct {
             )
         };
         let mut rust = quote! {
-            #path_abbreviations
+            #type_aliases
+
+            if let Some(size) =
+                <Self as crate::twenty_first::math::bfield_codec::BFieldCodec>::static_length()
+            {
+                return [
+                    Instruction::Instruction(AnInstruction::Pop(N::N1)),
+                    Instruction::Instruction(AnInstruction::Push(BFE::from(size))),
+                ]
+                .to_vec();
+            }
+
+            // accumulates successive static lengths; minimize number of static-length jumps
+            let mut static_jump_accumulator = BFE::new(0);
             let mut instructions = [
-                Instruction::Instruction(AnInstruction::Push(BFE::new(0_u64))),
+                Instruction::Instruction(AnInstruction::Push(BFE::new(0))),
                 #accumulator_type_hint,
                 Instruction::Instruction(AnInstruction::Place(ST::ST1)),
             ].to_vec();
@@ -251,31 +264,35 @@ impl ParsedStruct {
                     <#field_ty as crate::twenty_first::math::bfield_codec::BFieldCodec>
                         ::static_length()
                 {
-                    instructions.extend([
-                        #field_ptr_hint,
-                        // _ acc *field
-                        Instruction::Instruction(AnInstruction::AddI(BFE::from(size))),
-                        // _ acc *next_field_or_next_field_si
-                        Instruction::Instruction(AnInstruction::Pick(ST::ST1)),
-                        // _ *next_field_or_next_field_si acc
-                        Instruction::Instruction(AnInstruction::AddI(BFE::from(size))),
-                        // _ *next_field_or_next_field_si (acc + field_size)
-                        Instruction::Instruction(AnInstruction::Place(ST::ST1)),
-                        // _ (acc + field_size) *next_field_or_next_field_si
-                    ]);
+                    static_jump_accumulator += BFE::from(size);
                 } else {
+                    if static_jump_accumulator != BFE::new(0) {
+                        instructions.extend([
+                            // _ acc_up_to_some_field *some_field
+                            Instruction::Instruction(AnInstruction::AddI(static_jump_accumulator)),
+                            // _ acc_up_to_some_field *field_si
+                            Instruction::Instruction(AnInstruction::Pick(ST::ST1)),
+                            // _ *field_si acc_up_to_some_field
+                            Instruction::Instruction(AnInstruction::AddI(static_jump_accumulator)),
+                            // _ *field_si acc
+                            Instruction::Instruction(AnInstruction::Place(ST::ST1)),
+                            // _ acc *field_si
+                        ]);
+                        static_jump_accumulator = BFE::new(0);
+                    }
+
                     instructions.extend([
                         // _ acc *field_si
                         Instruction::Instruction(AnInstruction::ReadMem(N::N1)),
                         // _ acc field_size (*field_si - 1)
-                        Instruction::Instruction(AnInstruction::AddI(BFE::new(2_u64))),
+                        Instruction::Instruction(AnInstruction::AddI(BFE::new(2))),
                         #field_ptr_hint,
                         // _ acc field_size *field
                         Instruction::Instruction(AnInstruction::Push(BFE::from(Self::MAX_OFFSET))),
                         Instruction::Instruction(AnInstruction::Dup(ST::ST2)),
                         Instruction::Instruction(AnInstruction::Lt),
                         Instruction::Instruction(AnInstruction::Assert),
-                        Instruction::AssertionContext(AssertionContext::ID(180_i128)),
+                        Instruction::AssertionContext(AssertionContext::ID(180)),
                         // _ acc field_size *field
                         Instruction::Instruction(AnInstruction::Dup(ST::ST0)),
                         // _ acc field_size *field *field
@@ -291,7 +308,7 @@ impl ParsedStruct {
                         Instruction::Instruction(AnInstruction::Eq),
                         // _ acc field_size *field (computed_field_size == field_size)
                         Instruction::Instruction(AnInstruction::Assert),
-                        Instruction::AssertionContext(AssertionContext::ID(181_i128)),
+                        Instruction::AssertionContext(AssertionContext::ID(181)),
                         // _ acc field_size *field
                         Instruction::Instruction(AnInstruction::Dup(ST::ST1)),
                         // _ acc field_size *field field_size
@@ -301,10 +318,10 @@ impl ParsedStruct {
                         // _ *next_field_or_next_field_si acc field_size
                         Instruction::Instruction(AnInstruction::Add),
                         // _ *next_field_or_next_field_si (acc + field_size)
-                        Instruction::Instruction(AnInstruction::AddI(BFE::new(1_u64))),
+                        Instruction::Instruction(AnInstruction::AddI(BFE::new(1))),
                         // _ *next_field_or_next_field_si (acc + field_size + 1)
                         Instruction::Instruction(AnInstruction::Pick(ST::ST1)),
-                        // _ (acc + field_size + 1) Default::default()*next_field_or_next_field_si
+                        // _ (acc + field_size + 1) *next_field_or_next_field_si
                     ]);
                 }
             });
@@ -315,25 +332,32 @@ impl ParsedStruct {
                 <#first_field_ty as crate::twenty_first::math::bfield_codec::BFieldCodec>
                     ::static_length()
             {
+                static_jump_accumulator += BFE::from(size);
                 instructions.extend([
-                    // _ acc *field
+                    // _ acc *some_field
                     Instruction::Instruction(AnInstruction::Pop(N::N1)),
                     // _ acc
-                    Instruction::Instruction(AnInstruction::AddI(BFE::from(size))),
+                    Instruction::Instruction(AnInstruction::AddI(static_jump_accumulator)),
                     // _ final_size
                 ]);
             } else {
+                if static_jump_accumulator != BFE::new(0) {
+                    instructions.push(Instruction::Instruction(AnInstruction::AddI(
+                        static_jump_accumulator
+                    )));
+                }
+
                 instructions.extend([
                     // _ acc *field_si
                     Instruction::Instruction(AnInstruction::ReadMem(N::N1)),
                     // _ acc field_size (*field_si - 1)
-                    Instruction::Instruction(AnInstruction::AddI(BFE::new(2_u64))),
+                    Instruction::Instruction(AnInstruction::AddI(BFE::new(2))),
                     // _ acc field_size *field
                     Instruction::Instruction(AnInstruction::Push(BFE::from(Self::MAX_OFFSET))),
                     Instruction::Instruction(AnInstruction::Dup(ST::ST2)),
                     Instruction::Instruction(AnInstruction::Lt),
                     Instruction::Instruction(AnInstruction::Assert),
-                    Instruction::AssertionContext(AssertionContext::ID(180_i128)),
+                    Instruction::AssertionContext(AssertionContext::ID(180)),
                     // _ acc field_size *field
                 ]);
                 instructions.extend(
@@ -347,12 +371,18 @@ impl ParsedStruct {
                     Instruction::Instruction(AnInstruction::Eq),
                     // _ acc field_size (computed_field_size == field_size)
                     Instruction::Instruction(AnInstruction::Assert),
-                    Instruction::AssertionContext(AssertionContext::ID(181_i128)),
+                    Instruction::AssertionContext(AssertionContext::ID(181)),
                     // _ acc field_size
                     Instruction::Instruction(AnInstruction::Add),
-                    Instruction::Instruction(AnInstruction::AddI(BFE::new(1_u64))),
-                    // _ final_size
+                    Instruction::Instruction(AnInstruction::AddI(BFE::new(1))),
+                    // _ acc
                 ]);
+
+                if static_jump_accumulator != BFE::new(0) {
+                    instructions.push(Instruction::Instruction(AnInstruction::AddI(
+                        static_jump_accumulator
+                    )));
+                }
             }
 
             instructions
@@ -382,9 +412,11 @@ impl ParsedStruct {
             return quote!(panic!("type `{}` has no fields", #struct_name););
         };
 
-        let path_abbreviations = Self::path_abbreviations();
+        let type_aliases = Self::type_aliases();
         let mut rust = quote! {
-            #path_abbreviations
+            #type_aliases
+            // accumulates successive static lengths; minimize number of static-length jumps
+            let mut static_jump_accumulator = BFE::new(0);
             let mut instructions = ::std::vec::Vec::new();
         };
 
@@ -396,31 +428,35 @@ impl ParsedStruct {
                         ::static_length().is_none()
                     {
                         // shift pointer from size indicator to actual field
-                        instructions.push(
-                            Instruction::Instruction(AnInstruction::AddI(BFE::new(1_u64))),
-                        );
+                        static_jump_accumulator += BFE::new(1);
+                    }
+                    if static_jump_accumulator != BFE::new(0) {
+                        instructions.push(Instruction::Instruction(AnInstruction::AddI(
+                            static_jump_accumulator
+                        )));
                     }
                     instructions.push(#field_ptr_hint);
                     return instructions;
                 }
 
-                // move pointer to next field (or next field's size indicator)
                 if let Some(size) =
                     <#field_ty as crate::twenty_first::math::bfield_codec::BFieldCodec>
                         ::static_length()
                 {
-                    instructions.extend([
-                        #field_ptr_hint,
-                        // _ *field
-                        Instruction::Instruction(AnInstruction::AddI(BFE::from(size))),
-                        // _ *next_field_or_next_field_si
-                    ]);
+                    static_jump_accumulator += BFE::from(size);
                 } else {
+                    if static_jump_accumulator != BFE::new(0) {
+                        instructions.push(Instruction::Instruction(AnInstruction::AddI(
+                            static_jump_accumulator
+                        )));
+                        static_jump_accumulator = BFE::new(0);
+                    }
+
                     instructions.extend([
                         // _ *field_si
                         Instruction::Instruction(AnInstruction::ReadMem(N::N1)),
                         // _ field_size (*field_si - 1)
-                        Instruction::Instruction(AnInstruction::AddI(BFE::new(2_u64))),
+                        Instruction::Instruction(AnInstruction::AddI(BFE::new(2))),
                         #field_ptr_hint,
                         // _ field_size *field
                         Instruction::Instruction(AnInstruction::Pick(ST::ST1)),
@@ -429,7 +465,7 @@ impl ParsedStruct {
                         Instruction::Instruction(AnInstruction::Dup(ST::ST1)),
                         Instruction::Instruction(AnInstruction::Lt),
                         Instruction::Instruction(AnInstruction::Assert),
-                        Instruction::AssertionContext(AssertionContext::ID(184_i128)),
+                        Instruction::AssertionContext(AssertionContext::ID(184)),
                         // _ *field field_size
                         Instruction::Instruction(AnInstruction::Add),
                         // _ *next_field_or_next_field_si
@@ -440,6 +476,7 @@ impl ParsedStruct {
 
         let (first_field_name, first_field_ty) = first_field;
         let struct_name = struct_name.to_string();
+        let first_field_type_hint = Self::top_of_stack_pointer_type_hint(&first_field_name);
         rust.extend(quote!(
             if field_name != #first_field_name {
                 panic!("unknown field name `{field_name}` for type `{}`", #struct_name);
@@ -447,16 +484,18 @@ impl ParsedStruct {
             if <#first_field_ty as crate::twenty_first::math::bfield_codec::BFieldCodec>
                 ::static_length().is_none()
             {
-                // shift final pointer from size indicator to actual field
-                instructions.push(
-                    Instruction::Instruction(AnInstruction::AddI(BFE::new(1_u64))),
-                );
+                // shift pointer from size indicator to actual field
+                static_jump_accumulator += BFE::new(1);
             }
+            if static_jump_accumulator != BFE::new(0) {
+                instructions.push(Instruction::Instruction(AnInstruction::AddI(
+                    static_jump_accumulator
+                )));
+            }
+            instructions.push(#first_field_type_hint);
+            instructions
         ));
 
-        let first_field_type_hint = Self::top_of_stack_pointer_type_hint(&first_field_name);
-        rust.extend(quote!(instructions.push(#first_field_type_hint);));
-        rust.extend(quote!(instructions));
         rust
     }
 
@@ -480,9 +519,11 @@ impl ParsedStruct {
             return quote!(panic!("type `{}` has no fields", #struct_name););
         };
 
-        let path_abbreviations = Self::path_abbreviations();
+        let type_aliases = Self::type_aliases();
         let mut rust = quote! {
-            #path_abbreviations
+            #type_aliases
+            // accumulates successive static lengths; minimize number of static-length jumps
+            let mut static_jump_accumulator = BFE::new(0);
             let mut instructions = ::std::vec::Vec::new();
         };
 
@@ -490,6 +531,11 @@ impl ParsedStruct {
             let field_ptr_hint = Self::top_of_stack_pointer_type_hint(&field_name);
             rust.extend(quote!(
                 if field_name == #field_name {
+                    if static_jump_accumulator != BFE::new(0) {
+                        instructions.push(Instruction::Instruction(AnInstruction::AddI(
+                            static_jump_accumulator
+                        )));
+                    }
                     if let Some(size) =
                         <#field_ty as crate::twenty_first::math::bfield_codec::BFieldCodec>
                             ::static_length()
@@ -504,7 +550,7 @@ impl ParsedStruct {
                             // _ *field_si
                             Instruction::Instruction(AnInstruction::ReadMem(N::N1)),
                             // _ field_size (*field_si - 1)
-                            Instruction::Instruction(AnInstruction::AddI(BFE::new(2_u64))),
+                            Instruction::Instruction(AnInstruction::AddI(BFE::new(2))),
                             #field_ptr_hint,
                             // _ field_size *field
                             Instruction::Instruction(AnInstruction::Pick(ST::ST1)),
@@ -513,30 +559,31 @@ impl ParsedStruct {
                             Instruction::Instruction(AnInstruction::Dup(ST::ST1)),
                             Instruction::Instruction(AnInstruction::Lt),
                             Instruction::Instruction(AnInstruction::Assert),
-                            Instruction::AssertionContext(AssertionContext::ID(185_i128)),
+                            Instruction::AssertionContext(AssertionContext::ID(185)),
                             // _ *field field_size
                         ]);
                     }
                     return instructions;
                 }
 
-                // move pointer to next field (or next field's size indicator)
                 if let Some(size) =
                     <#field_ty as crate::twenty_first::math::bfield_codec::BFieldCodec>
                         ::static_length()
                 {
-                    instructions.extend([
-                        #field_ptr_hint,
-                        // _ *field
-                        Instruction::Instruction(AnInstruction::AddI(BFE::from(size))),
-                        // _ *next_field_or_next_field_si
-                    ]);
+                    static_jump_accumulator += BFE::from(size);
                 } else {
+                    if static_jump_accumulator != BFE::new(0) {
+                        instructions.push(Instruction::Instruction(AnInstruction::AddI(
+                            static_jump_accumulator
+                        )));
+                        static_jump_accumulator = BFE::new(0);
+                    }
+
                     instructions.extend([
                         // _ *field_si
                         Instruction::Instruction(AnInstruction::ReadMem(N::N1)),
                         // _ field_size (*field_si - 1)
-                        Instruction::Instruction(AnInstruction::AddI(BFE::new(2_u64))),
+                        Instruction::Instruction(AnInstruction::AddI(BFE::new(2))),
                         #field_ptr_hint,
                         // _ field_size *field
                         Instruction::Instruction(AnInstruction::Pick(ST::ST1)),
@@ -545,7 +592,7 @@ impl ParsedStruct {
                         Instruction::Instruction(AnInstruction::Dup(ST::ST1)),
                         Instruction::Instruction(AnInstruction::Lt),
                         Instruction::Instruction(AnInstruction::Assert),
-                        Instruction::AssertionContext(AssertionContext::ID(185_i128)),
+                        Instruction::AssertionContext(AssertionContext::ID(185)),
                         // _ *field field_size
                         Instruction::Instruction(AnInstruction::Add),
                         // _ *next_field_or_next_field_si
@@ -561,6 +608,11 @@ impl ParsedStruct {
             if field_name != #first_field_name {
                 panic!("unknown field name `{field_name}` for type `{}`", #struct_name);
             }
+            if static_jump_accumulator != BFE::new(0) {
+                instructions.push(Instruction::Instruction(AnInstruction::AddI(
+                    static_jump_accumulator
+                )));
+            }
             if let Some(size) =
                 <#first_field_ty as crate::twenty_first::math::bfield_codec::BFieldCodec>
                     ::static_length()
@@ -574,7 +626,7 @@ impl ParsedStruct {
                     // _ *field_si
                     Instruction::Instruction(AnInstruction::ReadMem(N::N1)),
                     // _ field_size (*field_si - 1)
-                    Instruction::Instruction(AnInstruction::AddI(BFE::new(2_u64))),
+                    Instruction::Instruction(AnInstruction::AddI(BFE::new(2))),
                     #first_field_type_hint,
                     // _ field_size *field
                     Instruction::Instruction(AnInstruction::Pick(ST::ST1)),
@@ -583,7 +635,7 @@ impl ParsedStruct {
                     Instruction::Instruction(AnInstruction::Dup(ST::ST1)),
                     Instruction::Instruction(AnInstruction::Lt),
                     Instruction::Instruction(AnInstruction::Assert),
-                    Instruction::AssertionContext(AssertionContext::ID(185_i128)),
+                    Instruction::AssertionContext(AssertionContext::ID(185)),
                     // _ *field field_size
                 ]);
             }
@@ -607,16 +659,16 @@ impl ParsedStruct {
             .map(|n| n.to_string())
             .zip(&self.field_types);
 
-        let path_abbreviations = Self::path_abbreviations();
+        let type_aliases = Self::type_aliases();
         let Some(first_field) = fields.next_back() else {
             return quote! {
-                #path_abbreviations
+                #type_aliases
                 [Instruction::Instruction(AnInstruction::Pop(N::N1))].to_vec()
             };
         };
 
         let mut rust = quote! {
-            #path_abbreviations
+            #type_aliases
             let mut instructions = ::std::vec::Vec::new();
         };
 
@@ -639,7 +691,7 @@ impl ParsedStruct {
                     // _ *field_si
                     Instruction::Instruction(AnInstruction::ReadMem(N::N1)),
                     // _ field_size (*field_si - 1)
-                    Instruction::Instruction(AnInstruction::AddI(BFE::new(2_u64))),
+                    Instruction::Instruction(AnInstruction::AddI(BFE::new(2))),
                     #field_ptr_hint,
                     // _ field_size *field
                     Instruction::Instruction(AnInstruction::Dup(ST::ST0)),
@@ -650,7 +702,7 @@ impl ParsedStruct {
                     Instruction::Instruction(AnInstruction::Dup(ST::ST1)),
                     Instruction::Instruction(AnInstruction::Lt),
                     Instruction::Instruction(AnInstruction::Assert),
-                    Instruction::AssertionContext(AssertionContext::ID(183_i128)),
+                    Instruction::AssertionContext(AssertionContext::ID(183)),
                     // _ *field *field field_size
                     Instruction::Instruction(AnInstruction::Add),
                     // _ *field *next_field_or_next_field_si
