@@ -712,18 +712,34 @@ impl ParsedStruct {
         }
 
         let (first_field_name, first_field_ty) = first_field;
+        let first_field_type_hint = Self::top_of_stack_pointer_type_hint(&first_field_name);
         rust.extend(quote!(
             if <#first_field_ty as crate::twenty_first::math::bfield_codec::BFieldCodec>
-                ::static_length().is_none()
+                ::static_length().is_some()
             {
-                // shift final pointer from size indicator to actual field
-                instructions.push(Instruction::Instruction(AnInstruction::AddI(BFE::new(1_u64))));
+                instructions.push(#first_field_type_hint);
+            } else {
+                instructions.extend([
+                    // _ *field_si
+                    Instruction::Instruction(AnInstruction::ReadMem(N::N1)),
+                    // _ field_size (*field_si - 1)
+                    Instruction::Instruction(AnInstruction::AddI(BFE::new(2))),
+                    #first_field_type_hint,
+                    // _ field_size *field
+                    Instruction::Instruction(AnInstruction::Push(BFE::from(Self::MAX_OFFSET))),
+                    // _ field_size *field max_offset
+                    Instruction::Instruction(AnInstruction::Pick(ST::ST2)),
+                    // _ *field max_offset field_size
+                    Instruction::Instruction(AnInstruction::Lt),
+                    // _ *field (field_size < max_offset)
+                    Instruction::Instruction(AnInstruction::Assert),
+                    Instruction::AssertionContext(AssertionContext::ID(183)),
+                    // _ *field
+                ]);
             }
+            instructions
         ));
 
-        let first_field_type_hint = Self::top_of_stack_pointer_type_hint(&first_field_name);
-        rust.extend(quote!(instructions.push(#first_field_type_hint);));
-        rust.extend(quote!(instructions));
         rust
     }
 
