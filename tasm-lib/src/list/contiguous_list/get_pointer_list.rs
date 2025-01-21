@@ -206,7 +206,6 @@ impl DeprecatedSnippet for GetPointerList {
                 output_list_pointer,
                 vec![address + BFieldElement::one()],
                 memory,
-                1,
             );
             let size_indicator = *memory.get(&address).unwrap();
 

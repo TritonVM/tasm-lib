@@ -63,22 +63,12 @@ impl MmrCalculateNewPeaksFromLeafMutationMtIndices {
         rust_shadowing_helper_functions::list::list_new(peaks_pointer, &mut memory);
 
         for peak in start_mmr.peaks() {
-            list_push(
-                peaks_pointer,
-                peak.values().to_vec(),
-                &mut memory,
-                Digest::LEN,
-            );
+            list_push(peaks_pointer, peak.values().to_vec(), &mut memory);
         }
 
         rust_shadowing_helper_functions::list::list_new(auth_path_pointer, &mut memory);
         for ap_element in auth_path.iter() {
-            list_push(
-                auth_path_pointer,
-                ap_element.values().to_vec(),
-                &mut memory,
-                Digest::LEN,
-            );
+            list_push(auth_path_pointer, ap_element.values().to_vec(), &mut memory);
         }
 
         (

@@ -518,7 +518,6 @@ mod tests {
                     peaks_pointer,
                     peak.values().to_vec(),
                     &mut memory,
-                    Digest::LEN,
                 );
             }
 

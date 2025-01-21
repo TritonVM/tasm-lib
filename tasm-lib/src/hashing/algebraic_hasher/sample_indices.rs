@@ -163,7 +163,6 @@ mod tests {
                     list_pointer,
                     vec![BFieldElement::new(*index as u64)],
                     memory,
-                    1,
                 );
             }
             println!("sponge after: {}", sponge.state.iter().join(","));

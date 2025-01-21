@@ -314,8 +314,8 @@ mod tests {
         let right_pointer = BFieldElement::new(1 << 60); // far enough
 
         let mut ram = HashMap::default();
-        write_list_to_ram(&mut ram, left_pointer, &left_type, &left_list);
-        write_list_to_ram(&mut ram, right_pointer, &right_type, &right_list);
+        write_list_to_ram(&mut ram, left_pointer, &left_list);
+        write_list_to_ram(&mut ram, right_pointer, &right_list);
 
         let mut stack = [empty_stack(), vec![left_pointer, right_pointer]].concat();
 
@@ -335,12 +335,11 @@ mod tests {
     fn write_list_to_ram<T: BFieldCodec + Copy>(
         ram: &mut HashMap<BFieldElement, BFieldElement>,
         list_pointer: BFieldElement,
-        item_type: &DataType,
         list: &[T],
     ) {
         list::list_new(list_pointer, ram);
         for &item in list {
-            list::list_push(list_pointer, item.encode(), ram, item_type.stack_size());
+            list::list_push(list_pointer, item.encode(), ram);
         }
     }
 }

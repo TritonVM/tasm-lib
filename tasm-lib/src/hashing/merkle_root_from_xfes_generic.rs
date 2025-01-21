@@ -208,12 +208,7 @@ mod tests {
             for node_count in 0..(leafs.len() >> 1) {
                 let node_index = node_count + (1 << (mt.height() - 1));
                 let node = mt.node(node_index).unwrap();
-                list_push(
-                    digests_in_layer_one,
-                    node.values().to_vec(),
-                    memory,
-                    Digest::LEN,
-                )
+                list_push(digests_in_layer_one, node.values().to_vec(), memory)
             }
 
             let pointer = dynamic_allocator(memory);

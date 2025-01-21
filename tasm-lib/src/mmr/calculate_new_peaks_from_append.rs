@@ -49,7 +49,6 @@ impl CalculateNewPeaksFromAppend {
                 peaks_pointer,
                 peak.values().to_vec(),
                 &mut memory,
-                Digest::LEN,
             );
         }
 
@@ -268,12 +267,7 @@ impl DeprecatedSnippet for CalculateNewPeaksFromAppend {
 
         let auth_path_pointer = dyn_malloc::DYN_MALLOC_FIRST_ADDRESS;
         rust_shadowing_helper_functions::list::list_new(auth_path_pointer, memory);
-        list_push(
-            peaks_pointer,
-            new_leaf.values().to_vec(),
-            memory,
-            Digest::LEN,
-        );
+        list_push(peaks_pointer, new_leaf.values().to_vec(), memory);
         let new_node_index = mmr::shared_advanced::leaf_index_to_node_index(old_leaf_count);
         let (mut right_lineage_count, _height) =
             mmr::shared_advanced::right_lineage_length_and_own_height(new_node_index);
@@ -288,17 +282,11 @@ impl DeprecatedSnippet for CalculateNewPeaksFromAppend {
                     .try_into()
                     .unwrap(),
             );
-            list_push(
-                auth_path_pointer,
-                previous_peak.values().to_vec(),
-                memory,
-                Digest::LEN,
-            );
+            list_push(auth_path_pointer, previous_peak.values().to_vec(), memory);
             list_push(
                 peaks_pointer,
                 Tip5::hash_pair(previous_peak, new_hash).values().to_vec(),
                 memory,
-                Digest::LEN,
             );
             right_lineage_count -= 1;
         }
@@ -436,7 +424,6 @@ mod tests {
                 peaks_pointer,
                 peak.values().to_vec(),
                 &mut memory,
-                Digest::LEN,
             );
         }
 

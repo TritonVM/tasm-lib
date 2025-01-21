@@ -496,6 +496,9 @@ mod tests {
             let mut total_output_len = 0;
             for input_list_pointer in input_list_pointers {
                 let input_list_len = list_get_length(input_list_pointer, memory);
+                let output_list_len = list_get_length(output_list_pointer, memory);
+                let new_output_list_len = output_list_len + input_list_len;
+                list_set_length(output_list_pointer, new_output_list_len, memory);
 
                 for i in (0..input_list_len).rev() {
                     if input_type.static_length().is_some() {
@@ -509,7 +512,7 @@ mod tests {
                             &input_type,
                         );
                         stack.push(ptr);
-                        stack.push(bfe!(len as u64));
+                        stack.push(bfe!(len));
                     };
                     self.f.apply(stack, memory);
                     let elem = (0..output_type.stack_size())
@@ -526,7 +529,6 @@ mod tests {
             }
 
             stack.push(output_list_pointer);
-            list_set_length(output_list_pointer, total_output_len, memory);
         }
 
         fn pseudorandom_initial_state(

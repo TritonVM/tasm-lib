@@ -7,6 +7,8 @@ use twenty_first::math::other::random_elements;
 
 use crate::list::LIST_METADATA_SIZE;
 use crate::prelude::*;
+use crate::U32_TO_USIZE_ERR;
+use crate::USIZE_TO_U64_ERR;
 
 /// Load a list from memory returning each element as a list of `BFieldElement`s.
 pub fn load_list_unstructured(
@@ -59,12 +61,7 @@ pub fn list_insert<T: BFieldCodec>(
     list_new(list_pointer, memory);
 
     for element in vector {
-        list_push(
-            list_pointer,
-            element.encode(),
-            memory,
-            element.encode().len(),
-        );
+        list_push(list_pointer, element.encode(), memory);
     }
 }
 
@@ -92,7 +89,7 @@ pub fn untyped_insert_random_list(
     list_new(list_pointer, memory);
     for _ in 0..list_length {
         let random_element: Vec<BFieldElement> = random_elements(element_length);
-        list_push(list_pointer, random_element, memory, element_length);
+        list_push(list_pointer, random_element, memory);
     }
 }
 
@@ -100,67 +97,87 @@ pub fn list_new(list_pointer: BFieldElement, memory: &mut HashMap<BFieldElement,
     memory.insert(list_pointer, BFieldElement::zero());
 }
 
+/// Push the given element to the pointed-to list.
+///
+/// Only supports lists with statically sized elements.
+///
+/// # Panics
+///
+/// Panics if the pointed-to list is incorrectly encoded.
 pub fn list_push(
     list_pointer: BFieldElement,
     value: Vec<BFieldElement>,
     memory: &mut HashMap<BFieldElement, BFieldElement>,
-    element_length: usize,
 ) {
-    assert_eq!(
-        element_length,
-        value.len(),
-        "Length must match indicated length. Types with dynamic length are not supported."
-    );
-    let list_length: usize = memory[&list_pointer].value().try_into().unwrap();
-    memory.get_mut(&list_pointer).unwrap().increment();
+    let list_length = memory
+        .get_mut(&list_pointer)
+        .expect("list must be initialized");
+    let len = list_length.value();
+    list_length.increment();
 
-    for (i, word) in value.into_iter().enumerate() {
-        let word_offset = (LIST_METADATA_SIZE + element_length * list_length + i) as u64;
-        let word_index = list_pointer + bfe!(word_offset);
-        memory.insert(word_index, word);
+    let element_length: u64 = value.len().try_into().expect(USIZE_TO_U64_ERR);
+    for (i, word) in (0..).zip(value) {
+        let word_offset = bfe!(LIST_METADATA_SIZE) + bfe!(element_length * len + i);
+        memory.insert(list_pointer + word_offset, word);
     }
 }
 
+/// Pop an element from the pointed-to list.
+///
+/// Only supports lists with statically sized elements.
+///
+/// # Panics
+///
+/// Panics if the pointed-to list is empty, or if the list is incorrectly
+/// encoded.
 pub fn list_pop(
     list_pointer: BFieldElement,
     memory: &mut HashMap<BFieldElement, BFieldElement>,
     element_length: usize,
 ) -> Vec<BFieldElement> {
-    let init_list_length = memory[&list_pointer];
-    assert!(!init_list_length.is_zero(), "List is empty");
-    memory.get_mut(&list_pointer).unwrap().decrement();
-    let last_item_index: usize = memory[&list_pointer].value().try_into().unwrap();
+    let list_length = memory
+        .get_mut(&list_pointer)
+        .expect("list must be initialized");
+    assert_ne!(0, list_length.value(), "list must not be empty");
+    list_length.decrement();
+    let last_item_index = list_length.value();
 
+    let element_length: u64 = element_length.try_into().expect(USIZE_TO_U64_ERR);
     let read_word = |i| {
-        let word_offset = (LIST_METADATA_SIZE + element_length * last_item_index + i) as u64;
-        let word_index = list_pointer + BFieldElement::new(word_offset);
+        let word_offset = bfe!(LIST_METADATA_SIZE) + bfe!(element_length * last_item_index + i);
+        let word_index = list_pointer + bfe!(word_offset);
         memory[&word_index]
     };
 
     (0..element_length).map(read_word).collect()
 }
 
-/// A pointer to the `i`th element in the list, as well as the size of that element.
+/// A pointer to the `i`th element in the list, as well as the size of that
+/// element.
+///
+/// Supports both, lists with statically _and_ lists with dynamically sized
+/// elements.
 ///
 /// # Panics
 ///
-/// Panics if `i` is out of bounds, or if the pointed-to-list is incorrectly encoded.
+/// Panics if the `index` is out of bounds, or if the pointed-to-list is
+/// incorrectly encoded.
 pub fn list_pointer_to_elem_pointer(
     list_pointer: BFieldElement,
-    i: usize,
+    index: usize,
     memory: &HashMap<BFieldElement, BFieldElement>,
     element_type: &DataType,
 ) -> (usize, BFieldElement) {
     let list_len = list_get_length(list_pointer, memory);
-    assert!(i < list_len, "Index {i} out of bounds for len {list_len}.");
+    assert!(index < list_len, "out of bounds: {index} >= {list_len}");
 
     if let Some(element_size) = element_type.static_length() {
-        let elem_ptr = list_pointer + bfe!(LIST_METADATA_SIZE + i * element_size);
+        let elem_ptr = list_pointer + bfe!(LIST_METADATA_SIZE + index * element_size);
         return (element_size, elem_ptr);
     }
 
     let mut elem_pointer = list_pointer + bfe!(LIST_METADATA_SIZE);
-    for _ in 0..i {
+    for _ in 0..index {
         elem_pointer += memory[&elem_pointer] + BFieldElement::ONE;
     }
     let elem_size = usize::try_from(memory[&elem_pointer].value()).unwrap();
@@ -168,18 +185,31 @@ pub fn list_pointer_to_elem_pointer(
 }
 
 /// Read an element from a list.
+///
+/// Only supports lists with statically sized elements.
+///
+/// # Panics
+///
+/// Panics if
+/// - the `index` is out of bounds, or
+/// - the element that is to be read resides outside the list`s
+///   [memory page][crate::memory], or
+/// - the pointed-to-list is incorrectly encoded into `memory`.
 pub fn list_get(
     list_pointer: BFieldElement,
     index: usize,
     memory: &HashMap<BFieldElement, BFieldElement>,
     element_length: usize,
 ) -> Vec<BFieldElement> {
+    let list_len = list_get_length(list_pointer, memory);
+    assert!(index < list_len, "out of bounds: {index} >= {list_len}");
+
     let highest_access_index = LIST_METADATA_SIZE + element_length * (index + 1);
     assert!(u32::try_from(highest_access_index).is_ok());
 
     let read_word = |i| {
-        let word_offset = (LIST_METADATA_SIZE + element_length * index + i) as u64;
-        let word_index = list_pointer + BFieldElement::new(word_offset);
+        let word_offset = LIST_METADATA_SIZE + element_length * index + i;
+        let word_index = list_pointer + bfe!(word_offset);
         memory[&word_index]
     };
 
@@ -187,16 +217,25 @@ pub fn list_get(
 }
 
 /// Write an element to a list.
+///
+/// Only supports lists with statically sized elements.
+///
+/// # Panics
+///
+/// Panics if the `index` is out of bounds.
 pub fn list_set(
     list_pointer: BFieldElement,
     index: usize,
     value: Vec<BFieldElement>,
     memory: &mut HashMap<BFieldElement, BFieldElement>,
 ) {
+    let list_len = list_get_length(list_pointer, memory);
+    assert!(index < list_len, "out of bounds: {index} >= {list_len}");
+
     let element_size = value.len();
     for (i, word) in value.into_iter().enumerate() {
-        let word_offset = (LIST_METADATA_SIZE + element_size * index + i) as u64;
-        let word_index = list_pointer + BFieldElement::new(word_offset);
+        let word_offset = LIST_METADATA_SIZE + element_size * index + i;
+        let word_index = list_pointer + bfe!(word_offset);
         memory.insert(word_index, word);
     }
 }
@@ -207,7 +246,7 @@ pub fn list_get_length(
 ) -> usize {
     let length: u32 = memory[&list_pointer].value().try_into().unwrap();
 
-    length as usize
+    length.try_into().expect(U32_TO_USIZE_ERR)
 }
 
 pub fn list_set_length(
@@ -215,7 +254,7 @@ pub fn list_set_length(
     new_length: usize,
     memory: &mut HashMap<BFieldElement, BFieldElement>,
 ) {
-    memory.insert(list_pointer, BFieldElement::new(new_length as u64));
+    memory.insert(list_pointer, bfe!(new_length));
 }
 
 #[cfg(test)]

@@ -53,6 +53,11 @@ pub use triton_vm::twenty_first;
 
 use crate::test_helpers::prepend_program_with_stack_setup;
 
+pub(crate) const U32_TO_USIZE_ERR: &str =
+    "internal error: type `usize` should have at least 32 bits";
+pub(crate) const USIZE_TO_U64_ERR: &str =
+    "internal error: type `usize` should have at most 64 bits";
+
 #[derive(Clone, Debug, Default)]
 pub struct InitVmState {
     pub stack: Vec<BFieldElement>,

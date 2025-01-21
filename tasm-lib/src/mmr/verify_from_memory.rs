@@ -68,7 +68,6 @@ impl MmrVerifyFromMemory {
                 peaks_pointer,
                 peak.values().to_vec(),
                 &mut memory,
-                Digest::LEN,
             );
         }
 
@@ -78,7 +77,6 @@ impl MmrVerifyFromMemory {
                 auth_path_pointer,
                 ap_element.values().to_vec(),
                 &mut memory,
-                Digest::LEN,
             );
         }
 
