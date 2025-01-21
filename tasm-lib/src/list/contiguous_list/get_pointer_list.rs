@@ -44,11 +44,10 @@ impl DeprecatedSnippet for GetPointerList {
     fn function_code(&self, library: &mut Library) -> String {
         let entrypoint = self.entrypoint_name();
 
-        let data_type = DataType::VoidPointer;
         let get_list_length = library.import(Box::new(GetLength));
-        let new_list = library.import(Box::new(New::new(data_type.clone())));
-        let set_length = library.import(Box::new(SetLength::new(data_type.clone())));
-        let set_element = library.import(Box::new(Set::new(data_type)));
+        let new_list = library.import(Box::new(New));
+        let set_length = library.import(Box::new(SetLength));
+        let set_element = library.import(Box::new(Set::new(DataType::VoidPointer)));
 
         format!(
             "

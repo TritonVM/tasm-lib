@@ -3,7 +3,7 @@
     "name": "tasmlib_neptune_mutator_get_swbf_indices_1048576_45",
     "benchmark_result": {
       "clock_cycle_count": 4395,
-      "hash_table_height": 481,
+      "hash_table_height": 475,
       "u32_table_height": 4633,
       "op_stack_table_height": 3184,
       "ram_table_height": 470
@@ -14,7 +14,7 @@
     "name": "tasmlib_neptune_mutator_get_swbf_indices_1048576_45",
     "benchmark_result": {
       "clock_cycle_count": 4395,
-      "hash_table_height": 481,
+      "hash_table_height": 475,
       "u32_table_height": 4507,
       "op_stack_table_height": 3184,
       "ram_table_height": 470

@@ -50,16 +50,14 @@ impl BasicSnippet for HornerEvaluationDynamicLength {
         let entrypoint = self.entrypoint();
         let loop_batches = format!("{entrypoint}_loop_batches");
         let loop_remainder = format!("{entrypoint}_loop_remainder");
-        let length_of_list_of_xfes = library.import(Box::new(Length {
-            element_type: DataType::Xfe,
-        }));
+        let length_of_list = library.import(Box::new(Length));
 
         triton_asm! {
             // BEFORE: *coefficients [x]
             // AFTER: [poly(x)]
             {entrypoint}:
                 dup 3                           // _ *coefficients [x] *coefficients
-                call {length_of_list_of_xfes}   // _ *coefficients [x] num_coefficients
+                call {length_of_list}           // _ *coefficients [x] num_coefficients
                 push 3 mul                      // _ *coefficients [x] size
                 dup 4 add                       // _ *coefficients [x] *last_coefficient+2
                 dup 3 dup 3 dup 3               // _ *coefficients [x] *last_coefficient+2 [x]

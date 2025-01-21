@@ -44,10 +44,10 @@ impl BasicSnippet for Filter {
         assert_eq!(output_type, DataType::Bool);
 
         let safety_offset = LIST_METADATA_SIZE;
-        let get_length = library.import(Box::new(Length::new(input_type.clone())));
+        let get_length = library.import(Box::new(Length));
         let list_get = library.import(Box::new(Get::new(input_type)));
-        let new_list = library.import(Box::new(New::new(output_type.clone())));
-        let set_length = library.import(Box::new(SetLength::new(output_type)));
+        let new_list = library.import(Box::new(New));
+        let set_length = library.import(Box::new(SetLength));
         let element_size = self.f.domain().stack_size();
 
         let inner_function_name = match &self.f {
@@ -176,7 +176,6 @@ mod tests {
             memory: &mut HashMap<BFieldElement, BFieldElement>,
         ) {
             let input_type = self.f.domain();
-            let output_type = self.f.range();
 
             let element_size = self.f.domain().stack_size();
             let memcpy = MemCpy::rust_shadowing;
@@ -189,13 +188,13 @@ mod tests {
 
             let get_element = rust_shadowing_helper_functions::list::list_get;
 
-            New::new(input_type.clone()).rust_shadow(stack, memory);
+            New.rust_shadow(stack, memory);
             let output_list = stack.pop().unwrap();
 
             // set length
             stack.push(output_list);
             stack.push(BFieldElement::new(len as u64));
-            SetLength::new(output_type).rust_shadowing(stack, vec![], vec![], memory);
+            SetLength.rust_shadowing(stack, vec![], vec![], memory);
             stack.pop();
 
             // forall elements, read + map + maybe copy
@@ -236,7 +235,7 @@ mod tests {
             // set length
             stack.push(output_list);
             stack.push(BFieldElement::new(output_index as u64));
-            SetLength::new(input_type).rust_shadowing(stack, vec![], vec![], memory);
+            SetLength.rust_shadowing(stack, vec![], vec![], memory);
         }
 
         fn pseudorandom_initial_state(

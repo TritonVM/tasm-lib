@@ -39,7 +39,7 @@ impl BasicSnippet for All {
         let output_type = self.f.range();
         assert_eq!(output_type, DataType::Bool);
 
-        let get_length = library.import(Box::new(Length::new(input_type.clone())));
+        let get_length = library.import(Box::new(Length));
         let list_get = library.import(Box::new(Get::new(input_type)));
 
         let inner_function_name = match &self.f {

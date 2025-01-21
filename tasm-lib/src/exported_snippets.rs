@@ -373,40 +373,9 @@ pub fn name_to_snippet(fn_name: &str) -> Option<Box<dyn BasicSnippet>> {
             Some(Box::new(list::set::Set::new(DataType::Digest)))
         }
 
-        "tasmlib_list_new___bool" => Some(Box::new(list::new::New::new(DataType::Bool))),
-        "tasmlib_list_new___u32" => Some(Box::new(list::new::New::new(DataType::U32))),
-        "tasmlib_list_new___u64" => Some(Box::new(list::new::New::new(DataType::U64))),
-        "tasmlib_list_new___bfe" => Some(Box::new(list::new::New::new(DataType::Bfe))),
-        "tasmlib_list_new___xfe" => Some(Box::new(list::new::New::new(DataType::Xfe))),
-        "tasmlib_list_new___digest" => Some(Box::new(list::new::New::new(DataType::Digest))),
-
-        "tasmlib_list_length___bool" => Some(Box::new(list::length::Length::new(DataType::Bool))),
-        "tasmlib_list_length___u32" => Some(Box::new(list::length::Length::new(DataType::U32))),
-        "tasmlib_list_length___u64" => Some(Box::new(list::length::Length::new(DataType::U64))),
-        "tasmlib_list_length___bfe" => Some(Box::new(list::length::Length::new(DataType::Bfe))),
-        "tasmlib_list_length___xfe" => Some(Box::new(list::length::Length::new(DataType::Xfe))),
-        "tasmlib_list_length___digest" => {
-            Some(Box::new(list::length::Length::new(DataType::Digest)))
-        }
-
-        "tasmlib_list_set_length___bool" => {
-            Some(Box::new(list::set_length::SetLength::new(DataType::Bool)))
-        }
-        "tasmlib_list_set_length___u32" => {
-            Some(Box::new(list::set_length::SetLength::new(DataType::U32)))
-        }
-        "tasmlib_list_set_length___u64" => {
-            Some(Box::new(list::set_length::SetLength::new(DataType::U64)))
-        }
-        "tasmlib_list_set_length___bfe" => {
-            Some(Box::new(list::set_length::SetLength::new(DataType::Bfe)))
-        }
-        "tasmlib_list_set_length___xfe" => {
-            Some(Box::new(list::set_length::SetLength::new(DataType::Xfe)))
-        }
-        "tasmlib_list_set_length___digest" => {
-            Some(Box::new(list::set_length::SetLength::new(DataType::Digest)))
-        }
+        "tasmlib_list_new" => Some(Box::new(list::new::New)),
+        "tasmlib_list_length" => Some(Box::new(list::length::Length)),
+        "tasmlib_list_set_length" => Some(Box::new(list::set_length::SetLength)),
 
         "tasmlib_list_multiset_equality_digests" => Some(Box::new(
             list::multiset_equality_digests::MultisetEqualityDigests,

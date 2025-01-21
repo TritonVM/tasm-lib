@@ -152,7 +152,7 @@ impl<const NUM_INPUT_LISTS: usize> ChainMap<NUM_INPUT_LISTS> {
         let output_type = self.f.range();
         assert!(input_type.static_length().is_some());
 
-        let new_list = library.import(Box::new(New::new(output_type.clone())));
+        let new_list = library.import(Box::new(New));
         let inner_fn = self.decompose_inner_fn(library);
 
         let entrypoint = self.entrypoint();
@@ -266,7 +266,7 @@ impl<const NUM_INPUT_LISTS: usize> ChainMap<NUM_INPUT_LISTS> {
         let output_type = self.f.range();
         assert!(input_type.static_length().is_none());
 
-        let new_list = library.import(Box::new(New::new(output_type.clone())));
+        let new_list = library.import(Box::new(New));
         let push = library.import(Box::new(Push::new(output_type.clone())));
         let inner_fn = self.decompose_inner_fn(library);
 
@@ -482,7 +482,7 @@ mod tests {
             let input_type = self.f.domain();
             let output_type = self.f.range();
 
-            New::new(output_type.clone()).rust_shadow(stack, memory);
+            New.rust_shadow(stack, memory);
             let output_list_pointer = stack.pop().unwrap();
 
             let input_list_pointers = (0..NUM_INPUT_LISTS)

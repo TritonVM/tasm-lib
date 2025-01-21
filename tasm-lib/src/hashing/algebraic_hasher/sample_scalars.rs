@@ -31,15 +31,15 @@ impl BasicSnippet for SampleScalars {
         assert_eq!(3, EXTENSION_DEGREE, "Code assumes extension degree 3");
 
         let entrypoint = self.entrypoint();
-        let set_length = library.import(Box::new(SetLength::new(DataType::Xfe)));
-        let new_list_of_xfes = library.import(Box::new(New::new(DataType::Xfe)));
+        let set_length = library.import(Box::new(SetLength));
+        let new_list = library.import(Box::new(New));
         let safety_offset = 1;
         let squeeze_repeatedly = library.import(Box::new(SqueezeRepeatedly));
         triton_asm! {
             // BEFORE: _ num_scalars
             // AFTER:  _ *scalars
             {entrypoint}:
-                call {new_list_of_xfes}
+                call {new_list}
                                 // _ num_scalars *scalars
 
                 // set length

@@ -35,8 +35,8 @@ impl BasicSnippet for SampleIndices {
         let then_reduce_and_save = format!("{entrypoint}_then_reduce_and_save");
         let else_drop_tip = format!("{entrypoint}_else_drop_tip");
 
-        let new_list = library.import(Box::new(New::new(DataType::U32)));
-        let length = library.import(Box::new(Length::new(DataType::U32)));
+        let new_list = library.import(Box::new(New));
+        let length = library.import(Box::new(Length));
         let push_element = library.import(Box::new(Push::new(DataType::U32)));
 
         let if_can_sample = triton_asm! (

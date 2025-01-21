@@ -104,10 +104,10 @@ impl DeprecatedSnippet for CalculateNewPeaksFromAppend {
         let entrypoint = self.entrypoint_name();
         let while_loop_label = format!("{entrypoint}_while");
 
-        let new_list = library.import(Box::new(New::new(DataType::Digest)));
+        let new_list = library.import(Box::new(New));
         let push = library.import(Box::new(Push::new(DataType::Digest)));
         let pop = library.import(Box::new(Pop::new(DataType::Digest)));
-        let set_length = library.import(Box::new(SetLength::new(DataType::Digest)));
+        let set_length = library.import(Box::new(SetLength));
         let u64incr = library.import(Box::new(Incr));
         let right_lineage_count = library.import(Box::new(TrailingZeros));
 

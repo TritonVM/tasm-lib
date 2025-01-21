@@ -33,7 +33,7 @@ impl BasicSnippet for MultisetEqualityDigests {
 
     fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
         let entrypoint = self.entrypoint();
-        let length_snippet = library.import(Box::new(Length::new(DataType::Digest)));
+        let length_snippet = library.import(Box::new(Length));
         let hash_varlen = library.import(Box::new(HashVarlen));
 
         let early_abort_label = format!("{entrypoint}_early_abort");

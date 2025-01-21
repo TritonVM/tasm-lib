@@ -61,10 +61,8 @@ impl DeprecatedSnippet for Range {
     }
 
     fn function_code(&self, library: &mut crate::library::Library) -> String {
-        let data_type = DataType::U32;
-
-        let new_list = library.import(Box::new(New::new(data_type.clone())));
-        let set_length = library.import(Box::new(SetLength::new(data_type)));
+        let new_list = library.import(Box::new(New));
+        let set_length = library.import(Box::new(SetLength));
 
         let entrypoint = self.entrypoint_name();
         let inner_loop = format!("{entrypoint}_loop");

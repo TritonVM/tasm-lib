@@ -24,21 +24,12 @@ use crate::traits::basic_snippet::SignOffFingerprint;
 // Todo: the return type used to be a u32. However, neither the tasm nor the
 //   rust shadowing ever performed any range checks. Should the return type be
 //   changed back to u32? If so, should range checks be introduced?
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub struct Length {
-    pub element_type: DataType,
-}
-
-impl Length {
-    pub fn new(element_type: DataType) -> Self {
-        Self { element_type }
-    }
-}
+#[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash)]
+pub struct Length;
 
 impl BasicSnippet for Length {
     fn inputs(&self) -> Vec<(DataType, String)> {
-        let list_type = DataType::List(Box::new(self.element_type.clone()));
-        vec![(list_type, "*list".to_string())]
+        vec![(DataType::VoidPointer, "*list".to_string())]
     }
 
     fn outputs(&self) -> Vec<(DataType, String)> {
@@ -46,8 +37,7 @@ impl BasicSnippet for Length {
     }
 
     fn entrypoint(&self) -> String {
-        let element_type = self.element_type.label_friendly_name();
-        format!("tasmlib_list_length___{element_type}")
+        "tasmlib_list_length".to_string()
     }
 
     fn code(&self, _: &mut Library) -> Vec<LabelledInstruction> {
@@ -97,7 +87,7 @@ mod tests {
             let list_len = rng.gen_range(0..=1 << 10);
 
             let mut memory = HashMap::default();
-            insert_random_list(&self.element_type, list_ptr, list_len, &mut memory);
+            insert_random_list(&DataType::Digest, list_ptr, list_len, &mut memory);
             let stack = [self.init_stack_for_isolated_run(), vec![list_ptr]].concat();
 
             AccessorInitialState { stack, memory }
@@ -106,9 +96,7 @@ mod tests {
 
     #[test]
     fn rust_shadow() {
-        ShadowedAccessor::new(Length::new(DataType::Bfe)).test();
-        ShadowedAccessor::new(Length::new(DataType::U64)).test();
-        ShadowedAccessor::new(Length::new(DataType::Digest)).test();
+        ShadowedAccessor::new(Length).test();
     }
 }
 
@@ -119,6 +107,6 @@ mod benches {
 
     #[test]
     fn length_long_benchmark() {
-        ShadowedAccessor::new(Length::new(DataType::Digest)).bench();
+        ShadowedAccessor::new(Length).bench();
     }
 }

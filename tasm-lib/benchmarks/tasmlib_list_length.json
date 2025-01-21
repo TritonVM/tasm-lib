@@ -1,6 +1,6 @@
 [
   {
-    "name": "tasmlib_list_length___digest",
+    "name": "tasmlib_list_length",
     "benchmark_result": {
       "clock_cycle_count": 5,
       "hash_table_height": 6,
@@ -11,7 +11,7 @@
     "case": "CommonCase"
   },
   {
-    "name": "tasmlib_list_length___digest",
+    "name": "tasmlib_list_length",
     "benchmark_result": {
       "clock_cycle_count": 5,
       "hash_table_height": 6,

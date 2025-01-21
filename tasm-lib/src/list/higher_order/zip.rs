@@ -58,7 +58,7 @@ impl BasicSnippet for Zip {
     fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
         let output_type = DataType::Tuple(vec![self.left_type.clone(), self.right_type.clone()]);
 
-        let new_output_list = library.import(Box::new(New::new(output_type.clone())));
+        let new_output_list = library.import(Box::new(New));
 
         let entrypoint = self.entrypoint();
         let main_loop_label = format!("{entrypoint}_loop");

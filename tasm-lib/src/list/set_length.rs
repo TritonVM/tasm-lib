@@ -10,25 +10,12 @@ use crate::rust_shadowing_helper_functions::list::untyped_insert_random_list;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::InitVmState;
 
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub struct SetLength {
-    pub element_type: DataType,
-}
-
-impl SetLength {
-    pub fn new(data_type: DataType) -> Self {
-        Self {
-            element_type: data_type,
-        }
-    }
-}
+#[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash)]
+pub struct SetLength;
 
 impl DeprecatedSnippet for SetLength {
     fn entrypoint_name(&self) -> String {
-        format!(
-            "tasmlib_list_set_length___{}",
-            self.element_type.label_friendly_name()
-        )
+        "tasmlib_list_set_length".to_string()
     }
 
     fn input_field_names(&self) -> Vec<String> {
@@ -36,10 +23,7 @@ impl DeprecatedSnippet for SetLength {
     }
 
     fn input_types(&self) -> Vec<DataType> {
-        vec![
-            DataType::List(Box::new(self.element_type.clone())),
-            DataType::U32,
-        ]
+        vec![DataType::VoidPointer, DataType::U32]
     }
 
     fn output_field_names(&self) -> Vec<String> {
@@ -47,7 +31,7 @@ impl DeprecatedSnippet for SetLength {
     }
 
     fn output_types(&self) -> Vec<DataType> {
-        vec![DataType::List(Box::new(self.element_type.clone()))]
+        vec![DataType::VoidPointer]
     }
 
     fn stack_diff(&self) -> isize {
@@ -85,19 +69,15 @@ impl DeprecatedSnippet for SetLength {
     }
 
     fn gen_input_states(&self) -> Vec<InitVmState> {
-        vec![
-            prepare_state(&self.element_type),
-            prepare_state(&self.element_type),
-            prepare_state(&self.element_type),
-        ]
+        vec![prepare_state(), prepare_state(), prepare_state()]
     }
 
     fn common_case_input_state(&self) -> InitVmState {
-        prepare_state(&self.element_type)
+        prepare_state()
     }
 
     fn worst_case_input_state(&self) -> InitVmState {
-        prepare_state(&self.element_type)
+        prepare_state()
     }
 
     fn rust_shadowing(
@@ -116,7 +96,7 @@ impl DeprecatedSnippet for SetLength {
     }
 }
 
-fn prepare_state(data_type: &DataType) -> InitVmState {
+fn prepare_state() -> InitVmState {
     let list_pointer: BFieldElement = random();
     let old_length: usize = thread_rng().gen_range(0..100);
     let new_length: usize = thread_rng().gen_range(0..100);
@@ -128,7 +108,7 @@ fn prepare_state(data_type: &DataType) -> InitVmState {
         list_pointer,
         old_length,
         &mut memory,
-        data_type.stack_size(),
+        DataType::Digest.stack_size(),
     );
     InitVmState::with_stack_and_memory(stack, memory)
 }
@@ -142,34 +122,24 @@ mod tests {
 
     #[test]
     fn new_snippet_test() {
-        test_rust_equivalence_multiple_deprecated(
-            &SetLength {
-                element_type: DataType::Xfe,
-            },
-            true,
-        );
+        test_rust_equivalence_multiple_deprecated(&SetLength, true);
     }
 
     #[test]
     fn list_u32_n_is_one_push() {
         let list_address = BFieldElement::new(58);
-        prop_set_length(DataType::Bfe, list_address, 22, 14);
+        prop_set_length(list_address, 22, 14);
     }
 
     #[test]
     fn list_u32_n_is_five_push() {
         let list_address = BFieldElement::new(558);
-        prop_set_length(DataType::Digest, list_address, 2313, 14);
-        prop_set_length(DataType::Digest, list_address, 14, 0);
-        prop_set_length(DataType::Digest, list_address, 0, 0);
+        prop_set_length(list_address, 2313, 14);
+        prop_set_length(list_address, 14, 0);
+        prop_set_length(list_address, 0, 0);
     }
 
-    fn prop_set_length(
-        data_type: DataType,
-        list_address: BFieldElement,
-        init_list_length: u32,
-        new_list_length: u32,
-    ) {
+    fn prop_set_length(list_address: BFieldElement, init_list_length: u32, new_list_length: u32) {
         let expected_end_stack = [empty_stack(), vec![list_address]].concat();
         let mut init_stack = empty_stack();
         init_stack.push(list_address);
@@ -181,9 +151,7 @@ mod tests {
         vm_memory.insert(list_address, BFieldElement::new(init_list_length as u64));
 
         let memory = test_rust_equivalence_given_input_values_deprecated(
-            &SetLength {
-                element_type: data_type,
-            },
+            &SetLength,
             &init_stack,
             &[],
             vm_memory,
@@ -206,6 +174,6 @@ mod benches {
 
     #[test]
     fn set_length_benchmark() {
-        bench_and_write(SetLength::new(DataType::Digest));
+        bench_and_write(SetLength);
     }
 }

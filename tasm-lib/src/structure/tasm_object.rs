@@ -355,12 +355,8 @@ mod tests {
             assert_eq!(random_object, object_again);
 
             let mut library = Library::new();
-            let length_d = library.import(Box::new(Length {
-                element_type: DataType::Digest,
-            }));
-            let length_f = library.import(Box::new(Length {
-                element_type: DataType::U32,
-            }));
+            let length_d = library.import(Box::new(Length));
+            let length_f = library.import(Box::new(Length));
             let code = triton_asm! {
                     // _ *obj
                     dup 0 {&field!(NamedFields::d)}
@@ -792,15 +788,7 @@ mod tests {
 
             // code snippet to access object's fields
             let mut library = Library::new();
-            let length_digests = library.import(Box::new(Length {
-                element_type: DataType::Digest,
-            }));
-            let length_bfes = library.import(Box::new(Length {
-                element_type: DataType::Bfe,
-            }));
-            let length_xfes = library.import(Box::new(Length {
-                element_type: DataType::Xfe,
-            }));
+            let list_length = library.import(Box::new(Length));
             let code_for_list_lengths = triton_asm! {
                 // _ *obj
 
@@ -813,11 +801,11 @@ mod tests {
                 swap 1                    // _ *digests *bfes *obj
 
                 {&field!(TupleStruct::0)} // _ *digests *bfes *xfes
-                call {length_xfes}     // _ *digests *bfes xfe_count
-                swap 2                 // _ xfe_count *bfes *digests
-                call {length_digests}  // _ xfe_count *bfes digest_count
+                call {list_length}        // _ *digests *bfes xfe_count
+                swap 2                    // _ xfe_count *bfes *digests
+                call {list_length}        // _ xfe_count *bfes digest_count
                 swap 1
-                call {length_bfes}     // _ xfe_count digest_count bfe_count
+                call {list_length}        // _ xfe_count digest_count bfe_count
             };
 
             // extract list lengths
@@ -852,13 +840,8 @@ mod tests {
             // code snippet to access object's fields
             let mut library = Library::new();
             let get_authentication_structure = field!(FriResponse::auth_structure);
-            let length_digests = library.import(Box::new(Length {
-                element_type: DataType::Digest,
-            }));
+            let list_length = library.import(Box::new(Length));
             let get_revealed_leafs = field!(FriResponse::revealed_leaves);
-            let length_xfes = library.import(Box::new(Length {
-                element_type: DataType::Xfe,
-            }));
             let code = triton_asm! {
                 // _ *fri_response
                 dup 0 // _ *fri_response *fri_response
@@ -868,9 +851,9 @@ mod tests {
                 {&get_revealed_leafs}           // _ *authentication_structure *revealed_leafs
 
                 swap 1                          // _ *revealed_leafs *authentication_structure
-                call {length_digests}           // _ *revealed_leafs num_digests
+                call {list_length}              // _ *revealed_leafs num_digests
                 swap 1                          // _ num_digests *revealed_leafs
-                call {length_xfes}              // _ num_digests num_leafs
+                call {list_length}              // _ num_digests num_leafs
 
             };
 

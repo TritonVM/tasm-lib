@@ -8,19 +8,8 @@ use crate::snippet_bencher::BenchmarkCase;
 use crate::traits::function::Function;
 use crate::traits::function::FunctionInitialState;
 
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub struct New {
-    pub element_type: DataType,
-}
-
-impl New {
-    #[allow(clippy::self_named_constructors)] // 🤷
-    pub fn new(data_type: DataType) -> Self {
-        Self {
-            element_type: data_type,
-        }
-    }
-}
+#[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash)]
+pub struct New;
 
 impl BasicSnippet for New {
     fn inputs(&self) -> Vec<(DataType, String)> {
@@ -28,13 +17,11 @@ impl BasicSnippet for New {
     }
 
     fn outputs(&self) -> Vec<(DataType, String)> {
-        let list_type = DataType::List(Box::new(self.element_type.clone()));
-        vec![(list_type, "*list".to_string())]
+        vec![(DataType::VoidPointer, "*list".to_string())]
     }
 
     fn entrypoint(&self) -> String {
-        let element_type = self.element_type.label_friendly_name();
-        format!("tasmlib_list_new___{element_type}")
+        "tasmlib_list_new".to_string()
     }
 
     fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
@@ -90,17 +77,7 @@ pub(crate) mod tests {
 
     #[test]
     fn rust_shadow() {
-        for ty in [
-            DataType::Bool,
-            DataType::Bfe,
-            DataType::U32,
-            DataType::U64,
-            DataType::Xfe,
-            DataType::Digest,
-        ] {
-            dbg!(&ty);
-            ShadowedFunction::new(New::new(ty)).test();
-        }
+        ShadowedFunction::new(New).test();
     }
 }
 
@@ -111,6 +88,6 @@ mod benches {
 
     #[test]
     fn benchmark() {
-        ShadowedFunction::new(New::new(DataType::Digest)).bench();
+        ShadowedFunction::new(New).bench();
     }
 }
