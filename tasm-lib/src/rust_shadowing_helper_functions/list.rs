@@ -6,6 +6,7 @@ use triton_vm::prelude::*;
 use twenty_first::math::other::random_elements;
 
 use crate::list::LIST_METADATA_SIZE;
+use crate::memory::dyn_malloc::DYN_MALLOC_PAGE_SIZE;
 use crate::prelude::*;
 use crate::U32_TO_USIZE_ERR;
 use crate::USIZE_TO_U64_ERR;
@@ -205,7 +206,7 @@ pub fn list_get(
     assert!(index < list_len, "out of bounds: {index} >= {list_len}");
 
     let highest_access_index = LIST_METADATA_SIZE + element_length * (index + 1);
-    assert!(u32::try_from(highest_access_index).is_ok());
+    assert!(u64::try_from(highest_access_index).expect(USIZE_TO_U64_ERR) < DYN_MALLOC_PAGE_SIZE);
 
     let read_word = |i| {
         let word_offset = LIST_METADATA_SIZE + element_length * index + i;
