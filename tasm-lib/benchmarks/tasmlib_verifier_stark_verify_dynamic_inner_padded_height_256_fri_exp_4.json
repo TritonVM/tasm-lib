@@ -2,11 +2,11 @@
   {
     "name": "tasmlib_verifier_stark_verify_dynamic_inner_padded_height_256_fri_exp_4",
     "benchmark_result": {
-      "clock_cycle_count": 188122,
-      "hash_table_height": 138823,
-      "u32_table_height": 25078,
-      "op_stack_table_height": 167216,
-      "ram_table_height": 289169
+      "clock_cycle_count": 188724,
+      "hash_table_height": 138835,
+      "u32_table_height": 25090,
+      "op_stack_table_height": 167560,
+      "ram_table_height": 289255
     },
     "case": "CommonCase"
   }
