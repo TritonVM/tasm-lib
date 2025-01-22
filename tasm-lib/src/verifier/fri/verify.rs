@@ -133,7 +133,7 @@ impl BasicSnippet for FriSnippet {
             read_mem 5 pop 1    // _ [digest; 5]
         );
         let read_xfe = triton_asm!(
-            push {EXTENSION_DEGREE - 1} add read_mem {EXTENSION_DEGREE} pop 1
+            addi {EXTENSION_DEGREE - 1} read_mem {EXTENSION_DEGREE} pop 1
         );
         let push_scalar = library.import(Box::new(Push::new(DataType::Xfe)));
 
@@ -405,12 +405,10 @@ impl BasicSnippet for FriSnippet {
                 call {vm_proof_iter_sample_one_scalar}
                                             // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword *roots *alphas *indices *last_poly_coeffs *indeterminates
                 push 0 push 0 dup 3 dup 3   // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword *roots *alphas *indices *last_poly_coeffs *indeterminates 0 0 *last_poly_coeffs *indeterminates
-                push 0
-                call {get_xfe_from_list}    // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword *roots *alphas *indices *last_poly_coeffs *indeterminates 0 0 *last_poly_coeffs [x]
+                {&read_xfe}                 // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword *roots *alphas *indices *last_poly_coeffs *indeterminates 0 0 *last_poly_coeffs [x]
                 call {polynomial_evaluation}// _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword *roots *alphas *indices *last_poly_coeffs *indeterminates 0 0 [poly(x)]
                 push 0 push 0 dup 12 dup 8  // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword *roots *alphas *indices *last_poly_coeffs *indeterminates 0 0 [poly(x)] 0 0 *last_codeword *indeterminates
-                push 0
-                call {get_xfe_from_list}    // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword *roots *alphas *indices *last_poly_coeffs *indeterminates 0 0 [poly(x)] 0 0 *last_codeword [x]
+                {&read_xfe}                 // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword *roots *alphas *indices *last_poly_coeffs *indeterminates 0 0 [poly(x)] 0 0 *last_codeword [x]
                 call {barycentric_evaluation}
                                             // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword *roots *alphas *indices *last_poly_coeffs *indeterminates 0 0 [poly(x)] 0 0 [codeword(x)]
                 assert_vector
