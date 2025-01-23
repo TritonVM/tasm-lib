@@ -200,21 +200,21 @@ pub fn list_get(
     list_pointer: BFieldElement,
     index: usize,
     memory: &HashMap<BFieldElement, BFieldElement>,
-    element_length: usize,
+    element_size: usize,
 ) -> Vec<BFieldElement> {
     let list_len = list_get_length(list_pointer, memory);
     assert!(index < list_len, "out of bounds: {index} >= {list_len}");
 
-    let highest_access_index = LIST_METADATA_SIZE + element_length * (index + 1);
+    let highest_access_index = LIST_METADATA_SIZE + element_size * (index + 1);
     assert!(u64::try_from(highest_access_index).expect(USIZE_TO_U64_ERR) < DYN_MALLOC_PAGE_SIZE);
 
     let read_word = |i| {
-        let word_offset = LIST_METADATA_SIZE + element_length * index + i;
+        let word_offset = LIST_METADATA_SIZE + element_size * index + i;
         let word_index = list_pointer + bfe!(word_offset);
         memory[&word_index]
     };
 
-    (0..element_length).map(read_word).collect()
+    (0..element_size).map(read_word).collect()
 }
 
 /// Write an element to a list.
@@ -223,7 +223,11 @@ pub fn list_get(
 ///
 /// # Panics
 ///
-/// Panics if the `index` is out of bounds.
+/// Panics if
+/// - the `index` is out of bounds, or
+/// - the element that is to be read resides outside the list`s
+///   [memory page][crate::memory], or
+/// - the pointed-to-list is incorrectly encoded into `memory`.
 pub fn list_set(
     list_pointer: BFieldElement,
     index: usize,
@@ -234,6 +238,9 @@ pub fn list_set(
     assert!(index < list_len, "out of bounds: {index} >= {list_len}");
 
     let element_size = value.len();
+    let highest_access_index = LIST_METADATA_SIZE + element_size * (index + 1);
+    assert!(u64::try_from(highest_access_index).expect(USIZE_TO_U64_ERR) < DYN_MALLOC_PAGE_SIZE);
+
     for (i, word) in value.into_iter().enumerate() {
         let word_offset = LIST_METADATA_SIZE + element_size * index + i;
         let word_index = list_pointer + bfe!(word_offset);

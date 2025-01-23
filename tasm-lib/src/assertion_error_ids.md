@@ -48,3 +48,4 @@ often.
 |  360..370 | [`u64::Pow2`](arithmetic/u64/pow2.rs)                                                       |
 |  370..380 | [`u64::ShiftLeft`](arithmetic/u64/shift_left.rs)                                            |
 |  380..390 | [`list::get`](list/get.rs)                                                                  |                                                    
+|  390..400 | [`list::set`](list/set.rs)                                                                  |                                                    

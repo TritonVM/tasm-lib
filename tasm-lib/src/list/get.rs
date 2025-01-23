@@ -7,6 +7,22 @@ use crate::prelude::*;
 ///
 /// Only supports lists with [statically sized](BFieldCodec::static_length)
 /// elements.
+///
+/// ### Behavior
+///
+/// ```text
+/// BEFORE: _ *list [index: u32]
+/// AFTER:  _ [element: ElementType]
+/// ```
+///
+/// ### Preconditions
+///
+/// - the argument `*list` points to a properly [`BFieldCodec`]-encoded list
+/// - all input arguments are properly [`BFieldCodec`] encoded
+///
+/// ### Postconditions
+///
+/// None.
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct Get {
     element_type: DataType,
@@ -21,12 +37,23 @@ impl Get {
 
     /// # Panics
     ///
-    /// Panics if the element has [dynamic length][BFieldCodec::static_length].
+    /// Panics if the element has [dynamic length][BFieldCodec::static_length], or
+    /// if the static length is 0.
     pub fn new(element_type: DataType) -> Self {
-        let has_static_len = element_type.static_length().is_some();
-        assert!(has_static_len, "element should have static length");
+        Self::assert_element_type_is_supported(&element_type);
 
         Self { element_type }
+    }
+
+    /// # Panics
+    ///
+    /// Panics if the element has [dynamic length][BFieldCodec::static_length], or
+    /// if the static length is 0.
+    pub(crate) fn assert_element_type_is_supported(element_type: &DataType) {
+        let Some(static_len) = element_type.static_length() else {
+            panic!("element should have static length");
+        };
+        assert_ne!(0, static_len, "element must not be zero-sized");
     }
 }
 
@@ -50,12 +77,11 @@ impl BasicSnippet for Get {
     }
 
     fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
+        let list_length = library.import(Box::new(Length));
         let mul_with_element_size = match self.element_type.stack_size() {
-            1 => triton_asm!(/* no-op */),
+            1 => triton_asm!(), // no-op
             n => triton_asm!(push {n} mul),
         };
-
-        let list_length = library.import(Box::new(Length));
 
         triton_asm!(
             // BEFORE: _ *list index
@@ -89,7 +115,7 @@ impl BasicSnippet for Get {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use triton_vm::error::OpStackError::FailedU32Conversion;
 
     use super::*;
@@ -115,6 +141,23 @@ mod tests {
 
             AccessorInitialState { stack, memory }
         }
+
+        pub fn random_len_idx_ptr(
+            bench_case: Option<BenchmarkCase>,
+            rng: &mut impl Rng,
+        ) -> (usize, usize, BFieldElement) {
+            let (index, list_length) = match bench_case {
+                Some(BenchmarkCase::CommonCase) => (16, 32),
+                Some(BenchmarkCase::WorstCase) => (63, 64),
+                None => {
+                    let list_length = rng.gen_range(1..=100);
+                    (rng.gen_range(0..list_length), list_length)
+                }
+            };
+            let list_pointer = rng.gen();
+
+            (list_length, index, list_pointer)
+        }
     }
 
     impl Accessor for Get {
@@ -138,18 +181,8 @@ mod tests {
             seed: [u8; 32],
             bench_case: Option<BenchmarkCase>,
         ) -> AccessorInitialState {
-            let mut rng = StdRng::from_seed(seed);
-            let list_length = match bench_case {
-                Some(BenchmarkCase::CommonCase) => 1 << 5,
-                Some(BenchmarkCase::WorstCase) => 1 << 6,
-                None => rng.gen_range(1..=100),
-            };
-            let index = match bench_case {
-                Some(BenchmarkCase::CommonCase) => list_length / 2,
-                Some(BenchmarkCase::WorstCase) => list_length - 1,
-                None => rng.gen_range(0..list_length),
-            };
-            let list_pointer = rng.gen();
+            let (list_length, index, list_pointer) =
+                Self::random_len_idx_ptr(bench_case, &mut StdRng::from_seed(seed));
 
             self.set_up_initial_state(list_length, index, list_pointer)
         }
@@ -237,7 +270,7 @@ mod benches {
     use crate::test_prelude::*;
 
     #[test]
-    fn get_benchmark() {
+    fn benchmark() {
         ShadowedAccessor::new(Get::new(DataType::Digest)).bench();
     }
 }
