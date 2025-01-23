@@ -23,7 +23,6 @@ use crate::io::read_input::ReadInput;
 use crate::io::write_to_stdout::WriteToStdout;
 use crate::io::InputSource;
 use crate::list;
-use crate::list::contiguous_list;
 use crate::memory::dyn_malloc::DynMalloc;
 use crate::memory::memcpy::MemCpy;
 use crate::mmr::bag_peaks::BagPeaks;
@@ -381,14 +380,6 @@ pub fn name_to_snippet(fn_name: &str) -> Option<Box<dyn BasicSnippet>> {
             list::multiset_equality_digests::MultisetEqualityDigests,
         )),
         "tasmlib_list_range" => Some(Box::new(list::range::Range)),
-
-        // Contiguous lists
-        "tasmlib_list_contiguous_list_get_length" => {
-            Some(Box::new(contiguous_list::get_length::GetLength))
-        }
-        "tasmlib_list_contiguous_list_get_pointer_list" => {
-            Some(Box::new(contiguous_list::get_pointer_list::GetPointerList))
-        }
 
         // MMR
         "tasmlib_mmr_bag_peaks" => Some(Box::new(BagPeaks)),

@@ -2,7 +2,6 @@
 pub const LIST_METADATA_SIZE: usize = 1;
 
 pub mod contains;
-pub mod contiguous_list;
 pub mod get;
 pub mod higher_order;
 pub mod horner_evaluation_dynamic_length;
