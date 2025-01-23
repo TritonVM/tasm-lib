@@ -2,10 +2,32 @@ use std::collections::HashMap;
 
 use triton_vm::prelude::*;
 
+use crate::list::get::Get;
 use crate::prelude::*;
 use crate::traits::basic_snippet::Reviewer;
 use crate::traits::basic_snippet::SignOffFingerprint;
 
+/// Pop an element from a list. Performs bounds check.
+///
+/// Only supports lists with [statically sized](BFieldCodec::static_length)
+/// elements.
+///
+/// ### Behavior
+///
+/// ```text
+/// BEFORE: _ *list
+/// AFTER:  _ [element: ElementType]
+/// ```
+///
+/// ### Preconditions
+///
+/// - the argument `*list` points to a properly [`BFieldCodec`]-encoded list
+/// - the list `*list` points must be non-empty
+/// - all input arguments are properly [`BFieldCodec`] encoded
+///
+/// ### Postconditions
+///
+/// None.
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct Pop {
     element_type: DataType,
@@ -14,7 +36,17 @@ pub struct Pop {
 impl Pop {
     pub const EMPTY_LIST_ERROR_ID: i128 = 400;
 
+    /// Any part of the list is outside the allocated memory page.
+    /// See the [memory convention][crate::memory] for more details.
+    pub const MEM_PAGE_ACCESS_VIOLATION_ERROR_ID: i128 = 401;
+
+    /// # Panics
+    ///
+    /// Panics if the element has [dynamic length][BFieldCodec::static_length], or
+    /// if the static length is 0.
     pub fn new(element_type: DataType) -> Self {
+        Get::assert_element_type_is_supported(&element_type);
+
         Self { element_type }
     }
 }
@@ -44,10 +76,9 @@ impl BasicSnippet for Pop {
             // BEFORE: _ *list
             // AFTER:  _ [element]
             {self.entrypoint()}:
+                /* assert that length is not 0 */
                 read_mem 1
                 addi 1          // _ length *list
-
-                /* assert that length is not 0 */
                 dup 1
                 push 0
                 eq              // _ length *list (length == 0)
@@ -63,14 +94,25 @@ impl BasicSnippet for Pop {
                 write_mem 1     // _ length *first_element
                                 // _ index  *first_element
 
+                /* compute element's word offset */
                 pick 1
                 {&mul_with_element_size}
                                 // _ *first_element offset
+
+                /* assert access is within one memory page */
+                dup 0
+                split
+                pop 1
+                push 0
+                eq
+                assert error_id {Self::MEM_PAGE_ACCESS_VIOLATION_ERROR_ID}
+                                // _ *first_element offset
+
+                /* finally, read that thing */
                 add             // _ *next_element
                 addi -1         // _ *last_element_last_word
-
                 {&self.element_type.read_value_from_memory_pop_pointer()}
-                // _ [elements]
+                                // _ [elements]
 
                 return
         )
@@ -79,10 +121,10 @@ impl BasicSnippet for Pop {
     fn sign_offs(&self) -> HashMap<Reviewer, SignOffFingerprint> {
         let mut sign_offs = HashMap::new();
         match self.element_type.stack_size() {
-            1 => _ = sign_offs.insert(Reviewer("ferdinand"), 0x28d6e8e81c38c5c3.into()),
-            2 => _ = sign_offs.insert(Reviewer("ferdinand"), 0xcc150c79f8d01f5a.into()),
-            3 => _ = sign_offs.insert(Reviewer("ferdinand"), 0x0b1c07108fb13ed1.into()),
-            5 => _ = sign_offs.insert(Reviewer("ferdinand"), 0x878a01fe736bafce.into()),
+            1 => _ = sign_offs.insert(Reviewer("ferdinand"), 0x52fe322ae5f58aaf.into()),
+            2 => _ = sign_offs.insert(Reviewer("ferdinand"), 0x7ef69decd22cdbb0.into()),
+            3 => _ = sign_offs.insert(Reviewer("ferdinand"), 0xa46002a8b06f3169.into()),
+            5 => _ = sign_offs.insert(Reviewer("ferdinand"), 0x3e328d0b595bb6af.into()),
             _ => (),
         }
 
@@ -159,6 +201,31 @@ mod tests {
             &ShadowedFunction::new(pop),
             initial_state.into(),
             &[Pop::EMPTY_LIST_ERROR_ID],
+        );
+    }
+
+    /// See similar test for [`Get`] for an explanation.
+    #[proptest(cases = 100)]
+    fn too_large_lists_crash_vm(
+        #[strategy(1_u64 << 22..1 << 32)] list_length: u64,
+        #[strategy(arb())] list_pointer: BFieldElement,
+    ) {
+        // spare host machine RAM: pretend every element is all-zeros
+        let mut memory = HashMap::default();
+        memory.insert(list_pointer, bfe!(list_length));
+
+        // type with a large stack size in Triton VM without breaking the host machine
+        let tuple_ty = DataType::Tuple(vec![DataType::Bfe; 1 << 10]);
+        let set = Pop::new(tuple_ty);
+
+        let mut stack = set.init_stack_for_isolated_run();
+        stack.push(list_pointer);
+        let initial_state = AccessorInitialState { stack, memory };
+
+        test_assertion_failure(
+            &ShadowedFunction::new(set),
+            initial_state.into(),
+            &[Pop::MEM_PAGE_ACCESS_VIOLATION_ERROR_ID],
         );
     }
 }
