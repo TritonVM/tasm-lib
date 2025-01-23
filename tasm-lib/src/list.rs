@@ -1,3 +1,20 @@
+//! List operations, mimicking [`Vec`] in some ways (but not in others).
+//!
+//! Lists may only contain elements whose type has
+//! [static size](BFieldCodec::static_length).
+//!
+//! Like [`Vec`], a list can be [created][self::new::New],
+//! [pushed to][self::push::Push], [popped from][self::pop::Pop],
+//! [written to][self::set::Set], and asked for its
+//! [length][self::length::Length], among other operations.
+//!
+//! Unlike [`Vec`], lists do not track their capacity. Instead, list created at
+//! Triton VM's runtime get access to an entire [memory page][crate::memory].
+//! Lists spawned in Triton VM's memory through
+//! [non-determinism][crate::triton_vm::prelude::NonDeterminism] might have
+//! access to smaller memory regions. As with all non-determinism, handling them
+//! requires additional care.
+
 /// The number of VM words required to store the metadata / bookkeeping data of a list.
 pub const LIST_METADATA_SIZE: usize = 1;
 
