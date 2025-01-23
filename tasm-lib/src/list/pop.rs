@@ -1,309 +1,164 @@
 use std::collections::HashMap;
 
-use itertools::Itertools;
-use num::One;
-use rand::prelude::*;
 use triton_vm::prelude::*;
 
-use crate::empty_stack;
 use crate::prelude::*;
-use crate::rust_shadowing_helper_functions::list::untyped_insert_random_list;
-use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::InitVmState;
+use crate::traits::basic_snippet::Reviewer;
+use crate::traits::basic_snippet::SignOffFingerprint;
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct Pop {
-    pub element_type: DataType,
+    element_type: DataType,
 }
 
 impl Pop {
+    pub const EMPTY_LIST_ERROR_ID: i128 = 400;
+
     pub fn new(element_type: DataType) -> Self {
         Self { element_type }
     }
 }
 
-impl DeprecatedSnippet for Pop {
-    fn entrypoint_name(&self) -> String {
-        format!(
-            "tasmlib_list_pop___{}",
-            self.element_type.label_friendly_name()
-        )
+impl BasicSnippet for Pop {
+    fn inputs(&self) -> Vec<(DataType, String)> {
+        let list_type = DataType::List(Box::new(self.element_type.clone()));
+        vec![(list_type, "*list".to_string())]
     }
 
-    fn input_field_names(&self) -> Vec<String> {
-        vec!["*list".to_string()]
+    fn outputs(&self) -> Vec<(DataType, String)> {
+        vec![(self.element_type.clone(), "element".to_string())]
     }
 
-    fn input_types(&self) -> Vec<DataType> {
-        vec![DataType::List(Box::new(self.element_type.clone()))]
+    fn entrypoint(&self) -> String {
+        let element_type = self.element_type.label_friendly_name();
+        format!("tasmlib_list_pop___{element_type}")
     }
 
-    fn output_field_names(&self) -> Vec<String> {
-        let mut ret: Vec<String> = vec![];
-        let element_size = self.element_type.stack_size();
-        for i in 0..element_size {
-            ret.push(format!("element_{}", element_size - 1 - i));
-        }
-
-        ret
-    }
-
-    fn output_types(&self) -> Vec<DataType> {
-        vec![self.element_type.clone()]
-    }
-
-    fn stack_diff(&self) -> isize {
-        self.element_type.stack_size() as isize - 1
-    }
-
-    /// Pop last element from list. Does *not* actually delete the last
-    /// element but instead leaves it in memory.
-    fn function_code(&self, _library: &mut Library) -> String {
-        let entry_point = self.entrypoint_name();
-
-        let element_size = self.element_type.stack_size();
-        let mul_with_size = if element_size.is_one() {
-            String::default()
-        } else {
-            format!("push {element_size}\n mul\n")
+    fn code(&self, _: &mut Library) -> Vec<LabelledInstruction> {
+        let mul_with_element_size = match self.element_type.stack_size() {
+            1 => triton_asm!(), // no-op
+            n => triton_asm!(push {n} mul),
         };
+
         triton_asm!(
             // BEFORE: _ *list
-            // AFTER:  _ elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}}
-            {entry_point}:
+            // AFTER:  _ [element]
+            {self.entrypoint()}:
                 read_mem 1
-                push 1
-                add
-                // stack : _  length *list
+                addi 1          // _ length *list
 
-                // Assert that length is not 0
+                /* assert that length is not 0 */
                 dup 1
                 push 0
-                eq
+                eq              // _ length *list (length == 0)
                 push 0
-                eq
-                assert
-                // stack : _  length *list
+                eq              // _ length *list (length != 0)
+                assert error_id {Self::EMPTY_LIST_ERROR_ID}
+                                // _ length *list
 
-                // Decrease length value by one and write back to memory
+                /* decrement list length */
                 dup 1
-                // _  length *list length
+                addi -1         // _ length *list new_length
+                pick 1
+                write_mem 1     // _ length *first_element
+                                // _ index  *first_element
 
-                push -1
-                add
-                // _  length *list (length - 1)
-
-                swap 1
-                // _  length (length - 1) *list
-
-                write_mem 1
-                // _  length *first_element
-
-                swap 1
-                // _  *first_element, initial_length
-
-                {mul_with_size}
-                // stack : _  *first_element, offset_for_last_element = (N * initial_length)
-
-                add
-                // stack : _  address_for_next_element
-
-                push -1
-                add
-                // stack : _  address_for_current_element_last_word
+                pick 1
+                {&mul_with_element_size}
+                                // _ *first_element offset
+                add             // _ *next_element
+                addi -1         // _ *last_element_last_word
 
                 {&self.element_type.read_value_from_memory_pop_pointer()}
-                // Stack: _  [elements]
+                // _ [elements]
 
                 return
-
         )
-        .iter()
-        .join("\n")
     }
 
-    fn crash_conditions(&self) -> Vec<String> {
-        vec!["list stack underflow".to_string()]
-    }
-
-    fn gen_input_states(&self) -> Vec<InitVmState> {
-        vec![prepare_state(&self.element_type)]
-    }
-
-    fn common_case_input_state(&self) -> InitVmState {
-        prepare_state(&self.element_type)
-    }
-
-    fn worst_case_input_state(&self) -> InitVmState {
-        prepare_state(&self.element_type)
-    }
-
-    fn rust_shadowing(
-        &self,
-        stack: &mut Vec<BFieldElement>,
-        _std_in: Vec<BFieldElement>,
-        _secret_in: Vec<BFieldElement>,
-        memory: &mut HashMap<BFieldElement, BFieldElement>,
-    ) {
-        let list_address = stack.pop().unwrap();
-        let initial_list_length = memory[&list_address];
-
-        // Update length indicator
-        memory.insert(list_address, initial_list_length - BFieldElement::one());
-
-        let mut last_used_address = list_address
-            + initial_list_length * BFieldElement::new(self.element_type.stack_size() as u64);
-
-        for _ in 0..self.element_type.stack_size() {
-            let elem = memory[&last_used_address];
-            stack.push(elem);
-            last_used_address -= BFieldElement::one();
+    fn sign_offs(&self) -> HashMap<Reviewer, SignOffFingerprint> {
+        let mut sign_offs = HashMap::new();
+        match self.element_type.stack_size() {
+            1 => _ = sign_offs.insert(Reviewer("ferdinand"), 0x28d6e8e81c38c5c3.into()),
+            2 => _ = sign_offs.insert(Reviewer("ferdinand"), 0xcc150c79f8d01f5a.into()),
+            3 => _ = sign_offs.insert(Reviewer("ferdinand"), 0x0b1c07108fb13ed1.into()),
+            5 => _ = sign_offs.insert(Reviewer("ferdinand"), 0x878a01fe736bafce.into()),
+            _ => (),
         }
-    }
-}
 
-fn prepare_state(element_type: &DataType) -> InitVmState {
-    let list_pointer: u32 = random();
-    let list_pointer = BFieldElement::new(list_pointer as u64);
-    let old_length: usize = thread_rng().gen_range(1..30);
-    let mut stack = empty_stack();
-    stack.push(list_pointer);
-    let mut memory = HashMap::default();
-    untyped_insert_random_list(
-        list_pointer,
-        old_length,
-        &mut memory,
-        element_type.stack_size(),
-    );
-    InitVmState::with_stack_and_memory(stack, memory)
+        sign_offs
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use num::Zero;
-
     use super::*;
-    use crate::test_helpers::test_rust_equivalence_given_input_values_deprecated;
-    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
+    use crate::rust_shadowing_helper_functions::list::insert_random_list;
+    use crate::rust_shadowing_helper_functions::list::list_pop;
+    use crate::test_prelude::*;
 
-    #[test]
-    fn new_snippet_test() {
-        test_rust_equivalence_multiple_deprecated(
-            &Pop {
-                element_type: DataType::U32,
-            },
-            true,
-        );
-        test_rust_equivalence_multiple_deprecated(
-            &Pop {
-                element_type: DataType::U64,
-            },
-            true,
-        );
-        test_rust_equivalence_multiple_deprecated(
-            &Pop {
-                element_type: DataType::Xfe,
-            },
-            true,
-        );
-        test_rust_equivalence_multiple_deprecated(
-            &Pop {
-                element_type: DataType::Digest,
-            },
-            true,
-        );
+    impl Pop {
+        fn set_up_initial_state(
+            &self,
+            list_length: usize,
+            list_pointer: BFieldElement,
+        ) -> FunctionInitialState {
+            let mut memory = HashMap::default();
+            insert_random_list(&self.element_type, list_pointer, list_length, &mut memory);
+
+            let mut stack = self.init_stack_for_isolated_run();
+            stack.push(list_pointer);
+
+            FunctionInitialState { stack, memory }
+        }
     }
 
-    #[test]
-    #[should_panic]
-    fn panic_if_pop_on_empty_list_1() {
-        let list_address = BFieldElement::new(48);
-        prop_pop::<1>(DataType::Bfe, list_address, 0);
-    }
-
-    #[test]
-    #[should_panic]
-    fn panic_if_pop_on_empty_list_2() {
-        let list_address = BFieldElement::new(48);
-        prop_pop::<2>(DataType::U64, list_address, 0);
-    }
-
-    #[test]
-    #[should_panic]
-    fn panic_if_pop_on_empty_list_3() {
-        let list_address = BFieldElement::new(48);
-        prop_pop::<3>(DataType::Xfe, list_address, 0);
-    }
-
-    #[test]
-    fn list_u32_n_is_n_pop() {
-        let list_address = BFieldElement::new(48);
-        prop_pop::<1>(DataType::Bfe, list_address, 24);
-        prop_pop::<2>(DataType::U64, list_address, 48);
-        prop_pop::<3>(DataType::Xfe, list_address, 3);
-        // prop_pop::<4>(list_address, 4);
-        prop_pop::<5>(DataType::Digest, list_address, 20);
-        // prop_pop::<6>(list_address, 20);
-        // prop_pop::<7>(list_address, 20);
-        // prop_pop::<8>(list_address, 20);
-        // prop_pop::<9>(list_address, 20);
-        // prop_pop::<10>(list_address, 1);
-        // prop_pop::<11>(list_address, 33);
-        // prop_pop::<12>(list_address, 20);
-        // prop_pop::<13>(list_address, 20);
-        // prop_pop::<14>(list_address, 20);
-        // prop_pop::<15>(list_address, 20);
-        // prop_pop::<16>(list_address, 20);
-    }
-
-    fn prop_pop<const N: usize>(
-        element_type: DataType,
-        list_address: BFieldElement,
-        init_list_length: u32,
-    ) {
-        let mut init_stack = empty_stack();
-        init_stack.push(list_address);
-
-        let mut memory = HashMap::default();
-
-        // Insert length indicator of list, lives on offset = 0 from `list_address`
-        memory.insert(list_address, BFieldElement::new(init_list_length as u64));
-
-        // Insert random values for the elements in the list
-        let mut rng = thread_rng();
-        let mut last_element: [BFieldElement; N] = [BFieldElement::zero(); N];
-        let mut j = 1;
-        for _ in 0..init_list_length {
-            last_element = (0..N)
-                .map(|_| BFieldElement::new(rng.next_u64()))
-                .collect_vec()
-                .try_into()
-                .unwrap();
-            for elem in last_element.iter() {
-                memory.insert(list_address + BFieldElement::new(j), *elem);
-                j += 1;
-            }
+    impl Function for Pop {
+        fn rust_shadow(
+            &self,
+            stack: &mut Vec<BFieldElement>,
+            memory: &mut HashMap<BFieldElement, BFieldElement>,
+        ) {
+            let list_address = stack.pop().unwrap();
+            let element = list_pop(list_address, memory, self.element_type.stack_size());
+            stack.extend(element.into_iter().rev());
         }
 
-        let mut expected_end_stack = empty_stack();
+        fn pseudorandom_initial_state(
+            &self,
+            seed: [u8; 32],
+            _: Option<BenchmarkCase>,
+        ) -> FunctionInitialState {
+            let mut rng = StdRng::from_seed(seed);
+            let list_length = rng.gen_range(1..1 << 12);
+            let list_pointer = rng.gen();
 
-        for i in 0..N {
-            expected_end_stack.push(last_element[N - 1 - i]);
+            self.set_up_initial_state(list_length, list_pointer)
         }
+    }
 
-        let memory = test_rust_equivalence_given_input_values_deprecated(
-            &Pop { element_type },
-            &init_stack,
-            &[],
-            memory,
-            Some(&expected_end_stack),
-        )
-        .ram;
+    #[test]
+    fn rust_shadow() {
+        for ty in [
+            DataType::Bool,
+            DataType::Bfe,
+            DataType::U32,
+            DataType::U64,
+            DataType::Xfe,
+            DataType::Digest,
+        ] {
+            ShadowedFunction::new(Pop::new(ty)).test();
+        }
+    }
 
-        // Verify that length is now indicated to be `init_list_length - 1`
-        assert_eq!(
-            BFieldElement::new(init_list_length as u64) - BFieldElement::one(),
-            memory[&list_address]
+    #[proptest]
+    fn empty_list_crashes_vm(#[strategy(arb())] list_pointer: BFieldElement) {
+        let pop = Pop::new(DataType::Digest);
+        let initial_state = pop.set_up_initial_state(0, list_pointer);
+        test_assertion_failure(
+            &ShadowedFunction::new(pop),
+            initial_state.into(),
+            &[Pop::EMPTY_LIST_ERROR_ID],
         );
     }
 }
@@ -311,10 +166,10 @@ mod tests {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::snippet_bencher::bench_and_write;
+    use crate::test_prelude::*;
 
     #[test]
-    fn pop_benchmark() {
-        bench_and_write(Pop::new(DataType::Digest));
+    fn benchmark() {
+        ShadowedFunction::new(Pop::new(DataType::Digest)).bench();
     }
 }
