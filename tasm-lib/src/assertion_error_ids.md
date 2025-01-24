@@ -50,3 +50,4 @@ often.
 |  380..390 | [`list::get`](list/get.rs)                                                                  |                                                    
 |  390..400 | [`list::set`](list/set.rs)                                                                  |
 |  400..410 | [`list::pop`](list/pop.rs)                                                                  |
+|  410..420 | [`list::push`](list/push.rs)                                                                |

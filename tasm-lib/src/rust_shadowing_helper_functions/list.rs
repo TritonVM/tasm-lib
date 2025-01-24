@@ -116,9 +116,13 @@ pub fn list_push(
     let len = list_length.value();
     list_length.increment();
 
-    let element_length: u64 = value.len().try_into().expect(USIZE_TO_U64_ERR);
+    let element_size: u64 = value.len().try_into().expect(USIZE_TO_U64_ERR);
+    let list_metadata_size: u64 = LIST_METADATA_SIZE.try_into().expect(USIZE_TO_U64_ERR);
+    let highest_access_index = list_metadata_size + element_size * (len + 1);
+    assert!(highest_access_index < DYN_MALLOC_PAGE_SIZE);
+
     for (i, word) in (0..).zip(value) {
-        let word_offset = bfe!(LIST_METADATA_SIZE) + bfe!(element_length * len + i);
+        let word_offset = bfe!(list_metadata_size + element_size * len + i);
         memory.insert(list_pointer + word_offset, word);
     }
 }

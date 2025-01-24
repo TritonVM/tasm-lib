@@ -4,9 +4,9 @@
     "benchmark_result": {
       "clock_cycle_count": 4395,
       "hash_table_height": 475,
-      "u32_table_height": 4633,
-      "op_stack_table_height": 3184,
-      "ram_table_height": 470
+      "u32_table_height": 4878,
+      "op_stack_table_height": 3094,
+      "ram_table_height": 425
     },
     "case": "CommonCase"
   },
@@ -15,9 +15,9 @@
     "benchmark_result": {
       "clock_cycle_count": 4395,
       "hash_table_height": 475,
-      "u32_table_height": 4507,
-      "op_stack_table_height": 3184,
-      "ram_table_height": 470
+      "u32_table_height": 4758,
+      "op_stack_table_height": 3094,
+      "ram_table_height": 425
     },
     "case": "WorstCase"
   }

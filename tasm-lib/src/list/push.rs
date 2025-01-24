@@ -1,307 +1,240 @@
 use std::collections::HashMap;
 
-use itertools::Itertools;
-use num::One;
-use rand::prelude::*;
 use triton_vm::prelude::*;
-use twenty_first::math::other::random_elements;
 
-use crate::empty_stack;
+use crate::list::get::Get;
 use crate::prelude::*;
-use crate::rust_shadowing_helper_functions::list::untyped_insert_random_list;
-use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::InitVmState;
+use crate::traits::basic_snippet::Reviewer;
+use crate::traits::basic_snippet::SignOffFingerprint;
 
+/// Push an element to a list. Performs bounds check.
+///
+/// Only supports lists with [statically sized](BFieldCodec::static_length)
+/// elements. The element's static size must be in range `1..=15`.
+///
+/// ### Behavior
+///
+/// ```text
+/// BEFORE: _ *list [element: ElementType]
+/// AFTER:  _
+/// ```
+///
+/// ### Preconditions
+///
+/// - the argument `*list` points to a properly [`BFieldCodec`]-encoded list
+/// - all input arguments are properly [`BFieldCodec`] encoded
+///
+/// ### Postconditions
+///
+/// None.
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct Push {
-    pub element_type: DataType,
+    element_type: DataType,
 }
 
 impl Push {
+    /// Any part of the list is outside the allocated memory page.
+    /// See the [memory convention][crate::memory] for more details.
+    pub const MEM_PAGE_ACCESS_VIOLATION_ERROR_ID: i128 = 410;
+
+    /// # Panics
+    ///
+    /// Panics
+    /// - if the element has [dynamic length][BFieldCodec::static_length], or
+    /// - if the static length is 0, or
+    /// - if the static length is larger than or equal to 16.
     pub fn new(element_type: DataType) -> Self {
+        // need to access argument `*list`
+        assert!(element_type.stack_size() < 16);
+        Get::assert_element_type_is_supported(&element_type);
+
         Self { element_type }
     }
-
-    fn write_type_to_mem(&self) -> Vec<LabelledInstruction> {
-        let data_size = self.element_type.stack_size();
-        let num_full_chunk_writes = data_size / 5;
-        let num_remaining_words = data_size % 5;
-        let mut instructions = vec![triton_instr!(write_mem 5); num_full_chunk_writes];
-        if num_remaining_words > 0 {
-            instructions.extend(triton_asm!(write_mem {
-                num_remaining_words
-            }));
-        }
-        instructions
-    }
 }
 
-impl DeprecatedSnippet for Push {
-    fn entrypoint_name(&self) -> String {
-        format!(
-            "tasmlib_list_push___{}",
-            self.element_type.label_friendly_name()
-        )
-    }
+impl BasicSnippet for Push {
+    fn inputs(&self) -> Vec<(DataType, String)> {
+        let list_type = DataType::List(Box::new(self.element_type.clone()));
+        let element_type = self.element_type.clone();
 
-    fn input_field_names(&self) -> Vec<String> {
-        let element_size = self.element_type.stack_size();
-
-        // _ *list elem{N - 1} … elem{0}
-        let mut ret = vec!["*list".to_string()];
-        for i in 0..element_size {
-            ret.push(format!("element_{}", element_size - 1 - i));
-        }
-
-        ret
-    }
-
-    fn input_types(&self) -> Vec<DataType> {
         vec![
-            DataType::List(Box::new(self.element_type.clone())),
-            self.element_type.clone(),
+            (list_type, "*list".to_string()),
+            (element_type, "element".to_string()),
         ]
     }
 
-    fn output_field_names(&self) -> Vec<String> {
+    fn outputs(&self) -> Vec<(DataType, String)> {
         vec![]
     }
 
-    fn output_types(&self) -> Vec<DataType> {
-        vec![]
+    fn entrypoint(&self) -> String {
+        let element_type = self.element_type.label_friendly_name();
+        format!("tasmlib_list_push___{element_type}")
     }
 
-    fn stack_diff(&self) -> isize {
-        -(self.element_type.stack_size() as isize) - 1
-    }
-
-    /// push one `self.element_type` element to the list in memory
-    fn function_code(&self, _library: &mut Library) -> String {
-        let element_size = self.element_type.stack_size();
-
-        let write_elements_to_memory = self.write_type_to_mem();
-        let mul_with_size = match element_size {
-            1 => vec![],
-            _ => triton_asm!(push {element_size} mul),
+    fn code(&self, _: &mut Library) -> Vec<LabelledInstruction> {
+        let mul_with_element_size = match self.element_type.stack_size() {
+            1 => triton_asm!(), // no-op
+            n => triton_asm!(push {n} mul),
+        };
+        let add_element_size_minus_1 = match self.element_type.stack_size() {
+            1 => triton_asm!(), // no-op
+            n => triton_asm!(addi {n - 1}),
         };
 
-        let entry_point = self.entrypoint_name();
         triton_asm!(
-            // BEFORE: _ *list elem{N - 1} … elem{0}
+            // BEFORE: _ *list [element]
             // AFTER:  _
-            {entry_point}:
-                dup {element_size}  // _ *list elem{N - 1} … elem{0} *list
-                read_mem 1          // _ *list elem{N - 1} … elem{0} length *(list - 1)
-                swap 1              // _ *list elem{N - 1} … elem{0} *(list - 1) length
-                {&mul_with_size}    // _ *list elem{N - 1} … elem{0} *(list - 1) (length * elem_size)
+            {self.entrypoint()}:
+                pick {self.element_type.stack_size()}
+                                    // _ [element] *list
+                read_mem 1          // _ [element] length *list
+                addi 1
 
-                // set top of stack to offset for where elements will be stored
-                push 2
-                add
-                add                 // _ *list elem{N - 1} … elem{0} *(list + length * elem_size + 1)
+                /* update list length */
+                dup 1               // _ [element] length *list length
+                addi 1              // _ [element] length *list new_length
+                pick 1
+                write_mem 1         // _ [element] length (*list + 1)
 
-                {&write_elements_to_memory}
-                                    // _ *list *(list + (length + 1) * elem_size + 1)
-                pop 1               // _ *list
+                /* compute element's offset in list */
+                pick 1
+                {&mul_with_element_size}
+                                    // _ [element] (*list + 1) offset
 
-                // Increase length indicator by one
-                read_mem 1          // _ length *(list - 1)
-                push 1              // _ length *(list - 1) 1
-                add                 // _ length *list
-                swap 1              // _ *list length
-                push 1              // _ *list length 1
-                add                 // _ *list (length + 1)
-                swap 1              // _ (length + 1) *list
-                write_mem 1         // _ *(list + 1)
-                pop 1               // _
+                /* assert access is within one memory page */
+                dup 0
+                {&add_element_size_minus_1}
+                                    // _ [element] *list offset highest_word_idx
+                split
+                pop 1
+                push 0
+                eq
+                assert error_id {Self::MEM_PAGE_ACCESS_VIOLATION_ERROR_ID}
+                                    // _ [element] *list offset
+
+                /* finally, write that thing */
+                add                 // _ [element] *element
+                {&self.element_type.write_value_to_memory_pop_pointer()}
+                                    // _
                 return
         )
-        .iter()
-        .join("\n")
     }
 
-    fn crash_conditions(&self) -> Vec<String> {
-        vec![]
-    }
-
-    fn gen_input_states(&self) -> Vec<InitVmState> {
-        vec![
-            prepare_state(&self.element_type),
-            prepare_state(&self.element_type),
-            prepare_state(&self.element_type),
-            prepare_state(&self.element_type),
-        ]
-    }
-
-    fn common_case_input_state(&self) -> InitVmState {
-        prepare_state(&self.element_type)
-    }
-
-    fn worst_case_input_state(&self) -> InitVmState {
-        prepare_state(&self.element_type)
-    }
-
-    fn rust_shadowing(
-        &self,
-        stack: &mut Vec<BFieldElement>,
-        _std_in: Vec<BFieldElement>,
-        _secret_in: Vec<BFieldElement>,
-        memory: &mut HashMap<BFieldElement, BFieldElement>,
-    ) {
-        let list_address = stack[stack.len() - 1 - self.element_type.stack_size()];
-        let initial_list_length = memory[&list_address];
-
-        let mut next_free_address = list_address
-            + initial_list_length * BFieldElement::new(self.element_type.stack_size() as u64)
-            + BFieldElement::one();
-
-        for _ in 0..self.element_type.stack_size() {
-            let elem = stack.pop().unwrap();
-            memory.insert(next_free_address, elem);
-            next_free_address += BFieldElement::one();
+    fn sign_offs(&self) -> HashMap<Reviewer, SignOffFingerprint> {
+        let mut sign_offs = HashMap::new();
+        match self.element_type.stack_size() {
+            1 => _ = sign_offs.insert(Reviewer("ferdinand"), 0x292abedacc166a44.into()),
+            2 => _ = sign_offs.insert(Reviewer("ferdinand"), 0x713379aa2ec2f141.into()),
+            3 => _ = sign_offs.insert(Reviewer("ferdinand"), 0x187fb6005d7699cc.into()),
+            5 => _ = sign_offs.insert(Reviewer("ferdinand"), 0x456653f3204bda08.into()),
+            _ => (),
         }
 
-        // Remove list pointer
-        stack.pop().unwrap();
-
-        // Update length indicator
-        memory.insert(list_address, initial_list_length + BFieldElement::one());
+        sign_offs
     }
-}
-
-fn prepare_state(element_type: &DataType) -> InitVmState {
-    let list_pointer: u32 = random();
-    let list_pointer = BFieldElement::new(list_pointer as u64);
-    let init_length: usize = thread_rng().gen_range(0..100);
-    let mut stack = empty_stack();
-    stack.push(list_pointer);
-    let mut push_value: Vec<BFieldElement> = random_elements(element_type.stack_size());
-    while let Some(element) = push_value.pop() {
-        stack.push(element);
-    }
-
-    let mut memory = HashMap::default();
-    untyped_insert_random_list(
-        list_pointer,
-        init_length,
-        &mut memory,
-        element_type.stack_size(),
-    );
-    InitVmState::with_stack_and_memory(stack, memory)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::empty_stack;
-    use crate::test_helpers::test_rust_equivalence_given_input_values_deprecated;
-    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
+    use crate::rust_shadowing_helper_functions::list::insert_random_list;
+    use crate::rust_shadowing_helper_functions::list::list_push;
+    use crate::test_prelude::*;
 
-    #[test]
-    fn new_snippet_test() {
-        fn test_rust_equivalence_and_export(element_type: DataType) {
-            test_rust_equivalence_multiple_deprecated(&Push { element_type }, true);
+    impl Push {
+        fn set_up_initial_state(
+            &self,
+            list_length: usize,
+            list_pointer: BFieldElement,
+            element: Vec<BFieldElement>,
+        ) -> FunctionInitialState {
+            let mut memory = HashMap::default();
+            insert_random_list(&self.element_type, list_pointer, list_length, &mut memory);
+
+            let mut stack = self.init_stack_for_isolated_run();
+            stack.push(list_pointer);
+            stack.extend(element.into_iter().rev());
+
+            FunctionInitialState { stack, memory }
+        }
+    }
+
+    impl Function for Push {
+        fn rust_shadow(
+            &self,
+            stack: &mut Vec<BFieldElement>,
+            memory: &mut HashMap<BFieldElement, BFieldElement>,
+        ) {
+            let element = (0..self.element_type.stack_size())
+                .map(|_| stack.pop().unwrap())
+                .collect();
+            let list_pointer = stack.pop().unwrap();
+
+            list_push(list_pointer, element, memory);
         }
 
-        test_rust_equivalence_and_export(DataType::Bool);
-        test_rust_equivalence_and_export(DataType::U64);
-        test_rust_equivalence_and_export(DataType::Xfe);
-        test_rust_equivalence_and_export(DataType::Digest);
+        fn pseudorandom_initial_state(
+            &self,
+            seed: [u8; 32],
+            bench_case: Option<BenchmarkCase>,
+        ) -> FunctionInitialState {
+            let mut rng = StdRng::from_seed(seed);
+            let (list_length, _, list_pointer) = Get::random_len_idx_ptr(bench_case, &mut rng);
+            let element = self.element_type.seeded_random_element(&mut rng);
+
+            self.set_up_initial_state(list_length, list_pointer, element)
+        }
     }
 
     #[test]
-    fn list_u32_n_is_one_push() {
-        let list_address = BFieldElement::new(48);
-        let push_value = vec![BFieldElement::new(1337)];
-        prop_push(DataType::Bfe, list_address, 20, push_value);
+    fn rust_shadow() {
+        for ty in [
+            DataType::Bool,
+            DataType::Bfe,
+            DataType::U32,
+            DataType::U64,
+            DataType::Xfe,
+            DataType::Digest,
+        ] {
+            ShadowedFunction::new(Push::new(ty)).test()
+        }
     }
 
-    #[test]
-    fn list_u32_n_is_two_push() {
-        let list_address = BFieldElement::new(1841);
-        let push_value = vec![BFieldElement::new(133700), BFieldElement::new(32)];
-        prop_push(DataType::U64, list_address, 20, push_value);
-    }
-
-    #[test]
-    fn list_u32_n_is_five_push() {
-        let list_address = BFieldElement::new(558);
-        let push_value = vec![
-            BFieldElement::new(133700),
-            BFieldElement::new(32),
-            BFieldElement::new(133700),
-            BFieldElement::new(19990),
-            BFieldElement::new(88888888),
-        ];
-        prop_push(DataType::Digest, list_address, 2313, push_value);
-    }
-
-    fn prop_push(
-        element_type: DataType,
-        list_address: BFieldElement,
-        init_list_length: u32,
-        push_value: Vec<BFieldElement>,
+    /// See similar test for [`Get`] for an explanation.
+    #[proptest(cases = 100)]
+    fn too_large_lists_crash_vm(
+        #[strategy(1_u64 << 29..1 << 32)] list_length: u64,
+        #[strategy(arb())] list_pointer: BFieldElement,
     ) {
-        assert_eq!(
-            element_type.stack_size(),
-            push_value.len(),
-            "Push value length must match data size"
-        );
-        let expected_end_stack = empty_stack();
-        let mut init_stack = empty_stack();
-        init_stack.push(list_address);
-
-        for i in 0..element_type.stack_size() {
-            init_stack.push(push_value[element_type.stack_size() - 1 - i]);
-        }
+        // spare host machine RAM: pretend every element is all-zeros
         let mut memory = HashMap::default();
+        memory.insert(list_pointer, bfe!(list_length));
 
-        untyped_insert_random_list(
-            list_address,
-            init_list_length as usize,
-            &mut memory,
-            element_type.stack_size(),
+        // largest supported element type
+        let tuple_ty = DataType::Tuple(vec![DataType::Bfe; 15]);
+        let push = Push::new(tuple_ty);
+
+        let mut stack = push.init_stack_for_isolated_run();
+        stack.push(list_pointer);
+        stack.extend(bfe_array![0; 15]);
+        let initial_state = AccessorInitialState { stack, memory };
+
+        test_assertion_failure(
+            &ShadowedFunction::new(push),
+            initial_state.into(),
+            &[Push::MEM_PAGE_ACCESS_VIOLATION_ERROR_ID],
         );
-
-        let memory = test_rust_equivalence_given_input_values_deprecated(
-            &Push {
-                element_type: element_type.clone(),
-            },
-            &init_stack,
-            &[],
-            memory,
-            Some(&expected_end_stack),
-        )
-        .ram;
-
-        // Verify that length indicator has increased by one
-        assert_eq!(
-            BFieldElement::new((init_list_length + 1) as u64),
-            memory[&list_address]
-        );
-
-        // verify that value was inserted at expected place
-        for i in 0..element_type.stack_size() {
-            assert_eq!(
-                push_value[i],
-                memory[&BFieldElement::new(
-                    list_address.value()
-                        + 1
-                        + element_type.stack_size() as u64 * init_list_length as u64
-                        + i as u64
-                )]
-            );
-        }
     }
 }
 
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::snippet_bencher::bench_and_write;
+    use crate::test_prelude::*;
 
     #[test]
-    fn push_benchmark() {
-        bench_and_write(Push::new(DataType::Digest));
+    fn benchmark() {
+        ShadowedFunction::new(Push::new(DataType::Digest));
     }
 }
