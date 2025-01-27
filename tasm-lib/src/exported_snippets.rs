@@ -35,7 +35,6 @@ use crate::mmr::verify_from_secret_in_secret_leaf_index::MmrVerifyFromSecretInSe
 use crate::mmr::verify_mmr_successor::VerifyMmrSuccessor;
 use crate::neptune::mutator_set::commit::Commit;
 use crate::neptune::mutator_set::get_swbf_indices::GetSwbfIndices;
-use crate::other_snippets::bfe_add::BfeAdd;
 use crate::prelude::*;
 use crate::verifier;
 use crate::verifier::challenges;
@@ -402,9 +401,6 @@ pub fn name_to_snippet(fn_name: &str) -> Option<Box<dyn BasicSnippet>> {
         "tasm_lib_mmr_verify_mmr_successor" => {
             Some(Box::new(VerifyMmrSuccessor))
         }
-
-        // other
-        "tasmlib_other_bfe_add" => Some(Box::new(BfeAdd)),
 
         // recufy
         "tasmlib_verifier_vm_proof_iter_dequeue_next_as_merkleroot" => {
