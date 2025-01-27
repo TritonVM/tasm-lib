@@ -87,9 +87,9 @@ pub fn encode_to_memory<T: BFieldCodec>(
 ) -> BFieldElement {
     let encoding = object.encode();
     for (i, e) in encoding.iter().enumerate() {
-        memory.insert(address + BFieldElement::new(i as u64), *e);
+        memory.insert(address + bfe!(i), *e);
     }
-    address + BFieldElement::new(encoding.len() as u64)
+    address + bfe!(encoding.len())
 }
 
 /// Return the code to read `n` words from memory. Top of stack must point
