@@ -2,8 +2,8 @@
   {
     "name": "tasmlib_list_higher_order_u32_all_test_hash_xfield_element_lsb",
     "benchmark_result": {
-      "clock_cycle_count": 797,
-      "hash_table_height": 220,
+      "clock_cycle_count": 707,
+      "hash_table_height": 214,
       "u32_table_height": 430,
       "op_stack_table_height": 790,
       "ram_table_height": 41
@@ -13,8 +13,8 @@
   {
     "name": "tasmlib_list_higher_order_u32_all_test_hash_xfield_element_lsb",
     "benchmark_result": {
-      "clock_cycle_count": 7817,
-      "hash_table_height": 1390,
+      "clock_cycle_count": 6917,
+      "hash_table_height": 1384,
       "u32_table_height": 3902,
       "op_stack_table_height": 7810,
       "ram_table_height": 401

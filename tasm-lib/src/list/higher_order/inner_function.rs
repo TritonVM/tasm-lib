@@ -184,6 +184,34 @@ impl InnerFunction {
         }
     }
 
+    /// Computes the inner function and applies the resulting change to the given stack
+    pub fn apply(
+        &self,
+        stack: &mut Vec<BFieldElement>,
+        memory: &HashMap<BFieldElement, BFieldElement>,
+    ) {
+        match &self {
+            InnerFunction::RawCode(rc) => Self::run_vm(&rc.function, stack, memory),
+            InnerFunction::DeprecatedSnippet(sn) => {
+                sn.rust_shadowing(stack, vec![], vec![], &mut memory.clone());
+            }
+            InnerFunction::NoFunctionBody(_lnat) => {
+                panic!("Cannot apply inner function without function body")
+            }
+            InnerFunction::BasicSnippet(bs) => {
+                let mut library = Library::new();
+                let function = bs.annotated_code(&mut library);
+                let imports = library.all_imports();
+                let code = triton_asm!(
+                    {&function}
+                    {&imports}
+                );
+
+                Self::run_vm(&code, stack, memory);
+            }
+        };
+    }
+
     /// Run the VM for on a given stack and memory to observe how it manipulates the
     /// stack. This is a helper function for [`apply`](Self::apply), which in some cases
     /// just grabs the inner function's code and then needs a VM to apply it.
@@ -206,41 +234,6 @@ impl InnerFunction {
         vmstate.ram.clone_from(memory);
         vmstate.run().unwrap();
         *stack = vmstate.op_stack.stack;
-    }
-
-    /// Computes the inner function and applies the resulting change to the given stack
-    pub fn apply(
-        &self,
-        stack: &mut Vec<BFieldElement>,
-        memory: &HashMap<BFieldElement, BFieldElement>,
-    ) {
-        match &self {
-            InnerFunction::RawCode(rc) => Self::run_vm(&rc.function, stack, memory),
-            InnerFunction::DeprecatedSnippet(sn) => {
-                sn.rust_shadowing(stack, vec![], vec![], &mut memory.clone());
-            }
-            InnerFunction::NoFunctionBody(_lnat) => {
-                panic!("Cannot apply inner function without function body")
-            }
-            InnerFunction::BasicSnippet(bs) => {
-                let mut snippet_state = Library::new();
-                let entrypoint = bs.entrypoint();
-                let function_body = bs.annotated_code(&mut snippet_state);
-                let library_code = snippet_state.all_imports();
-
-                // The TASM code is always run through a function call, so the 1st instruction
-                // is a call to the function in question.
-                let code = triton_asm!(
-                    call {entrypoint}
-                    halt
-
-                    {&function_body}
-                    {&library_code}
-                );
-
-                Self::run_vm(&code, stack, memory);
-            }
-        };
     }
 }
 
