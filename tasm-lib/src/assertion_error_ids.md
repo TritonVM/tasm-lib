@@ -51,3 +51,4 @@ often.
 |  390..400 | [`list::set`](list/set.rs)                                                                  |
 |  400..410 | [`list::pop`](list/pop.rs)                                                                  |
 |  410..420 | [`list::push`](list/push.rs)                                                                |
+|  420..430 | [`u64::DivMod`](arithmetic/u64/div_mod.rs)                                                  |
