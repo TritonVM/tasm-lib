@@ -1,7 +1,7 @@
 //! List operations, mimicking [`Vec`] in some ways (but not in others).
 //!
 //! Lists may only contain elements whose type has
-//! [static size](BFieldCodec::static_length).
+//! [static size](crate::BFieldCodec::static_length).
 //!
 //! Like [`Vec`], a list can be [created][self::new::New],
 //! [pushed to][self::push::Push], [popped from][self::pop::Pop],
