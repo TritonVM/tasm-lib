@@ -1,6 +1,8 @@
 use itertools::Itertools;
+use num_traits::Zero;
 use triton_vm::prelude::*;
 use twenty_first::error::BFieldCodecError;
+use twenty_first::error::PolynomialBFieldCodecError;
 use twenty_first::math::x_field_element::EXTENSION_DEGREE;
 use twenty_first::prelude::*;
 
@@ -29,8 +31,21 @@ where
         todo!()
     }
 
-    fn decode_iter<Itr: Iterator<Item = BFieldElement>>(_iterator: &mut Itr) -> Result<Box<Self>> {
-        todo!()
+    fn decode_iter<Itr: Iterator<Item = BFieldElement>>(iterator: &mut Itr) -> Result<Box<Self>> {
+        let mut vector = Vec::with_capacity(N);
+        for _ in 0..N {
+            if T::static_length().is_none() {
+                iterator.next().ok_or(BFieldCodecError::SequenceTooShort)?;
+            };
+            vector.push(*T::decode_iter(iterator)?);
+        }
+
+        // `unwrap()` needs `T` to implement `Debug` – unwrap manually instead
+        let Ok(array) = vector.try_into() else {
+            unreachable!()
+        };
+
+        Ok(Box::new(array))
     }
 }
 
@@ -159,18 +174,10 @@ where
         let vec_length = iterator.next().ok_or(BFieldCodecError::SequenceTooShort)?;
         let mut vector = vec![];
         for _ in 0..vec_length.value() {
-            let item_length = if let Some(static_length) = T::static_length() {
-                static_length
-            } else {
-                let dynamic_length = iterator.next().ok_or(BFieldCodecError::SequenceTooShort)?;
-                usize::try_from(dynamic_length.value())?
+            if T::static_length().is_none() {
+                iterator.next().ok_or(BFieldCodecError::SequenceTooShort)?;
             };
-            let item_sequence = (0..item_length)
-                .map(|_| iterator.next())
-                .collect::<Option<Vec<_>>>()
-                .ok_or(BFieldCodecError::SequenceTooShort)?;
-            let item = *T::decode(&item_sequence).map_err(|e| e.into())?;
-            vector.push(item);
+            vector.push(*T::decode_iter(iterator)?);
         }
 
         Ok(Box::new(vector))
@@ -399,12 +406,22 @@ where
         )
     }
 
-    fn decode_iter<Itr: Iterator<Item = BFieldElement>>(_iterator: &mut Itr) -> Result<Box<Self>> {
-        todo!()
+    fn decode_iter<Itr: Iterator<Item = BFieldElement>>(iterator: &mut Itr) -> Result<Box<Self>> {
+        if S::static_length().is_none() {
+            iterator.next().ok_or(BFieldCodecError::SequenceTooShort)?;
+        }
+        let s = *S::decode_iter(iterator)?;
+
+        if T::static_length().is_none() {
+            iterator.next().ok_or(BFieldCodecError::SequenceTooShort)?;
+        }
+        let t = *T::decode_iter(iterator)?;
+
+        Ok(Box::new((t, s)))
     }
 }
 
-impl TasmObject for Polynomial<'_, XFieldElement> {
+impl TasmObject for Polynomial<'static, XFieldElement> {
     fn label_friendly_name() -> String {
         "polynomial_xfe".to_owned()
     }
@@ -442,8 +459,14 @@ impl TasmObject for Polynomial<'_, XFieldElement> {
         )
     }
 
-    fn decode_iter<Itr: Iterator<Item = BFieldElement>>(_iterator: &mut Itr) -> Result<Box<Self>> {
-        todo!()
+    fn decode_iter<Itr: Iterator<Item = BFieldElement>>(iterator: &mut Itr) -> Result<Box<Self>> {
+        iterator.next().ok_or(BFieldCodecError::SequenceTooShort)?;
+        let coefficients = *Vec::<XFieldElement>::decode_iter(iterator)?;
+        if coefficients.last().is_some_and(|c| c.is_zero()) {
+            return Err(PolynomialBFieldCodecError::TrailingZerosInPolynomialEncoding)?;
+        }
+
+        Ok(Box::new(Self::new(coefficients)))
     }
 }
 
