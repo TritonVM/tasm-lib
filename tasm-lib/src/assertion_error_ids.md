@@ -52,3 +52,4 @@ often.
 |  400..410 | [`list::pop`](list/pop.rs)                                                                  |
 |  410..420 | [`list::push`](list/push.rs)                                                                |
 |  420..430 | [`u64::DivMod`](arithmetic/u64/div_mod.rs)                                                  |
+|  430..440 | [`MerkleRoot`](hashing/merkle_root.rs)                                                      |                                                      
