@@ -283,7 +283,6 @@ mod tests {
 
     use super::*;
     use crate::rust_shadowing_helper_functions::list;
-    use crate::structure::tasm_object::MemoryIter;
     use crate::test_prelude::*;
 
     #[test]
@@ -307,11 +306,8 @@ mod tests {
         left_list: Vec<u32>,
         #[strategy(vec(arb(), #left_list.len()))] right_list: Vec<XFieldElement>,
     ) {
-        let left_type = DataType::U32;
-        let right_type = DataType::Xfe;
-
-        let left_pointer = BFieldElement::new(0);
-        let right_pointer = BFieldElement::new(1 << 60); // far enough
+        let left_pointer = bfe!(0);
+        let right_pointer = bfe!(1_u64 << 60); // far enough
 
         let mut ram = HashMap::default();
         write_list_to_ram(&mut ram, left_pointer, &left_list);
@@ -319,17 +315,13 @@ mod tests {
 
         let mut stack = [empty_stack(), vec![left_pointer, right_pointer]].concat();
 
-        let zip = Zip::new(left_type, right_type);
+        let zip = Zip::new(DataType::U32, DataType::Xfe);
         zip.rust_shadow(&mut stack, &mut ram);
-
-        let zipped = left_list.into_iter().zip_eq(right_list).collect_vec();
-        let encoding = zipped.encode();
-
         let output_list_pointer = stack.pop().unwrap();
-        let memory_iter = MemoryIter::new(&ram, output_list_pointer);
-        let tasm_zip_result = memory_iter.take(encoding.len()).collect_vec();
+        let tasm_zipped = *Vec::decode_from_memory(&ram, output_list_pointer).unwrap();
 
-        prop_assert_eq!(encoding, tasm_zip_result);
+        let rust_zipped = left_list.into_iter().zip_eq(right_list).collect_vec();
+        prop_assert_eq!(rust_zipped, tasm_zipped);
     }
 
     fn write_list_to_ram<T: BFieldCodec + Copy>(

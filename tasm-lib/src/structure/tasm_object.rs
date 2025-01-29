@@ -233,13 +233,13 @@ macro_rules! field_with_size {
 /// Turns a memory, represented as a `HashMap` from `BFieldElement`s to `BFieldElement`s,
 /// along with a starting address, into an iterator over `BFieldElement`s.
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
-pub struct MemoryIter<'a> {
+struct MemoryIter<'a> {
     memory: &'a HashMap<BFieldElement, BFieldElement>,
     address: BFieldElement,
 }
 
 impl<'a> MemoryIter<'a> {
-    pub fn new(memory: &'a HashMap<BFieldElement, BFieldElement>, address: BFieldElement) -> Self {
+    fn new(memory: &'a HashMap<BFieldElement, BFieldElement>, address: BFieldElement) -> Self {
         Self { memory, address }
     }
 }
