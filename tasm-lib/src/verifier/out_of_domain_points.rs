@@ -1,7 +1,6 @@
 use triton_vm::prelude::*;
 use twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
-use crate::arithmetic::xfe::to_the_fourth::ToTheFourth;
 use crate::data_type::ArrayType;
 use crate::prelude::*;
 
@@ -72,8 +71,6 @@ impl BasicSnippet for OutOfDomainPoints {
             .unwrap();
         let ood_points_alloc = library.kmalloc(num_words_for_out_of_domain_points);
 
-        let pow_four = library.import(Box::new(ToTheFourth));
-
         triton_asm!(
             {entrypoint}:
                 // _ trace_domain_generator [ood_curr_row]
@@ -102,7 +99,10 @@ impl BasicSnippet for OutOfDomainPoints {
                 pop 1
                 // _ *ood_points[2] [ood_curr_row]
 
-                call {pow_four}
+                dup 2 dup 2 dup 2
+                xx_mul
+                dup 2 dup 2 dup 2
+                xx_mul
                 // _ *ood_points[2] [ood_curr_row**4]
 
                 swap 1

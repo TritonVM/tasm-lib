@@ -14,8 +14,6 @@ use super::leaf_index_to_mt_index_and_peak_index::MmrLeafIndexToMtIndexAndPeakIn
 use super::MAX_MMR_HEIGHT;
 use crate::arithmetic::u64::div2::Div2;
 use crate::empty_stack;
-use crate::hashing::eq_digest::EqDigest;
-use crate::hashing::swap_digest::SwapDigest;
 use crate::list::get::Get;
 use crate::prelude::Digest;
 use crate::prelude::*;
@@ -128,14 +126,13 @@ impl DeprecatedSnippet for MmrVerifyFromMemory {
     }
 
     fn function_code(&self, library: &mut Library) -> String {
-        let entrypoint = self.entrypoint_name();
-
         let leaf_index_to_mt_index = library.import(Box::new(MmrLeafIndexToMtIndexAndPeakIndex));
         let get_list_element = library.import(Box::new(Get::new(DataType::Digest)));
         let div_2 = library.import(Box::new(Div2));
-        let swap_digests = library.import(Box::new(SwapDigest));
-        let eq_digest = library.import(Box::new(EqDigest));
+
+        let entrypoint = self.entrypoint_name();
         let loop_label = format!("{entrypoint}_loop");
+        let swap_digests = format!("{entrypoint}_swap_digests");
 
         let u32_is_even = triton_asm!(
             // _ val
@@ -189,6 +186,10 @@ impl DeprecatedSnippet for MmrVerifyFromMemory {
                     // _ *auth_path[n+1] peak_index mt_index_hi mt_index_lo [digest (acc_hash)]
 
                     recurse
+
+                {swap_digests}:
+                    pick 9 pick 9 pick 9 pick 9 pick 9
+                    return
         );
 
         triton_asm!(
@@ -232,7 +233,7 @@ impl DeprecatedSnippet for MmrVerifyFromMemory {
                     // _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo *auth_path peak_index mt_index_hi mt_index_lo [digest (acc_hash)] [digest (expected_peak)]
 
                     // Compare top two digests
-                    call {eq_digest}
+                    {&DataType::Digest.compare()}
                     // _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo *auth_path peak_index mt_index_hi mt_index_lo (expected_peak == acc_hash)
 
                     // Rename: expected_peak == acc_hash -> validation_result

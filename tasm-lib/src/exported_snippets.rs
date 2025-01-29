@@ -73,9 +73,6 @@ pub fn name_to_snippet(fn_name: &str) -> Option<Box<dyn BasicSnippet>> {
         )),
 
         // XFieldElement
-        "tasmlib_arithmetic_xfe_to_the_fourth" => {
-            Some(Box::new(crate::arithmetic::xfe::to_the_fourth::ToTheFourth))
-        }
         "tasmlib_arithmetic_xfe_to_the_power_of_power_of_2" => Some(Box::new(
             crate::arithmetic::xfe::to_the_power_of_power_of_2::ToThePowerOfPowerOf2,
         )),
@@ -220,7 +217,6 @@ pub fn name_to_snippet(fn_name: &str) -> Option<Box<dyn BasicSnippet>> {
         "tasmlib_hashing_absorb_multiple" => {
             Some(Box::new(hashing::absorb_multiple::AbsorbMultiple))
         }
-        "tasmlib_hashing_eq_digest" => Some(Box::new(hashing::eq_digest::EqDigest)),
         "tasmlib_hashing_merkle_root" => Some(Box::new(hashing::merkle_root::MerkleRoot)),
         "tasmlib_hashing_merkle_root_from_xfes_generic" => Some(Box::new(
             hashing::merkle_root_from_xfes_generic::MerkleRootFromXfesGeneric,
@@ -232,8 +228,6 @@ pub fn name_to_snippet(fn_name: &str) -> Option<Box<dyn BasicSnippet>> {
             Some(Box::new(hashing::merkle_step_u64_index::MerkleStepU64Index))
         }
         "tasmlib_hashing_merkle_verify" => Some(Box::new(hashing::merkle_verify::MerkleVerify)),
-        "tasmlib_hashing_reverse_digest" => Some(Box::new(hashing::reverse_digest::ReverseDigest)),
-        "tasmlib_hashing_swap_digest" => Some(Box::new(hashing::swap_digest::SwapDigest)),
 
         // Hashing -> algebraic hasher trait
         "tasmlib_hashing_algebraic_hasher_hash_varlen" => {

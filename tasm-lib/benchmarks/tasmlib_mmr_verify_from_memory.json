@@ -2,8 +2,8 @@
   {
     "name": "tasmlib_mmr_verify_from_memory",
     "benchmark_result": {
-      "clock_cycle_count": 1449,
-      "hash_table_height": 414,
+      "clock_cycle_count": 1447,
+      "hash_table_height": 408,
       "u32_table_height": 1409,
       "op_stack_table_height": 1164,
       "ram_table_height": 161
@@ -13,8 +13,8 @@
   {
     "name": "tasmlib_mmr_verify_from_memory",
     "benchmark_result": {
-      "clock_cycle_count": 2733,
-      "hash_table_height": 600,
+      "clock_cycle_count": 2731,
+      "hash_table_height": 594,
       "u32_table_height": 1568,
       "op_stack_table_height": 2228,
       "ram_table_height": 316

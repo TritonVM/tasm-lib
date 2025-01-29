@@ -1,7 +1,6 @@
 pub mod absorb_multiple;
 pub mod absorb_multiple_static_size;
 pub mod algebraic_hasher;
-pub mod eq_digest;
 pub mod hash_from_stack;
 pub mod lt_digest;
 pub mod merkle_root;
@@ -9,8 +8,6 @@ pub mod merkle_root_from_xfes_generic;
 pub mod merkle_step_mem_u64_index;
 pub mod merkle_step_u64_index;
 pub mod merkle_verify;
-pub mod reverse_digest;
 pub mod sponge_hasher;
 pub mod squeeze_repeatedly;
 pub mod squeeze_repeatedly_static_number;
-pub mod swap_digest;
