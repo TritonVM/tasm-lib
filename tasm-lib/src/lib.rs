@@ -169,8 +169,7 @@ pub fn execute_bench_deprecated(
 
 /// Execute a Triton-VM program and test correct behavior indicators.
 /// Modify stack and memory. Panic if anything goes wrong.
-#[allow(clippy::too_many_arguments)]
-pub fn execute_test(
+pub(crate) fn execute_test(
     code: &[LabelledInstruction],
     stack: &mut Vec<BFieldElement>,
     expected_stack_diff: isize,
@@ -254,7 +253,7 @@ pub fn maybe_write_debuggable_vm_state_to_disk(vm_state: &VMState) {
 }
 
 /// Prepare state and run Triton VM
-pub fn execute_with_terminal_state(
+pub(crate) fn execute_with_terminal_state(
     program: Program,
     std_in: &[BFieldElement],
     stack: &[BFieldElement],
