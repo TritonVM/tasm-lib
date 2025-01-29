@@ -3,7 +3,6 @@ pub mod and;
 pub mod decr;
 pub mod div2;
 pub mod div_mod;
-pub mod double_pow2;
 pub mod eq;
 pub mod incr;
 pub mod leading_zeros;

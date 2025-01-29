@@ -73,8 +73,6 @@ pub fn name_to_snippet(fn_name: &str) -> Option<Box<dyn BasicSnippet>> {
         )),
 
         // XFieldElement
-        "tasmlib_arithmetic_xfe_square" => Some(Box::new(crate::arithmetic::xfe::square::Square)),
-        "tasmlib_arithmetic_xfe_cube" => Some(Box::new(crate::arithmetic::xfe::cube::Cube)),
         "tasmlib_arithmetic_xfe_to_the_fourth" => {
             Some(Box::new(crate::arithmetic::xfe::to_the_fourth::ToTheFourth))
         }
@@ -109,7 +107,6 @@ pub fn name_to_snippet(fn_name: &str) -> Option<Box<dyn BasicSnippet>> {
         "tasmlib_arithmetic_u64_decr" => Some(Box::new(u64::decr::Decr)),
         "tasmlib_arithmetic_u64_div2" => Some(Box::new(u64::div2::Div2)),
         "tasmlib_arithmetic_u64_div_mod" => Some(Box::new(u64::div_mod::DivMod)),
-        "tasmlib_arithmetic_u64_pow2_double" => Some(Box::new(u64::double_pow2::DoublePow2)),
         "tasmlib_arithmetic_u64_eq" => Some(Box::new(u64::eq::Eq)),
         "tasmlib_arithmetic_u64_incr" => Some(Box::new(u64::incr::Incr)),
         "tasmlib_arithmetic_u64_leading_zeros" => Some(Box::new(u64::leading_zeros::LeadingZeros)),
