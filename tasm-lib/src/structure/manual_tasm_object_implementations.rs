@@ -595,51 +595,127 @@ mod tests {
     use std::collections::HashMap;
     use std::fmt::Debug;
 
-    use rand::random;
+    use proptest::prelude::*;
+    use proptest::test_runner::TestCaseResult;
+    use proptest_arbitrary_interop::arb;
+    use test_strategy::proptest;
+    use test_strategy::Arbitrary;
 
     use super::*;
     use crate::memory::encode_to_memory;
 
-    fn decode_iter_prop<T: TasmObject + Eq + Debug>(obj_written: T) {
-        let mut memory = HashMap::default();
-        let address = random();
-        encode_to_memory(&mut memory, address, &obj_written);
-        let obj_read = *T::decode_from_memory(&memory, address).unwrap();
-        assert_eq!(obj_written, obj_read);
+    #[derive(Debug, Clone, Arbitrary)]
+    struct TestObject<T>
+    where
+        T: TasmObject + Debug + Clone + Eq + for<'a> arbitrary::Arbitrary<'a> + 'static,
+    {
+        #[strategy(arb())]
+        t: T,
+
+        #[strategy(arb())]
+        address: BFieldElement,
     }
 
-    #[test]
-    fn decode_iter_bfe() {
-        decode_iter_prop::<BFieldElement>(random());
+    impl<T> TestObject<T>
+    where
+        T: TasmObject + Debug + Clone + Eq + for<'a> arbitrary::Arbitrary<'a>,
+    {
+        fn verify_decoding_properties(&self) -> TestCaseResult {
+            let mut memory = HashMap::default();
+            encode_to_memory(&mut memory, self.address, &self.t);
+            let decoding_result = T::decode_from_memory(&memory, self.address);
+            prop_assert!(decoding_result.is_ok());
+
+            let obj_read = *decoding_result.unwrap();
+            prop_assert_eq!(&self.t, &obj_read);
+
+            Ok(())
+        }
     }
 
-    #[test]
-    fn decode_iter_xfe() {
-        decode_iter_prop::<XFieldElement>(random());
+    /// Generate a test case with the specified name for the specified type.
+    macro_rules! gen_test {
+        (fn $test_fn:ident for $type:ty) => {
+            #[proptest]
+            fn $test_fn(test_object: TestObject<$type>) {
+                test_object.verify_decoding_properties()?;
+            }
+        };
     }
 
-    #[test]
-    fn decode_iter_digest() {
-        decode_iter_prop::<Digest>(random());
-    }
+    gen_test!(fn decode_bfe for BFieldElement);
+    gen_test!(fn decode_xfe for XFieldElement);
+    gen_test!(fn decode_digest for Digest);
+    gen_test!(fn decode_bool for bool);
+    gen_test!(fn decode_u32 for u32);
+    gen_test!(fn decode_u64 for u64);
+    gen_test!(fn decode_u128 for u128);
+    gen_test!(fn decode_poly_xfe for Polynomial<'static, XFieldElement>);
+    gen_test!(fn decode_proof for Proof);
 
-    #[test]
-    fn decode_iter_bool() {
-        decode_iter_prop::<bool>(random());
-    }
+    gen_test!(fn decode_array_bfe_0 for [BFieldElement; 0]);
+    gen_test!(fn decode_array_bfe_2 for [BFieldElement; 2]);
+    gen_test!(fn decode_array_bfe_10 for [BFieldElement; 10]);
+    gen_test!(fn decode_array_bfe_25 for [BFieldElement; 25]);
+    gen_test!(fn decode_array_xfe_0 for [BFieldElement; 0]);
+    gen_test!(fn decode_array_xfe_2 for [BFieldElement; 2]);
+    gen_test!(fn decode_array_xfe_10 for [BFieldElement; 10]);
+    gen_test!(fn decode_array_xfe_25 for [BFieldElement; 25]);
+    gen_test!(fn decode_array_vec_bfe_0 for [Vec<BFieldElement>; 0]);
+    gen_test!(fn decode_array_vec_bfe_2 for [Vec<BFieldElement>; 2]);
+    gen_test!(fn decode_array_vec_vec_bfe_2 for [Vec<Vec<BFieldElement>>; 2]);
+    gen_test!(fn decode_array_tuple_l_bfe_bfe_r_0 for [(BFieldElement, BFieldElement); 0]);
+    gen_test!(fn decode_array_tuple_l_bfe_bfe_r_2 for [(BFieldElement, BFieldElement); 2]);
+    gen_test!(fn decode_array_tuple_l_u64_u128_r_0 for [(u64, u128); 0]);
+    gen_test!(fn decode_array_tuple_l_u64_u128_r_2 for [(u64, u128); 2]);
+    gen_test!(fn decode_array_tuple_l_vec_u64_vec_u64_r_2 for [(Vec<u64>, Vec<u64>); 2]);
+    gen_test!(fn decode_array_option_bfe_0 for [Option<BFieldElement>; 0]);
+    gen_test!(fn decode_array_option_bfe_5 for [Option<BFieldElement>; 5]);
+    gen_test!(fn decode_array_option_vec_u64_5 for [Option<Vec<u64>>; 5]);
 
-    #[test]
-    fn decode_iter_u32() {
-        decode_iter_prop::<u32>(random());
-    }
+    gen_test!(fn decode_vec_bfe for Vec<BFieldElement>);
+    gen_test!(fn decode_vec_xfe for Vec<XFieldElement>);
+    gen_test!(fn decode_vec_digest for Vec<Digest>);
+    gen_test!(fn decode_vec_array_u32_0 for Vec<[u32; 0]>);
+    gen_test!(fn decode_vec_array_u32_7 for Vec<[u32; 7]>);
+    gen_test!(fn decode_vec_array_u64_0 for Vec<[u64; 0]>);
+    gen_test!(fn decode_vec_array_u64_7 for Vec<[u64; 7]>);
+    gen_test!(fn decode_vec_vec_digest for Vec<Vec<Digest>>);
+    gen_test!(fn decode_vec_tuple_l_u32_u64_r for Vec<(u32, u64)>);
+    gen_test!(fn decode_vec_vec_tuple_l_u32_u64_r for Vec<Vec<(u32, u64)>>);
+    gen_test!(fn decode_vec_tuple_l_vec_u32_vec_u64_r for Vec<(Vec<u32>, Vec<u64>)>);
+    gen_test!(fn decode_vec_option_bfe for Vec<Option<BFieldElement>>);
+    gen_test!(fn decode_vec_option_tuple_l_u128_vec_digest_r for Vec<Option<(u128, Vec<Digest>)>>);
 
-    #[test]
-    fn decode_iter_u64() {
-        decode_iter_prop::<u64>(random());
-    }
+    gen_test!(fn decode_tuple_l_bfe_bfe_r for (BFieldElement, BFieldElement));
+    gen_test!(fn decode_tuple_l_bfe_xfe_r for (BFieldElement, XFieldElement));
+    gen_test!(fn decode_tuple_l_digest_xfe_r for (Digest, XFieldElement));
+    gen_test!(fn decode_tuple_l_digest_vec_xfe_r for (Digest, Vec<XFieldElement>));
+    gen_test!(fn decode_tuple_l_vec_digest_xfe_r for (Vec<Digest>, XFieldElement));
+    gen_test!(fn decode_tuple_l_digest_array_xfe_0_r for (Digest, [XFieldElement; 0]));
+    gen_test!(fn decode_tuple_l_digest_array_xfe_5_r for (Digest, [XFieldElement; 5]));
+    gen_test!(fn decode_tuple_l_array_xfe_0_digest_r for ([XFieldElement; 0], Digest));
+    gen_test!(fn decode_tuple_l_array_xfe_5_digest_r for ([XFieldElement; 5], Digest));
+    gen_test!(fn decode_tuple_l_array_u128_5_u64_5_digest_r for ([u128; 5], [u64; 5]));
+    gen_test!(fn decode_tuple_l_vec_u64_array_xfe_5_r for (Vec<u64>, [XFieldElement; 5]));
+    gen_test!(fn decode_tuple_l_tuple_l_u32_u64_r_u128_r for ((u32, u64), u128));
+    gen_test!(fn decode_tuple_l_u32_tuple_l_u64_u128_r_r for (u32, (u64, u128)));
+    gen_test!(fn decode_tuple_l_tuple_l_u32_u64_r_tuple_l_u64_u32_r_r for ((u32, u64), (u64, u32)));
+    gen_test!(fn decode_tuple_l_vec_vec_u32_vec_vec_u128_r for (Vec<Vec<u32>>, Vec<Vec<u128>>));
+    gen_test!(fn decode_tuple_l_option_u32_option_u64_r for (Option<u32>, Option<u64>));
+    gen_test!(fn decode_tuple_l_option_vec_u32_option_u64_r for (Option<Vec<u32>>, Option<u64>));
 
-    #[test]
-    fn decode_iter_u128() {
-        decode_iter_prop::<u128>(random());
-    }
+    gen_test!(fn decode_option_bfe for Option<BFieldElement>);
+    gen_test!(fn decode_option_xfe for Option<XFieldElement>);
+    gen_test!(fn decode_option_digest for Option<Digest>);
+    gen_test!(fn decode_option_vec_bfe for Option<Vec<BFieldElement>>);
+    gen_test!(fn decode_option_vec_xfe for Option<Vec<XFieldElement>>);
+    gen_test!(fn decode_option_option_bfe for Option<Option<BFieldElement>>);
+    gen_test!(fn decode_option_array_bfe_0 for Option<[BFieldElement; 0]>);
+    gen_test!(fn decode_option_array_xfe_5 for Option<[XFieldElement; 5]>);
+    gen_test!(fn decode_option_tuple_l_bfe_xfe_r for Option<(BFieldElement, XFieldElement)>);
+    gen_test!(fn decode_option_tuple_l_u32_u64_r for Option<(u32, u64)>);
+    gen_test!(fn decode_option_vec_tuple_l_bfe_u128_r for Option<Vec<(BFieldElement, u128)>>);
+    gen_test!(fn decode_option_tuple_l_vec_u32_vec_u64_r for Option<(Vec<u32>, Vec<u64>)>);
+    gen_test!(fn decode_option_tuple_l_array_u128_5_u64_5_r for Option<([u128; 5], [u64; 5])>);
 }
