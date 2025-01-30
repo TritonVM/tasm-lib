@@ -93,7 +93,7 @@ mod tests {
     use twenty_first::math::traits::ModPowU32;
 
     use super::*;
-    use crate::arithmetic::xfe::mod_pow_u32_generic::XfeModPowU32Generic;
+    use crate::arithmetic::xfe::mod_pow_u32::XfeModPowU32;
     use crate::test_prelude::*;
 
     impl Closure for ToThePowerOfPowerOf2 {
@@ -149,8 +149,8 @@ mod tests {
             .stack;
 
             let final_generic_stack = test_rust_equivalence_given_complete_state(
-                &ShadowedClosure::new(XfeModPowU32Generic),
-                &XfeModPowU32Generic.set_up_test_stack((2_u32.pow(log_2_exponent), base)),
+                &ShadowedClosure::new(XfeModPowU32),
+                &XfeModPowU32.set_up_test_stack((2_u32.pow(log_2_exponent), base)),
                 &[],
                 &NonDeterminism::default(),
                 &None,

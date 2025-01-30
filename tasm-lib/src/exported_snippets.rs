@@ -217,8 +217,8 @@ pub fn name_to_snippet(fn_name: &str) -> Option<Box<dyn BasicSnippet>> {
             Some(Box::new(hashing::absorb_multiple::AbsorbMultiple))
         }
         "tasmlib_hashing_merkle_root" => Some(Box::new(hashing::merkle_root::MerkleRoot)),
-        "tasmlib_hashing_merkle_root_from_xfes_generic" => Some(Box::new(
-            hashing::merkle_root_from_xfes_generic::MerkleRootFromXfesGeneric,
+        "tasmlib_hashing_merkle_root_from_xfes" => Some(Box::new(
+            hashing::merkle_root_from_xfes::MerkleRootFromXfes,
         )),
         "tasmlib_hashing_merkle_step_mem_u64_index" => {
             Some(Box::new(hashing::merkle_step_mem_u64_index::MerkleStepMemU64Index))

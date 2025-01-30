@@ -1,6 +1,6 @@
 [
   {
-    "name": "tasmlib_hashing_merkle_root_from_xfes_generic",
+    "name": "tasmlib_hashing_merkle_root_from_xfes",
     "benchmark_result": {
       "clock_cycle_count": 7236,
       "hash_table_height": 3234,
@@ -11,7 +11,7 @@
     "case": "CommonCase"
   },
   {
-    "name": "tasmlib_hashing_merkle_root_from_xfes_generic",
+    "name": "tasmlib_hashing_merkle_root_from_xfes",
     "benchmark_result": {
       "clock_cycle_count": 14173,
       "hash_table_height": 6306,

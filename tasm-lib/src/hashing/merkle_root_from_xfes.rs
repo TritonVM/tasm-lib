@@ -8,9 +8,9 @@ use crate::prelude::*;
 /// The input list must have a length that is a power of two
 /// and is not one. Can otherwise handle any length.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
-pub struct MerkleRootFromXfesGeneric;
+pub struct MerkleRootFromXfes;
 
-impl BasicSnippet for MerkleRootFromXfesGeneric {
+impl BasicSnippet for MerkleRootFromXfes {
     fn inputs(&self) -> Vec<(DataType, String)> {
         vec![(
             DataType::List(Box::new(DataType::Xfe)),
@@ -23,7 +23,7 @@ impl BasicSnippet for MerkleRootFromXfesGeneric {
     }
 
     fn entrypoint(&self) -> String {
-        "tasmlib_hashing_merkle_root_from_xfes_generic".to_string()
+        "tasmlib_hashing_merkle_root_from_xfes".to_string()
     }
 
     fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
@@ -185,7 +185,7 @@ mod tests {
     use crate::test_helpers::test_assertion_failure;
     use crate::test_prelude::*;
 
-    impl Function for MerkleRootFromXfesGeneric {
+    impl Function for MerkleRootFromXfes {
         fn rust_shadow(
             &self,
             stack: &mut Vec<BFieldElement>,
@@ -252,7 +252,7 @@ mod tests {
         }
     }
 
-    impl MerkleRootFromXfesGeneric {
+    impl MerkleRootFromXfes {
         fn init_state(
             &self,
             xfes: Vec<XFieldElement>,
@@ -270,14 +270,14 @@ mod tests {
 
     #[test]
     fn test() {
-        ShadowedFunction::new(MerkleRootFromXfesGeneric).test()
+        ShadowedFunction::new(MerkleRootFromXfes).test()
     }
 
     #[test]
     fn cannot_handle_input_list_of_length_one() {
-        let height_0 = MerkleRootFromXfesGeneric.init_state(xfe_vec![1], bfe!(0));
+        let height_0 = MerkleRootFromXfes.init_state(xfe_vec![1], bfe!(0));
         test_assertion_failure(
-            &ShadowedFunction::new(MerkleRootFromXfesGeneric),
+            &ShadowedFunction::new(MerkleRootFromXfes),
             InitVmState::with_stack_and_memory(height_0.stack, height_0.memory),
             &[91],
         );
@@ -286,9 +286,9 @@ mod tests {
     #[test]
     fn cannot_handle_input_list_of_length_not_pow2() {
         for bad_length in [3, 5, 6, 7, 9, 10, 11, 12, 13, 14, 15, 17] {
-            let init_state = MerkleRootFromXfesGeneric.init_state(xfe_vec![1; bad_length], bfe!(0));
+            let init_state = MerkleRootFromXfes.init_state(xfe_vec![1; bad_length], bfe!(0));
             test_assertion_failure(
-                &ShadowedFunction::new(MerkleRootFromXfesGeneric),
+                &ShadowedFunction::new(MerkleRootFromXfes),
                 InitVmState::with_stack_and_memory(init_state.stack, init_state.memory),
                 &[90],
             );
@@ -303,6 +303,6 @@ mod benches {
 
     #[test]
     fn benchmark() {
-        ShadowedFunction::new(MerkleRootFromXfesGeneric).bench()
+        ShadowedFunction::new(MerkleRootFromXfes).bench()
     }
 }

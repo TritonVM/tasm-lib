@@ -19,7 +19,7 @@ use crate::data_type::StructType;
 use crate::field;
 use crate::hashing::algebraic_hasher::sample_indices::SampleIndices;
 use crate::hashing::algebraic_hasher::sample_scalars_static_length_dyn_malloc::SampleScalarsStaticLengthDynMalloc;
-use crate::hashing::merkle_root_from_xfes_generic::MerkleRootFromXfesGeneric;
+use crate::hashing::merkle_root_from_xfes::MerkleRootFromXfes;
 use crate::list::get::Get;
 use crate::list::higher_order::inner_function::InnerFunction;
 use crate::list::higher_order::inner_function::RawCode;
@@ -155,7 +155,7 @@ impl BasicSnippet for FriSnippet {
             }));
         let dequeue_commit_phase = format!("{entrypoint}_dequeue_commit_phase_remainder");
         let length_of_list = library.import(Box::new(Length));
-        let merkle_root_from_xfes = library.import(Box::new(MerkleRootFromXfesGeneric));
+        let merkle_root_from_xfes = library.import(Box::new(MerkleRootFromXfes));
         let get_xfe_from_list = library.import(Box::new(Get::new(DataType::Xfe)));
         let get_digest_from_list = library.import(Box::new(Get::new(DataType::Digest)));
         let sample_indices = library.import(Box::new(SampleIndices));

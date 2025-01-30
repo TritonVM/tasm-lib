@@ -3,9 +3,9 @@ use triton_vm::prelude::*;
 use crate::prelude::*;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
-pub struct XfeModPowU32Generic;
+pub struct XfeModPowU32;
 
-impl BasicSnippet for XfeModPowU32Generic {
+impl BasicSnippet for XfeModPowU32 {
     fn inputs(&self) -> Vec<(DataType, String)> {
         vec![
             (DataType::U32, "exponent".to_owned()),
@@ -149,7 +149,7 @@ pub mod tests {
     use crate::execute_with_terminal_state;
     use crate::test_prelude::*;
 
-    impl Closure for XfeModPowU32Generic {
+    impl Closure for XfeModPowU32 {
         type Args = (u32, XFieldElement);
 
         fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
@@ -185,7 +185,7 @@ pub mod tests {
 
     #[test]
     fn mod_pow_u32_xfe_pbt() {
-        ShadowedClosure::new(XfeModPowU32Generic).test()
+        ShadowedClosure::new(XfeModPowU32).test()
     }
 
     #[test]
@@ -193,7 +193,7 @@ pub mod tests {
         let bfe_14 = BFieldElement::new(14);
         let xfe_14 = XFieldElement::new([bfe_14, bfe_14, bfe_14]);
         let xfe_14: Vec<_> = xfe_14.coefficients.into_iter().rev().collect();
-        let code = XfeModPowU32Generic.link_for_isolated_run();
+        let code = XfeModPowU32.link_for_isolated_run();
 
         for exponent in [
             1 << 32,
@@ -226,6 +226,6 @@ mod benches {
 
     #[test]
     fn benchmark() {
-        ShadowedClosure::new(XfeModPowU32Generic).bench();
+        ShadowedClosure::new(XfeModPowU32).bench();
     }
 }
