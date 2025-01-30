@@ -1,179 +1,138 @@
 use std::collections::HashMap;
 
-use num::One;
-use rand::prelude::*;
 use triton_vm::prelude::*;
-use twenty_first::prelude::U32s;
 
-use crate::empty_stack;
 use crate::prelude::*;
-use crate::push_encodable;
-use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::InitVmState;
+use crate::traits::basic_snippet::Reviewer;
+use crate::traits::basic_snippet::SignOffFingerprint;
 
-#[derive(Clone, Debug)]
+/// Increment a `u64` by 1.
+///
+/// Crashes the VM if the input is [`u64::MAX`].
+///
+/// ### Behavior
+///
+/// ```text
+/// BEFORE: _ v
+/// AFTER:  _ (v+1)
+/// ```
+///
+/// ### Preconditions
+///
+/// - all input arguments are properly [`BFieldCodec`] encoded
+///
+/// ### Postconditions
+///
+/// - the output is properly [`BFieldCodec`] encoded
+#[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct Incr;
 
-impl DeprecatedSnippet for Incr {
-    fn entrypoint_name(&self) -> String {
+impl Incr {
+    pub const OVERFLOW_ERROR_ID: i128 = 440;
+}
+
+impl BasicSnippet for Incr {
+    fn inputs(&self) -> Vec<(DataType, String)> {
+        vec![(DataType::U64, "value".to_string())]
+    }
+
+    fn outputs(&self) -> Vec<(DataType, String)> {
+        vec![(DataType::U64, "value + 1".to_string())]
+    }
+
+    fn entrypoint(&self) -> String {
         "tasmlib_arithmetic_u64_incr".to_string()
     }
 
-    fn input_field_names(&self) -> Vec<String> {
-        vec!["value_hi".to_string(), "value_lo".to_string()]
-    }
-
-    fn input_types(&self) -> Vec<DataType> {
-        vec![DataType::U64]
-    }
-
-    fn output_field_names(&self) -> Vec<String> {
-        vec!["(value + 1)_hi".to_string(), "(value + 1)_lo".to_string()]
-    }
-
-    fn output_types(&self) -> Vec<DataType> {
-        vec![DataType::U64]
-    }
-
-    fn stack_diff(&self) -> isize {
-        0
-    }
-
-    fn function_code(&self, _library: &mut Library) -> String {
-        let entrypoint = self.entrypoint_name();
-        const TWO_POW_32: u64 = 1 << 32;
-        format!(
-            "
-            // Before: _ value_hi value_lo
-            // After:  _ (value + 1)_hi (value + 1)_lo
-            {entrypoint}_carry:
-                pop 1
-                push 1
-                add
-                dup 0
-                push {TWO_POW_32}
-                eq
-                push 0
-                eq
-                assert
-                push 0
-                return
-
+    fn code(&self, _: &mut Library) -> Vec<LabelledInstruction> {
+        let entrypoint = self.entrypoint();
+        let carry = format!("{entrypoint}_carry");
+        triton_asm!(
+            // BEFORE: _ [value: u64]
+            // AFTER:  _ [value + 1: u64]
             {entrypoint}:
-                push 1
-                add
+                addi 1
                 dup 0
-                push {TWO_POW_32}
+                push {1_u64 << 32}
                 eq
                 skiz
-                    call {entrypoint}_carry
+                    call {carry}
                 return
-            ",
+
+            {carry}:
+                pop 1
+                addi 1
+                dup 0
+                push {1_u64 << 32}
+                eq
+                push 0
+                eq
+                assert error_id {Self::OVERFLOW_ERROR_ID}
+                push 0
+                return
         )
     }
 
-    fn crash_conditions(&self) -> Vec<String> {
-        vec!["value == u64::MAX".to_string()]
-    }
-
-    fn gen_input_states(&self) -> Vec<InitVmState> {
-        let mut rng = rand::thread_rng();
-        let values = vec![
-            U32s::new([u32::MAX, 0]),
-            U32s::new([0, u32::MAX]),
-            U32s::new([u32::MAX, u32::MAX - 1]),
-            // U32s::new([u32::MAX, u32::MAX])
-            rng.next_u32().into(),
-            U32s::<2>::try_from(rng.next_u64()).unwrap(),
-        ];
-        values
-            .into_iter()
-            .map(|value| {
-                let mut stack = empty_stack();
-                push_encodable(&mut stack, &value);
-                InitVmState::with_stack(stack)
-            })
-            .collect()
-    }
-
-    fn common_case_input_state(&self) -> InitVmState {
-        // no carry
-        InitVmState::with_stack(
-            [
-                empty_stack(),
-                vec![BFieldElement::new(1000), BFieldElement::new(7)],
-            ]
-            .concat(),
-        )
-    }
-
-    fn worst_case_input_state(&self) -> InitVmState {
-        // with carry
-        InitVmState::with_stack(
-            [
-                empty_stack(),
-                vec![BFieldElement::new(1000), BFieldElement::new((1 << 32) - 1)],
-            ]
-            .concat(),
-        )
-    }
-
-    fn rust_shadowing(
-        &self,
-        stack: &mut Vec<BFieldElement>,
-        _std_in: Vec<BFieldElement>,
-        _secret_in: Vec<BFieldElement>,
-        _memory: &mut HashMap<BFieldElement, BFieldElement>,
-    ) {
-        let a: u32 = stack.pop().unwrap().try_into().unwrap();
-        let b: u32 = stack.pop().unwrap().try_into().unwrap();
-        let ab = U32s::<2>::new([a, b]);
-        let ab_incr = ab + U32s::one();
-        let mut res = ab_incr.encode();
-        for _ in 0..res.len() {
-            stack.push(res.pop().unwrap());
-        }
+    fn sign_offs(&self) -> HashMap<Reviewer, SignOffFingerprint> {
+        let mut sign_offs = HashMap::new();
+        sign_offs.insert(Reviewer("ferdinand"), 0x786629a8064b2786.into());
+        sign_offs
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::empty_stack;
-    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
+    use crate::test_prelude::*;
 
-    #[test]
-    fn incr_u64_test() {
-        test_rust_equivalence_multiple_deprecated(&Incr, true);
+    impl Closure for Incr {
+        type Args = u64;
+
+        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
+            let v = pop_encodable::<Self::Args>(stack);
+            let incr = v.checked_add(1).unwrap();
+            push_encodable(stack, &incr);
+        }
+
+        fn pseudorandom_args(
+            &self,
+            seed: [u8; 32],
+            bench_case: Option<BenchmarkCase>,
+        ) -> Self::Args {
+            match bench_case {
+                Some(BenchmarkCase::CommonCase) => (1000 << 32) + 7, // no carry
+                Some(BenchmarkCase::WorstCase) => (1000 << 32) + u64::from(u32::MAX), // carry
+                None => StdRng::from_seed(seed).gen(),
+            }
+        }
+
+        fn corner_case_args(&self) -> Vec<Self::Args> {
+            vec![0, u32::MAX.into(), u64::MAX - 1]
+        }
     }
 
     #[test]
-    fn incr_u64_negative_tasm_test() {
-        let mut stack = empty_stack();
-        let u64_max = U32s::<2>::try_from(u64::MAX).unwrap();
-        push_encodable(&mut stack, &u64_max);
-        assert!(Incr
-            .link_and_run_tasm_for_test(&mut stack, vec![], NonDeterminism::default())
-            .is_err());
+    fn rust_shadow() {
+        ShadowedClosure::new(Incr).test();
     }
 
     #[test]
-    #[should_panic]
-    fn incr_u64_negative_rust_test() {
-        let mut stack = empty_stack();
-        let u64_max = U32s::<2>::try_from(u64::MAX).unwrap();
-        push_encodable(&mut stack, &u64_max);
-        Incr::rust_shadowing(&Incr, &mut stack, vec![], vec![], &mut HashMap::default());
+    fn u64_max_crashes_vm() {
+        test_assertion_failure(
+            &ShadowedClosure::new(Incr),
+            InitVmState::with_stack(Incr.set_up_test_stack(u64::MAX)),
+            &[Incr::OVERFLOW_ERROR_ID],
+        );
     }
 }
 
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::snippet_bencher::bench_and_write;
+    use crate::test_prelude::*;
 
     #[test]
-    fn incr_u64_benchmark() {
-        bench_and_write(Incr);
+    fn benchmark() {
+        ShadowedClosure::new(Incr).bench();
     }
 }
