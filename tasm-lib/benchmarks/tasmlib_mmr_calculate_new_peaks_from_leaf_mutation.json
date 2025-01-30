@@ -2,8 +2,8 @@
   {
     "name": "tasmlib_mmr_calculate_new_peaks_from_leaf_mutation",
     "benchmark_result": {
-      "clock_cycle_count": 2436,
-      "hash_table_height": 426,
+      "clock_cycle_count": 2332,
+      "hash_table_height": 414,
       "u32_table_height": 1265,
       "op_stack_table_height": 1584,
       "ram_table_height": 192
@@ -13,8 +13,8 @@
   {
     "name": "tasmlib_mmr_calculate_new_peaks_from_leaf_mutation",
     "benchmark_result": {
-      "clock_cycle_count": 4650,
-      "hash_table_height": 612,
+      "clock_cycle_count": 4484,
+      "hash_table_height": 600,
       "u32_table_height": 2160,
       "op_stack_table_height": 3082,
       "ram_table_height": 378

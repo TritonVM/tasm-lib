@@ -104,7 +104,6 @@ pub fn name_to_snippet(fn_name: &str) -> Option<Box<dyn BasicSnippet>> {
         "tasmlib_arithmetic_u64_decr" => Some(Box::new(u64::decr::Decr)),
         "tasmlib_arithmetic_u64_div2" => Some(Box::new(u64::div2::Div2)),
         "tasmlib_arithmetic_u64_div_mod" => Some(Box::new(u64::div_mod::DivMod)),
-        "tasmlib_arithmetic_u64_eq" => Some(Box::new(u64::eq::Eq)),
         "tasmlib_arithmetic_u64_incr" => Some(Box::new(u64::incr::Incr)),
         "tasmlib_arithmetic_u64_leading_zeros" => Some(Box::new(u64::leading_zeros::LeadingZeros)),
         "tasmlib_arithmetic_u64_trailing_zeros" => {

@@ -1,7 +1,6 @@
 use triton_vm::prelude::*;
 
 use super::leaf_index_to_mt_index_and_peak_index::MmrLeafIndexToMtIndexAndPeakIndex;
-use crate::arithmetic::u64::eq::Eq;
 use crate::hashing::merkle_step_u64_index::MerkleStepU64Index;
 use crate::list::get::Get;
 use crate::prelude::*;
@@ -38,7 +37,6 @@ impl BasicSnippet for MmrVerifyFromSecretInSecretLeafIndex {
         let while_loop_label = format!("{entrypoint}_while");
 
         let leaf_index_to_mt_index = library.import(Box::new(MmrLeafIndexToMtIndexAndPeakIndex));
-        let eq_u64 = library.import(Box::new(Eq));
         let merkle_step_u64_index = library.import(Box::new(MerkleStepU64Index));
         let list_get = library.import(Box::new(Get::new(DataType::Digest)));
 
@@ -86,7 +84,7 @@ impl BasicSnippet for MmrVerifyFromSecretInSecretLeafIndex {
 
             // start/end: _ mt_index_hi mt_index_lo [digest (acc_hash)]
             {while_loop_label}:
-                dup 6 dup 6 push 0 push 1 call {eq_u64}
+                dup 6 dup 6 push 0 push 1 {&DataType::U64.compare()}
                 // __ mt_index_hi mt_index_lo [digest (acc_hash)] (mt_index == 1)
 
                 skiz return

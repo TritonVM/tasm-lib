@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use itertools::Itertools;
 use num::One;
 use rand::prelude::*;
 use triton_vm::prelude::*;
@@ -13,7 +14,6 @@ use twenty_first::util_types::mmr::mmr_trait::Mmr;
 use super::leaf_index_to_mt_index_and_peak_index::MmrLeafIndexToMtIndexAndPeakIndex;
 use crate::arithmetic::u32::is_odd::IsOdd;
 use crate::arithmetic::u64::div2::Div2;
-use crate::arithmetic::u64::eq::Eq;
 use crate::empty_stack;
 use crate::list::get::Get;
 use crate::list::set::Set;
@@ -127,16 +127,17 @@ impl DeprecatedSnippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
     }
 
     fn function_code(&self, library: &mut Library) -> String {
-        let entrypoint = self.entrypoint_name();
         let leaf_index_to_mt_index = library.import(Box::new(MmrLeafIndexToMtIndexAndPeakIndex));
         let u32_is_odd = library.import(Box::new(IsOdd));
-        let eq_u64 = library.import(Box::new(Eq));
         let get = library.import(Box::new(Get::new(DataType::Digest)));
         let set = library.import(Box::new(Set::new(DataType::Digest)));
         let div_2 = library.import(Box::new(Div2));
 
-        format!(
-            "
+        let entrypoint = self.entrypoint_name();
+        let while_loop = format!("{entrypoint}_while");
+        let swap_digests = format!("{entrypoint}_swap_digests");
+
+        triton_asm!(
             // BEFORE: _ *auth_path leaf_index_hi leaf_index_lo *peaks [digest (leaf_digest)] leaf_count_hi leaf_count_lo
             // AFTER:  _ *auth_path leaf_index_hi leaf_index_lo
             {entrypoint}:
@@ -145,13 +146,13 @@ impl DeprecatedSnippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
                 // stack: _ *auth_path leaf_index_hi leaf_index_lo *peaks [digest (leaf_digest)] mt_index_hi mt_index_lo peak_index
 
                 push 0
-                /// stack: _ *auth_path leaf_index_hi leaf_index_lo *peaks [digest (leaf_digest)] mt_index_hi mt_index_lo peak_index i
+                // stack: _ *auth_path leaf_index_hi leaf_index_lo *peaks [digest (leaf_digest)] mt_index_hi mt_index_lo peak_index i
 
                 swap 8 swap 4 swap 1 swap 7 swap 3 swap 6 swap 2 swap 5 swap 1
-                /// stack: _ *auth_path leaf_index_hi leaf_index_lo *peaks i peak_index mt_index_hi mt_index_lo [digest (leaf_digest)]
+                // stack: _ *auth_path leaf_index_hi leaf_index_lo *peaks i peak_index mt_index_hi mt_index_lo [digest (leaf_digest)]
                 // rename: leaf_digest -> acc_hash
 
-                call {entrypoint}_while
+                call {while_loop}
                 // _ _ *auth_path leaf_index_hi leaf_index_lo *peaks i peak_index mt_index_hi mt_index_lo [digest (acc_hash)]
 
                 dup 9 dup 8
@@ -166,56 +167,57 @@ impl DeprecatedSnippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
 
             // Note that this while loop is the same as one in `verify_from_memory`
             // INVARIANT: _ *auth_path leaf_index_hi leaf_index_lo *peaks i peak_index mt_index_hi mt_index_lo [digest (leaf_digest)]
-                {entrypoint}_while:
-                    dup 6 dup 6 push 0 push 1 call {eq_u64}
-                    // _ *auth_path leaf_index_hi leaf_index_lo *peaks i peak_index mt_index_hi mt_index_lo [digest (leaf_digest)] (mt_index == 1)
+            {while_loop}:
+                dup 6 dup 6 push 0 push 1 {&DataType::U64.compare()}
+                // _ *auth_path leaf_index_hi leaf_index_lo *peaks i peak_index mt_index_hi mt_index_lo [digest (leaf_digest)] (mt_index == 1)
 
-                    skiz return
-                    // _ *auth_path leaf_index_hi leaf_index_lo *peaks i peak_index mt_index_hi mt_index_lo [digest (leaf_digest)]
+                skiz return
+                // _ *auth_path leaf_index_hi leaf_index_lo *peaks i peak_index mt_index_hi mt_index_lo [digest (leaf_digest)]
 
-                    // declare `ap_element = auth_path[i]`
-                    dup 12 dup 9 call {get}
-                    // _ *auth_path leaf_index_hi leaf_index_lo *peaks i peak_index mt_index_hi mt_index_lo [digest (leaf_digest)] [digest (ap_element)]
+                // declare `ap_element = auth_path[i]`
+                dup 12 dup 9 call {get}
+                // _ *auth_path leaf_index_hi leaf_index_lo *peaks i peak_index mt_index_hi mt_index_lo [digest (leaf_digest)] [digest (ap_element)]
 
-                    dup 10 call {u32_is_odd} push 0 eq
-                    // _ *auth_path leaf_index_hi leaf_index_lo *peaks i peak_index mt_index_hi mt_index_lo [digest (acc_hash)] [digest (ap_element)] (mt_index % 2 == 0)
+                dup 10 call {u32_is_odd} push 0 eq
+                // _ *auth_path leaf_index_hi leaf_index_lo *peaks i peak_index mt_index_hi mt_index_lo [digest (acc_hash)] [digest (ap_element)] (mt_index % 2 == 0)
 
-                    skiz call {entrypoint}_swap_digests
-                    // _ *auth_path leaf_index_hi leaf_index_lo *peaks i peak_index mt_index_hi mt_index_lo [digest (right_node)] [digest (left_node)]
+                skiz call {swap_digests}
+                // _ *auth_path leaf_index_hi leaf_index_lo *peaks i peak_index mt_index_hi mt_index_lo [digest (right_node)] [digest (left_node)]
 
-                    hash
-                    // _ *auth_path leaf_index_hi leaf_index_lo *peaks i peak_index mt_index_hi mt_index_lo [digest (new_acc_hash)]
+                hash
+                // _ *auth_path leaf_index_hi leaf_index_lo *peaks i peak_index mt_index_hi mt_index_lo [digest (new_acc_hash)]
 
-                    // i -> i + 1
-                    swap 8 push 1 add swap 8
-                    // _ *auth_path leaf_index_hi leaf_index_lo *peaks (i + 1) peak_index mt_index_hi mt_index_lo [digest (new_acc_hash)]
+                // i -> i + 1
+                swap 8 push 1 add swap 8
+                // _ *auth_path leaf_index_hi leaf_index_lo *peaks (i + 1) peak_index mt_index_hi mt_index_lo [digest (new_acc_hash)]
 
-                    // mt_index -> mt_index / 2
-                    swap 6 swap 1 swap 5
-                    // _ *auth_path [digest (leaf_digest)] *peaks peak_index acc_hash_0 acc_hash_1 (i + 1) acc_hash_4 acc_hash_3 acc_hash_2 mt_index_hi mt_index_lo
+                // mt_index -> mt_index / 2
+                swap 6 swap 1 swap 5
+                // _ *auth_path [digest (leaf_digest)] *peaks peak_index acc_hash_0 acc_hash_1 (i + 1) acc_hash_4 acc_hash_3 acc_hash_2 mt_index_hi mt_index_lo
 
-                    call {div_2}
-                    // _ *auth_path [digest (leaf_digest)] *peaks peak_index acc_hash_0 acc_hash_1 (i + 1) acc_hash_4 acc_hash_3 acc_hash_2 (mt_index / 2)_hi (mt_index / 2)_lo
+                call {div_2}
+                // _ *auth_path [digest (leaf_digest)] *peaks peak_index acc_hash_0 acc_hash_1 (i + 1) acc_hash_4 acc_hash_3 acc_hash_2 (mt_index / 2)_hi (mt_index / 2)_lo
 
-                    swap 5 swap 1 swap 6
-                    // _ *auth_path [digest (leaf_digest)] *peaks (mt_index / 2)_hi (mt_index / 2)_lo peak_index (i + 1) acc_hash_4 acc_hash_3 acc_hash_2 acc_hash_1 acc_hash_0
+                swap 5 swap 1 swap 6
+                // _ *auth_path [digest (leaf_digest)] *peaks (mt_index / 2)_hi (mt_index / 2)_lo peak_index (i + 1) acc_hash_4 acc_hash_3 acc_hash_2 acc_hash_1 acc_hash_0
 
-                    recurse
+                recurse
 
-                // purpose: swap the two digests `i` (node with `acc_hash`) is left child
-                {entrypoint}_swap_digests:
+            // purpose: swap the two digests `i` (node with `acc_hash`) is left child
+            {swap_digests}:
                 // _ *auth_path leaf_index_hi leaf_index_lo *peaks i peak_index mt_index_hi mt_index_lo [digest (acc_hash)] [digest (ap_element)]
-                        swap 4 swap 9 swap 4
-                        swap 3 swap 8 swap 3
-                        swap 2 swap 7 swap 2
-                        swap 1 swap 6 swap 1
-                        swap 5
-                        // _ *auth_path leaf_index_hi leaf_index_lo *peaks i peak_index mt_index_hi mt_index_lo [digest (ap_element)] [digest (acc_hash)]
+                pick 9
+                pick 9
+                pick 9
+                pick 9
+                pick 9
+                // _ *auth_path leaf_index_hi leaf_index_lo *peaks i peak_index mt_index_hi mt_index_lo [digest (ap_element)] [digest (acc_hash)]
 
-                        return
-            "
+                return
 
         )
+        .iter()
+        .join("\n")
     }
 
     fn crash_conditions(&self) -> Vec<String> {

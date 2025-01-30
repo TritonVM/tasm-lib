@@ -3,7 +3,6 @@ pub mod and;
 pub mod decr;
 pub mod div2;
 pub mod div_mod;
-pub mod eq;
 pub mod incr;
 pub mod leading_zeros;
 pub mod log_2_floor;
