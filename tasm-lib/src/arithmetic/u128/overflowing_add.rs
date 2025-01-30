@@ -8,7 +8,8 @@ pub struct OverflowingAdd;
 impl OverflowingAdd {
     /// Generate code to perform an addition on `u128`s.
     ///
-    /// This function is called by both this snippet and [`SafeAdd`].
+    /// This function is called by both this snippet and
+    /// [`SafeAdd`](super::safe_add::SafeAdd).
     ///
     /// BEFORE: _ rhs_3 rhs_2 rhs_1 rhs_0 lhs_3 lhs_2 lhs_1 lhs_0
     /// AFTER:  _ sum_3 sum_2 sum_1 sum_0 is_overflow

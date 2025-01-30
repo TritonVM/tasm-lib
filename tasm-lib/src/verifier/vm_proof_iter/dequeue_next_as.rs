@@ -244,12 +244,13 @@ impl DequeueNextAs {
         triton_asm! { push {bookkeeping_offset} hint bookkeeping_offset = stack[0] add }
     }
 
-    /// A `BFielcCodec`` encoding of a `Polynomial<T>` may not contain trailing zeros. This is
-    /// because it must be easy to read the degree of the polynomial. In order to be consistent with
-    /// that rule, we perform this check here, before returning a pointer to the polynomial to the
-    /// caller.
+    /// A [`BFieldCodec`] encoding of a [`Polynomial`] may not contain trailing
+    /// zeros. This is because it must be easy to read the degree of the polynomial.
+    /// In order to be consistent with that rule, we perform this check here, before
+    /// returning a pointer to the polynomial to the caller.
+    ///
     /// ```text
-    /// BEFORE:  _ *proof_item_payload
+    /// BEFORE: _ *proof_item_payload
     /// AFTER:  _ *proof_item_payload
     /// ```
     fn verify_last_xfe_is_non_zero_if_payload_is_polynomial(&self) -> Vec<LabelledInstruction> {

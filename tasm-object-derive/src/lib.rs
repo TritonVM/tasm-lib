@@ -84,7 +84,8 @@ struct ParsedStruct {
 
     /// The types of all relevant fields. Notably, ignored fields are _not_ included.
     ///
-    /// The order of the entries mimics the order of field [`field_names`].
+    /// The order of the entries mimics the order of field
+    /// [`field_names`](Self::field_names).
     field_types: Vec<syn::Type>,
 
     ignored_fields: Vec<syn::Field>,
