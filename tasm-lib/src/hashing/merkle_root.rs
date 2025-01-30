@@ -34,7 +34,6 @@ use crate::twenty_first::prelude::Inverse;
 pub struct MerkleRoot;
 
 impl MerkleRoot {
-    pub const ZERO_LEAFS_ERROR_ID: i128 = 430;
     pub const NUM_LEAFS_NOT_POWER_OF_2_ERROR_ID: i128 = 431;
 }
 
@@ -69,22 +68,12 @@ impl BasicSnippet for MerkleRoot {
                 addi 1
                 // _ leafs_len *leafs
 
-                /* assert the number of leafs is reasonable: some power of 2, not 0 */
+                /* assert the number of leafs is some power of 2 */
                 dup 1
-                push 0
-                eq
-                push 0
-                eq
-                assert error_id {Self::ZERO_LEAFS_ERROR_ID}
-
-                dup 1           // _ leafs_len *leafs leafs_len
-                log_2_floor
-                push 2
-                pow             // _ leafs_len *leafs (2^⌊log₂(leafs_len)⌋)
-                dup 2
+                pop_count
+                push 1
                 eq
                 assert error_id {Self::NUM_LEAFS_NOT_POWER_OF_2_ERROR_ID}
-
 
                 call {dyn_malloc}
                 // _ leafs_len *leafs *parent_level
@@ -210,7 +199,7 @@ impl BasicSnippet for MerkleRoot {
 
     fn sign_offs(&self) -> HashMap<Reviewer, SignOffFingerprint> {
         let mut sign_offs = HashMap::new();
-        sign_offs.insert(Reviewer("ferdinand"), 0x2f0791d17407d7dc.into());
+        sign_offs.insert(Reviewer("ferdinand"), 0x1c30ac983fdca9da.into());
         sign_offs
     }
 }
@@ -296,13 +285,13 @@ mod tests {
         test_assertion_failure(
             &ShadowedFunction::new(MerkleRoot),
             MerkleRoot.init_state(vec![], bfe!(0)).into(),
-            &[MerkleRoot::ZERO_LEAFS_ERROR_ID],
+            &[MerkleRoot::NUM_LEAFS_NOT_POWER_OF_2_ERROR_ID],
         );
     }
 
     #[proptest(cases = 100)]
     fn computing_root_of_tree_of_height_not_power_of_2_crashes_vm(
-        #[strategy(vec(arb(), 1..2048))]
+        #[strategy(vec(arb(), 0..2048))]
         #[filter(!#leafs.len().is_power_of_two())]
         leafs: Vec<Digest>,
         #[strategy(arb())] address: BFieldElement,
