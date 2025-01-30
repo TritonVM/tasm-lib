@@ -1,18 +1,41 @@
+use std::collections::HashMap;
+
 use triton_vm::prelude::*;
 
 use crate::prelude::*;
+use crate::traits::basic_snippet::Reviewer;
+use crate::traits::basic_snippet::SignOffFingerprint;
 
-pub const MERKLE_AUTHENTICATION_ROOT_MISMATCH_ERROR: i128 = 2;
-
-/// Verify membership in a Merkle tree.
+/// Verify membership in a [Merkle tree](twenty_first::prelude::MerkleTree).
 ///
-/// MerkleVerify -- verify that a leaf lives in a Merkle tree,
-/// given the root, leaf index, and leaf. The authentication path
-/// is non-deterministically divined. This algorithm asserts
-/// that the path is valid; phrased differently, it crashes the
-/// VM if it is not.
+/// Verify that a leaf lives in a Merkle tree, given the tree's root, its
+/// height, the leaf's index, and the leaf itself. The authentication path is
+/// non-deterministically divined. This algorithm asserts that the leaf is a
+/// member of the tree; phrased differently, if membership could not be
+/// established, it crashes the VM.
+///
+/// ### Behavior
+///
+/// ```text
+/// BEFORE: _ [root: Digest] tree_height leaf_index [leaf: Digest]
+/// AFTER:  _
+/// ```
+///
+/// ### Preconditions
+///
+/// - all input arguments are properly [`BFieldCodec`] encoded
+///
+/// ### Postconditions
+///
+/// None.
 #[derive(Clone, Debug)]
 pub struct MerkleVerify;
+
+impl MerkleVerify {
+    pub const TREE_TOO_HIGH_ERROR_ID: i128 = 0;
+    pub const OUT_OF_BOUNDS_LEAF_ERROR_ID: i128 = 1;
+    pub const ROOT_MISMATCH_ERROR_ID: i128 = 2;
+}
 
 impl BasicSnippet for MerkleVerify {
     fn inputs(&self) -> Vec<(DataType, String)> {
@@ -32,7 +55,7 @@ impl BasicSnippet for MerkleVerify {
         "tasmlib_hashing_merkle_verify".to_string()
     }
 
-    fn code(&self, _library: &mut Library) -> Vec<LabelledInstruction> {
+    fn code(&self, _: &mut Library) -> Vec<LabelledInstruction> {
         let entrypoint = self.entrypoint();
         let traverse_tree = format!("{entrypoint}_traverse_tree");
         let tree_height_is_not_zero = format!("{entrypoint}_tree_height_is_not_zero");
@@ -42,15 +65,19 @@ impl BasicSnippet for MerkleVerify {
             {entrypoint}:
                 /* Assert reasonable tree height
                  *
-                 * Don't rely on `pow`'s `is_u32` and `assert leaf_index < num_leaves` only:
-                 * Since bfe!(2)^3784253760 == 1 ∧ 3784253760 < 4294967295 == u32::MAX, weird
-                 * things are possible. It is not immediately obvious how this translates into
-                 * an attack, but there's no point in leaving a potential attack vector open.
+                 * Don't rely only on
+                 * 1. `pow`'s implicit check that the exponent is a u32,
+                 * 2. `assert leaf_index < num_leaves`.
+                 * Since bfe!(2)^192 == 1 and 192 < u32::MAX, weird things are possible. For
+                 * example, the number of leafs for a tree of height 193 would incorrectly be
+                 * computed as 2.
+                 * Any attack would probably still require a hash collision to work, but there's
+                 * no point in leaving a potential attack vector open.
                  */
                 push 32
                 dup 7
                 lt
-                assert error_id 0
+                assert error_id {Self::TREE_TOO_HIGH_ERROR_ID}
 
                 /* Calculate node index from tree height and leaf index */
                 dup 6
@@ -61,7 +88,7 @@ impl BasicSnippet for MerkleVerify {
                 dup 0 dup 7 lt
                 // _ [root; 5] tree_height leaf_index [leaf; 5] num_leaves (leaf_index < num_leaves)
 
-                assert error_id 1
+                assert error_id {Self::OUT_OF_BOUNDS_LEAF_ERROR_ID}
                 // _ [root; 5] tree_height leaf_index [leaf; 5] num_leaves
 
                 pick 6
@@ -71,42 +98,43 @@ impl BasicSnippet for MerkleVerify {
                 place 5
                 // _ [root; 5] tree_height node_index [leaf; 5]
 
-                dup 6
+                pick 6
                 skiz
                     call {tree_height_is_not_zero}
-
-                // _ [root; 5] [0|1] [0|1] [calculated_root; 5]
+                // _ [root; 5] [0|1] [calculated_root; 5]
 
                 /* compare calculated and provided root */
-
                 pick 5
-                pick 6
-                pop 2
-                // _ [root; 5] [calculated_root; 5]
-
-                assert_vector error_id {MERKLE_AUTHENTICATION_ROOT_MISMATCH_ERROR}
+                pop 1
+                assert_vector error_id {Self::ROOT_MISMATCH_ERROR_ID}
                 pop 5
 
                 return
 
+            // BEFORE: _ node_index [leaf; 5]
             {tree_height_is_not_zero}:
-                // _ [root; 5] tree_height node_index [leaf; 5]
-
                 push 1
-                swap 7
-                pop 1
-                // _ [root; 5] 1 node_index [leaf; 5]
+                place 6
+                // _ 1 node_index [leaf; 5]
 
                 call {traverse_tree}
-                // _ [root; 5] 1 1 [calculated_root; 5]
+                // _ 1 1 [calculated_root; 5]
+
+                pick 6
+                pop 1
 
                 return
 
             {traverse_tree}:
                 merkle_step
                 recurse_or_return
-
         )
+    }
+
+    fn sign_offs(&self) -> HashMap<Reviewer, SignOffFingerprint> {
+        let mut sign_offs = HashMap::new();
+        sign_offs.insert(Reviewer("ferdinand"), 0x54be0725136e609e.into());
+        sign_offs
     }
 }
 
@@ -173,17 +201,18 @@ mod tests {
             let leaf = rng.gen();
 
             // walk up tree to calculate root
-            let mut node_digest = leaf;
+            let mut current_node = leaf;
             let mut node_index = leaf_index + num_leaves;
             for &sibling in &path {
                 let node_is_left_sibling = node_index % 2 == 0;
-                node_digest = match node_is_left_sibling {
-                    true => Tip5::hash_pair(node_digest, sibling),
-                    false => Tip5::hash_pair(sibling, node_digest),
+                current_node = if node_is_left_sibling {
+                    Tip5::hash_pair(current_node, sibling)
+                } else {
+                    Tip5::hash_pair(sibling, current_node)
                 };
                 node_index /= 2;
             }
-            let root = node_digest;
+            let root = current_node;
 
             let mut stack = Self.init_stack_for_isolated_run();
             push_encodable(&mut stack, &root);
@@ -286,10 +315,14 @@ mod tests {
             .digests
             .extend(additional_bogus_tree_nodes);
 
+        let expected_errors = [
+            MerkleVerify::OUT_OF_BOUNDS_LEAF_ERROR_ID,
+            MerkleVerify::ROOT_MISMATCH_ERROR_ID,
+        ];
         test_assertion_failure(
             &ShadowedReadOnlyAlgorithm::new(MerkleVerify),
             initial_state.into(),
-            &[1, 2],
+            &expected_errors,
         );
     }
 
@@ -306,7 +339,7 @@ mod tests {
         test_assertion_failure(
             &ShadowedReadOnlyAlgorithm::new(MerkleVerify),
             initial_state.into(),
-            &[0],
+            &[MerkleVerify::TREE_TOO_HIGH_ERROR_ID],
         );
     }
 
@@ -342,7 +375,7 @@ mod tests {
         test_assertion_failure(
             &ShadowedReadOnlyAlgorithm::new(MerkleVerify),
             initial_state.into(),
-            &[2],
+            &[MerkleVerify::ROOT_MISMATCH_ERROR_ID],
         );
     }
 }
