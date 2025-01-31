@@ -1,8 +1,28 @@
+use std::collections::HashMap;
+
 use triton_vm::prelude::*;
 
 use crate::prelude::*;
+use crate::traits::basic_snippet::Reviewer;
+use crate::traits::basic_snippet::SignOffFingerprint;
 
-#[derive(Clone, Debug, Copy)]
+/// Mimics [`u128::overflowing_add`].
+///
+/// ### Behavior
+///
+/// ```text
+/// BEFORE: _ [rhs: u128] [lhs: u128]
+/// AFTER:  _ [sum: u128] [is_overflow: bool]
+/// ```
+///
+/// ### Preconditions
+///
+/// - all input arguments are properly [`BFieldCodec`] encoded
+///
+/// ### Postconditions
+///
+/// - the output is properly [`BFieldCodec`] encoded
+#[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct OverflowingAdd;
 
 impl OverflowingAdd {
@@ -11,63 +31,40 @@ impl OverflowingAdd {
     /// This function is called by both this snippet and
     /// [`SafeAdd`](super::safe_add::SafeAdd).
     ///
+    /// ```text
     /// BEFORE: _ rhs_3 rhs_2 rhs_1 rhs_0 lhs_3 lhs_2 lhs_1 lhs_0
     /// AFTER:  _ sum_3 sum_2 sum_1 sum_0 is_overflow
-    ///                                   ^^^^^^^^^^^
+    /// ```
     /// Don't forget to adapt the signature when using this function elsewhere.
     pub(crate) fn addition_code() -> Vec<LabelledInstruction> {
         triton_asm!(
-                pick 4
-                // _ rhs_3 rhs_2 rhs_1 lhs_3 lhs_2 lhs_1 lhs_0 rhs_0
-
-                add
-                split
-                // _ rhs_3 rhs_2 rhs_1 lhs_3 lhs_2 lhs_1 (lhs_0 + rhs_0)_hi (lhs_0 + rhs_0)_lo
-                // _ rhs_3 rhs_2 rhs_1 lhs_3 lhs_2 lhs_1 carry_1            sum_0
-
-                place 7
-                pick 4
-                // _ sum_0 rhs_3 rhs_2 lhs_3 lhs_2 lhs_1 carry_1 rhs_1
-
-                add
-                add
-                split
-                // _ sum_0 rhs_3 rhs_2 lhs_3 lhs_2 carry_2 sum_1
-
-                place 6
-                pick 3
-                // _ sum_1 sum_0 rhs_3 lhs_3 lhs_2 carry_2 rhs_2
-
-                add
-                add
-                split
-                // _ sum_1 sum_0 rhs_3 lhs_3 carry_3 sum_2
-
-                place 5
-                // _ sum_2 sum_1 sum_0 rhs_3 lhs_3 carry_3
-
-                add
-                add
-                split
-                // _ sum_2 sum_1 sum_0 carry_4 sum_3
-
-                place 4
-                // _ sum_3 sum_2 sum_1 sum_0 carry_4
-                // _ sum_3 sum_2 sum_1 sum_0 is_overflow
+            pick 4  // _ rhs_3 rhs_2 rhs_1 lhs_3 lhs_2 lhs_1 lhs_0 rhs_0
+            add
+            split   // _ rhs_3 rhs_2 rhs_1 lhs_3 lhs_2 lhs_1 (lhs_0 + rhs_0)_hi (lhs_0 + rhs_0)_lo
+                    // _ rhs_3 rhs_2 rhs_1 lhs_3 lhs_2 lhs_1 carry_1            sum_0
+            swap 5  // _ rhs_3 rhs_2 sum_0 lhs_3 lhs_2 lhs_1 carry_1 rhs_1
+            add
+            add
+            split   // _ rhs_3 rhs_2 sum_0 lhs_3 lhs_2 carry_2 sum_1
+            swap 5  // _ rhs_3 sum_1 sum_0 lhs_3 lhs_2 carry_2 rhs_2
+            add
+            add
+            split   // _ rhs_3 sum_1 sum_0 lhs_3 carry_3 sum_2
+            swap 5  // _ sum_2 sum_1 sum_0 lhs_3 carry_3 rhs_3
+            add
+            add
+            split   // _ sum_2 sum_1 sum_0 carry_4 sum_3
+            place 4 // _ sum_3 sum_2 sum_1 sum_0 carry_4
+                    // _ sum_3 sum_2 sum_1 sum_0 is_overflow
         )
     }
 }
 
 impl BasicSnippet for OverflowingAdd {
-    fn entrypoint(&self) -> String {
-        "tasmlib_arithmetic_u128_overflowing_add".to_string()
-    }
-
     fn inputs(&self) -> Vec<(DataType, String)> {
-        vec![
-            (DataType::U128, "lhs".to_owned()),
-            (DataType::U128, "rhs".to_owned()),
-        ]
+        ["lhs", "rhs"]
+            .map(|s| (DataType::U128, s.to_owned()))
+            .to_vec()
     }
 
     fn outputs(&self) -> Vec<(DataType, String)> {
@@ -77,29 +74,29 @@ impl BasicSnippet for OverflowingAdd {
         ]
     }
 
-    /// Four top elements of stack are assumed to be valid u32s. So to have
-    /// a value that's less than 2^32.
-    fn code(&self, _: &mut Library) -> Vec<LabelledInstruction> {
-        let add_code = Self::addition_code();
+    fn entrypoint(&self) -> String {
+        "tasmlib_arithmetic_u128_overflowing_add".to_string()
+    }
 
-        triton_asm! {
-            {self.entrypoint()}:
-                {&add_code}
-                return
-        }
+    fn code(&self, _: &mut Library) -> Vec<LabelledInstruction> {
+        triton_asm! { {self.entrypoint()}: {&Self::addition_code()} return }
+    }
+
+    fn sign_offs(&self) -> HashMap<Reviewer, SignOffFingerprint> {
+        let mut sign_offs = HashMap::new();
+        sign_offs.insert(Reviewer("ferdinand"), 0x191e15314c8a5c8e.into());
+        sign_offs
     }
 }
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use num::Zero;
-
     use super::*;
     use crate::test_prelude::*;
 
     impl OverflowingAdd {
         fn assert_expected_add_behavior(&self, lhs: u128, rhs: u128) {
-            let initial_stack = self.set_up_test_stack((lhs, rhs));
+            let initial_stack = self.set_up_test_stack((rhs, lhs));
 
             let mut expected_stack = initial_stack.clone();
             self.rust_shadow(&mut expected_stack);
@@ -149,49 +146,38 @@ pub(crate) mod tests {
     }
 
     #[test]
-    fn overflowing_add_u128_test() {
-        ShadowedClosure::new(OverflowingAdd).test()
+    fn rust_shadow() {
+        ShadowedClosure::new(OverflowingAdd).test();
     }
 
     #[test]
-    fn overflowing_add_u128_unit_test() {
+    fn unit_test() {
         let snippet = OverflowingAdd;
         snippet.assert_expected_add_behavior(1u128 << 67, 1u128 << 67)
     }
 
     #[test]
-    fn overflowing_add_u128_overflow_test() {
-        let snippet = OverflowingAdd;
+    fn overflow_test() {
+        let test_overflowing_add = |a, b| {
+            OverflowingAdd.assert_expected_add_behavior(a, b);
+            OverflowingAdd.assert_expected_add_behavior(b, a);
+        };
 
-        for (a, b) in [
-            (1u128 << 127, 1u128 << 127),
-            (u128::MAX, u128::MAX),
-            (u128::MAX, 1),
-            (u128::MAX, 1 << 31),
-            (u128::MAX, 1 << 32),
-            (u128::MAX, 1 << 33),
-            (u128::MAX, 1 << 63),
-            (u128::MAX, 1 << 64),
-            (u128::MAX, 1 << 65),
-            (u128::MAX, 1 << 95),
-            (u128::MAX, 1 << 96),
-            (u128::MAX, 1 << 97),
-            (u128::MAX - 1, 2),
-        ] {
-            snippet.assert_expected_add_behavior(a, b);
-            snippet.assert_expected_add_behavior(b, a);
+        test_overflowing_add(1, u128::MAX);
+        test_overflowing_add(2, u128::MAX - 1);
+        test_overflowing_add(1 << 127, 1 << 127);
+        test_overflowing_add(u128::MAX, u128::MAX);
+
+        for a in [31, 32, 33, 63, 64, 65, 95, 96, 97].map(|p| 1 << p) {
+            test_overflowing_add(u128::MAX, a);
         }
 
         for i in 0..128 {
-            let a = u128::MAX - ((1u128 << i) - 1);
-            let b = 1u128 << i;
+            let a = 1 << i;
+            let b = u128::MAX - a + 1;
+            debug_assert_eq!((0, true), a.overflowing_add(b), "i = {i}; a = {a}, b = {b}");
 
-            // sanity check of test input values
-            let (wrapped_add, is_overflow) = a.overflowing_add(b);
-            assert!(is_overflow, "i = {i}. a = {a}, b = {b}");
-            assert!(wrapped_add.is_zero());
-
-            snippet.assert_expected_add_behavior(b, a);
+            test_overflowing_add(a, b);
         }
     }
 }
@@ -203,6 +189,6 @@ mod benches {
 
     #[test]
     fn benchmark() {
-        ShadowedClosure::new(OverflowingAdd).bench()
+        ShadowedClosure::new(OverflowingAdd).bench();
     }
 }
