@@ -1,3 +1,85 @@
+## [0.46.0](https://github.com/TritonVM/tasm-lib/compare/v0.45.0..v0.46.0) - 2025-01-31
+
+### ✨ Features
+
+- Derive more for various `BasicSnippet`s ([3a66965b](https://github.com/TritonVM/tasm-lib/commit/3a66965b))
+- Add snippet exports ([e6a44361](https://github.com/TritonVM/tasm-lib/commit/e6a44361))
+- *(TasmObject)* Decode more types from iterators ([44976534](https://github.com/TritonVM/tasm-lib/commit/44976534))
+
+### 🐛 Bug Fixes
+
+- *(TasmObject)* Check all size indicators ([a1813e24](https://github.com/TritonVM/tasm-lib/commit/a1813e24))
+- *(Fri)* Don't access array as if it was a list ([369fca5a](https://github.com/TritonVM/tasm-lib/commit/369fca5a))
+- Run VM on `InnerFunction::BasicSnippet` ([fdf70e23](https://github.com/TritonVM/tasm-lib/commit/fdf70e23))
+
+### ⚡️ Performance
+
+- *(TasmObject)* Accumulate static jumps in TASM ([ae839408](https://github.com/TritonVM/tasm-lib/commit/ae839408))
+- (!) Improve `CalculateNewPeaksFromAppend` ([69ad217c](https://github.com/TritonVM/tasm-lib/commit/69ad217c))
+- *(MerkleRoot)* Simplify power-of-2 check ([5c3388a8](https://github.com/TritonVM/tasm-lib/commit/5c3388a8))
+
+### 📚 Documentation
+
+- Fix start of code block in docstring ([42426e39](https://github.com/TritonVM/tasm-lib/commit/42426e39))
+- Document absence of “capacity” from lists ([bb4245c9](https://github.com/TritonVM/tasm-lib/commit/bb4245c9))
+- Fix intra-doc link ([cc01e5f3](https://github.com/TritonVM/tasm-lib/commit/cc01e5f3))
+- Fix internal intra-doc links ([687cc309](https://github.com/TritonVM/tasm-lib/commit/687cc309))
+
+### ⚙️ Miscellaneous
+
+- Remove deprecated items ([ea54a09c](https://github.com/TritonVM/tasm-lib/commit/ea54a09c))
+- (!) *(TasmObject)* Overhaul generated code ([beb3f2cd](https://github.com/TritonVM/tasm-lib/commit/beb3f2cd))
+- (!) `MerkleVerify` ([ab7d221c](https://github.com/TritonVM/tasm-lib/commit/ab7d221c))
+
+### ♻️ Refactor
+
+- (!) Fail gracefully when looking up exports ([5b7f9fac](https://github.com/TritonVM/tasm-lib/commit/5b7f9fac))
+- (!) Consistify u32-Snippets exports ([1968b578](https://github.com/TritonVM/tasm-lib/commit/1968b578))
+- (!) Remove field from some “list” snippets ([ca6da237](https://github.com/TritonVM/tasm-lib/commit/ca6da237))
+- (!) Check bounds in “list” helper functions ([1bc79a03](https://github.com/TritonVM/tasm-lib/commit/1bc79a03))
+- (!) Check bounds in `list::get::Get` ([7f5729ca](https://github.com/TritonVM/tasm-lib/commit/7f5729ca))
+- (!) Remove “contiguous list” ([55fc928d](https://github.com/TritonVM/tasm-lib/commit/55fc928d))
+- (!) Check bounds in `list::set::Set` ([138fecb7](https://github.com/TritonVM/tasm-lib/commit/138fecb7))
+- Check bounds in `list::pop::Pop` ([83bc62c4](https://github.com/TritonVM/tasm-lib/commit/83bc62c4))
+- (!) Check bounds in `list::push::Push` ([8d292754](https://github.com/TritonVM/tasm-lib/commit/8d292754))
+- (!) Make field of `Contains` private ([a399b067](https://github.com/TritonVM/tasm-lib/commit/a399b067))
+- (!) Remove snippet `BfeAdd` ([1cbf9e2f](https://github.com/TritonVM/tasm-lib/commit/1cbf9e2f))
+- (!) Remove `DeprecatedSnippet` for `DivMod` ([cb18098b](https://github.com/TritonVM/tasm-lib/commit/cb18098b))
+- (!) Remove impl for `DeprecatedSnippet` ([eafc76a6](https://github.com/TritonVM/tasm-lib/commit/eafc76a6))
+- (!) Make helper type `MemoryIter` private ([8887e566](https://github.com/TritonVM/tasm-lib/commit/8887e566))
+- (!) Remove unused snippets ([d3d0eeea](https://github.com/TritonVM/tasm-lib/commit/d3d0eeea))
+- (!) Remove trivial snippets ([b5d874ab](https://github.com/TritonVM/tasm-lib/commit/b5d874ab))
+- (!) Remove unused helper functions ([16a1c1c9](https://github.com/TritonVM/tasm-lib/commit/16a1c1c9))
+- (!) Remove trivial snippet `u64::Eq` ([e0ef6ca6](https://github.com/TritonVM/tasm-lib/commit/e0ef6ca6))
+- (!) Drop “generic” if no counterpart exists ([10263084](https://github.com/TritonVM/tasm-lib/commit/10263084))
+
+### ✅ Testing
+
+- Check failure conditions of `list::get::Get` ([293805a3](https://github.com/TritonVM/tasm-lib/commit/293805a3))
+- *(TasmObject)* Test decoding from iterator ([00a5507b](https://github.com/TritonVM/tasm-lib/commit/00a5507b))
+
+### 🖋 Snippet Sign-Off
+
+- (!) U64::xor ([8d272de8](https://github.com/TritonVM/tasm-lib/commit/8d272de8))
+- (!) U64::safe_mul ([eb8502ad](https://github.com/TritonVM/tasm-lib/commit/eb8502ad))
+- (!) U64::wrapping_mul ([9a2f8ac8](https://github.com/TritonVM/tasm-lib/commit/9a2f8ac8))
+- U128::lt ([c35e8896](https://github.com/TritonVM/tasm-lib/commit/c35e8896))
+- Xfe::to_the_power_of_power_of_2 ([8efe4f38](https://github.com/TritonVM/tasm-lib/commit/8efe4f38))
+- Horner evaluation ([67441b63](https://github.com/TritonVM/tasm-lib/commit/67441b63))
+- Inner product of `XFieldElement`s ([cdfbb7ef](https://github.com/TritonVM/tasm-lib/commit/cdfbb7ef))
+- Inner product of three rows with weights ([2975d7b8](https://github.com/TritonVM/tasm-lib/commit/2975d7b8))
+- *(hashing)* Absorb multiple ([bd57aa2a](https://github.com/TritonVM/tasm-lib/commit/bd57aa2a))
+- (!) *(hashing)* Hash varlen ([bba98bfb](https://github.com/TritonVM/tasm-lib/commit/bba98bfb))
+- MutatorSet::commit ([50ea214b](https://github.com/TritonVM/tasm-lib/commit/50ea214b))
+- (!) List::length ([e54ce189](https://github.com/TritonVM/tasm-lib/commit/e54ce189))
+- (!) List::pop ([4e17043c](https://github.com/TritonVM/tasm-lib/commit/4e17043c))
+- (!) List::split_off ([6975e5c8](https://github.com/TritonVM/tasm-lib/commit/6975e5c8))
+- MerkleRoot ([bdf48c6f](https://github.com/TritonVM/tasm-lib/commit/bdf48c6f))
+- (!) `u64::Incr` ([6dbdb067](https://github.com/TritonVM/tasm-lib/commit/6dbdb067))
+- `MerkleRootFromXfes` ([6774c9f2](https://github.com/TritonVM/tasm-lib/commit/6774c9f2))
+
+Note: (!) indicates a breaking change.
+
 ## [0.45.0](https://github.com/TritonVM/tasm-lib/compare/v0.43.0..v0.45.0) - 2025-01-14
 
 ### ✨ Features
