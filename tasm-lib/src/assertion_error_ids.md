@@ -57,3 +57,5 @@ often.
 |  450..460 | [`u32::SafeAdd`](arithmetic/u32/safe_add.rs)                                                |
 |  460..470 | [`u32::SafeMul`](arithmetic/u32/safe_mul.rs)                                                |
 |  470..480 | [`u32::SafeSub`](arithmetic/u32/safe_sub.rs)                                                |
+|  480..490 | [`u32::ShiftLeft`](arithmetic/u32/shift_left.rs)                                            |
+|  490..500 | [`u32::ShiftRight`](arithmetic/u32/shift_right.rs)                                          |

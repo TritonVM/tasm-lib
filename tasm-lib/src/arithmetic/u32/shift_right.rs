@@ -1,59 +1,70 @@
 use std::collections::HashMap;
 
-use rand::prelude::*;
 use triton_vm::prelude::*;
 
-use crate::empty_stack;
 use crate::prelude::*;
-use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::InitVmState;
+use crate::traits::basic_snippet::Reviewer;
+use crate::traits::basic_snippet::SignOffFingerprint;
 
-#[derive(Clone, Debug)]
+/// [Shift right][shr] for unsigned 32-bit integers.
+///
+/// # Behavior
+///
+/// ```text
+/// BEFORE: _ [arg: u32] shift_amount
+/// AFTER:  _ [result: u32]
+/// ```
+///
+/// # Preconditions
+///
+/// - input argument `arg` is properly [`BFieldCodec`] encoded
+/// - input argument `shift_amount` is in `0..32`
+///
+/// # Postconditions
+///
+/// - the output is the input argument `arg` bit-shifted to the right by
+///   input argument `shift_amount`
+/// - the output is properly [`BFieldCodec`] encoded
+///
+/// [shr]: core::ops::Shr
+#[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct ShiftRight;
 
-impl DeprecatedSnippet for ShiftRight {
-    fn entrypoint_name(&self) -> String {
+impl ShiftRight {
+    pub const SHIFT_AMOUNT_TOO_BIG_ERROR_ID: i128 = 490;
+}
+
+impl BasicSnippet for ShiftRight {
+    fn inputs(&self) -> Vec<(DataType, String)> {
+        let arg = (DataType::U32, "arg".to_string());
+        let shift_amount = (DataType::U32, "shift_amount".to_string());
+
+        vec![arg, shift_amount]
+    }
+
+    fn outputs(&self) -> Vec<(DataType, String)> {
+        vec![(DataType::U32, "shifted_arg".to_string())]
+    }
+
+    fn entrypoint(&self) -> String {
         "tasmlib_arithmetic_u32_shift_right".to_string()
     }
 
-    fn input_field_names(&self) -> Vec<String> {
-        vec!["value".to_string(), "shift".to_string()]
-    }
-
-    fn input_types(&self) -> Vec<DataType> {
-        vec![DataType::U32, DataType::U32]
-    }
-
-    fn output_field_names(&self) -> Vec<String> {
-        vec!["value >> shift".to_string()]
-    }
-
-    fn output_types(&self) -> Vec<DataType> {
-        vec![DataType::U32]
-    }
-
-    fn stack_diff(&self) -> isize {
-        -1
-    }
-
-    fn function_code(&self, _library: &mut Library) -> String {
-        let entrypoint = self.entrypoint_name();
-
-        format!(
-            "
+    fn code(&self, _: &mut Library) -> Vec<LabelledInstruction> {
+        triton_asm!(
             // BEFORE: _ value shift
             // AFTER:  _ (value >> shift)
-            {entrypoint}:
-                // Bounds check. May be superfluous but this mimics Rust's behavior.
+            {self.entrypoint()}:
+                /* bounds check mimics Rust's behavior */
                 push 32
                 dup 1
                 lt
-                assert
+                assert error_id {Self::SHIFT_AMOUNT_TOO_BIG_ERROR_ID}
 
+                /* for an explanation of how & why this works, see `u64::shift_right` */
                 push -1
                 mul
-                push 32
-                add
+                addi 32
                 push 2
                 pow
                 // _ value (2 ^ (32 - shift))
@@ -66,116 +77,70 @@ impl DeprecatedSnippet for ShiftRight {
                 // _ (value >> shift))
 
                 return
-                "
         )
     }
 
-    fn crash_conditions(&self) -> Vec<String> {
-        vec!["shift is outside of the allowed range [0, 31]".to_string()]
+    fn sign_offs(&self) -> HashMap<Reviewer, SignOffFingerprint> {
+        let mut sign_offs = HashMap::new();
+        sign_offs.insert(Reviewer("ferdinand"), 0xf07f7ed3f3fe8e49.into());
+        sign_offs
     }
-
-    fn gen_input_states(&self) -> Vec<InitVmState> {
-        let mut rng = thread_rng();
-        let mut ret: Vec<InitVmState> = vec![];
-        for _ in 0..100 {
-            let value = rng.next_u32();
-            let shift = rng.gen_range(0..32);
-            ret.push(prepare_state(value, shift));
-        }
-
-        ret
-    }
-
-    fn common_case_input_state(&self) -> InitVmState {
-        prepare_state((1 << 16) - 1, 16)
-    }
-
-    fn worst_case_input_state(&self) -> InitVmState {
-        prepare_state(u32::MAX, 1)
-    }
-
-    fn rust_shadowing(
-        &self,
-        stack: &mut Vec<BFieldElement>,
-        _std_in: Vec<BFieldElement>,
-        _secret_in: Vec<BFieldElement>,
-        _memory: &mut HashMap<BFieldElement, BFieldElement>,
-    ) {
-        // Find shift amount
-        let shift_amount: u32 = stack.pop().unwrap().try_into().unwrap();
-
-        // Original value
-        let value: u32 = stack.pop().unwrap().try_into().unwrap();
-
-        let ret = value >> shift_amount;
-        stack.push((ret as u64).into());
-    }
-}
-
-fn prepare_state(value: u32, shift: u32) -> InitVmState {
-    let mut stack = empty_stack();
-    let value = BFieldElement::new(value as u64);
-    let shift = BFieldElement::new(shift as u64);
-    stack.push(value);
-    stack.push(shift);
-
-    InitVmState::with_stack(stack)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_helpers::test_rust_equivalence_given_input_values_deprecated;
-    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
+    use crate::test_prelude::*;
 
-    #[test]
-    fn shift_right_test() {
-        test_rust_equivalence_multiple_deprecated(&ShiftRight, true);
-    }
+    impl Closure for ShiftRight {
+        type Args = (u32, u32);
 
-    #[test]
-    fn shift_right_max_value_test() {
-        for i in 0..32 {
-            prop_shift_right(u32::MAX, i);
+        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
+            let (arg, shift_amount) = pop_encodable::<Self::Args>(stack);
+            assert!(shift_amount < 32);
+            push_encodable(stack, &(arg >> shift_amount));
+        }
+
+        fn pseudorandom_args(
+            &self,
+            seed: [u8; 32],
+            bench_case: Option<BenchmarkCase>,
+        ) -> Self::Args {
+            let mut rng = StdRng::from_seed(seed);
+            match bench_case {
+                Some(BenchmarkCase::CommonCase) => ((1 << 16) - 1, 16),
+                Some(BenchmarkCase::WorstCase) => (u32::MAX, 1),
+                None => (rng.gen(), rng.gen_range(0..32)),
+            }
+        }
+
+        fn corner_case_args(&self) -> Vec<Self::Args> {
+            (0..32).map(|i| (u32::MAX, i)).collect()
         }
     }
 
     #[test]
-    #[should_panic]
-    fn shift_beyond_limit() {
-        let mut init_stack = empty_stack();
-        init_stack.push(BFieldElement::new(u32::MAX as u64));
-        init_stack.push(32u64.into());
-        ShiftRight.link_and_run_tasm_from_state_for_test(&mut InitVmState::with_stack(init_stack));
+    fn rust_shadow() {
+        ShadowedClosure::new(ShiftRight).test();
     }
 
-    fn prop_shift_right(value: u32, shift_amount: u32) {
-        let mut init_stack = empty_stack();
-        init_stack.push(BFieldElement::new(value as u64));
-        init_stack.push(BFieldElement::new(shift_amount as u64));
-
-        let expected_u32 = value >> shift_amount;
-
-        let mut expected_stack = empty_stack();
-        expected_stack.push((expected_u32 as u64).into());
-
-        test_rust_equivalence_given_input_values_deprecated(
-            &ShiftRight,
-            &init_stack,
-            &[],
-            HashMap::default(),
-            Some(&expected_stack),
-        );
+    #[proptest]
+    fn too_big_shift_amount_crashes_vm(arg: u32, #[strategy(32_u32..)] shift_amount: u32) {
+        test_assertion_failure(
+            &ShadowedClosure::new(ShiftRight),
+            InitVmState::with_stack(ShiftRight.set_up_test_stack((arg, shift_amount))),
+            &[ShiftRight::SHIFT_AMOUNT_TOO_BIG_ERROR_ID],
+        )
     }
 }
 
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::snippet_bencher::bench_and_write;
+    use crate::test_prelude::*;
 
     #[test]
-    fn shift_right_benchmark() {
-        bench_and_write(ShiftRight);
+    fn benchmark() {
+        ShadowedClosure::new(ShiftRight).bench();
     }
 }
