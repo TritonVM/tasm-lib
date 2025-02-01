@@ -24,8 +24,6 @@ use crate::traits::basic_snippet::SignOffFingerprint;
 ///
 /// - the output is the product of the input
 /// - the output is properly [`BFieldCodec`] encoded
-///
-/// [bitand]: core::ops::BitAnd
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct SafeMul;
 
