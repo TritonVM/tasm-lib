@@ -1,189 +1,139 @@
-use num::Zero;
-use rand::prelude::*;
+use std::collections::HashMap;
+
 use triton_vm::prelude::*;
 
-use crate::empty_stack;
 use crate::prelude::*;
-use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::InitVmState;
+use crate::traits::basic_snippet::Reviewer;
+use crate::traits::basic_snippet::SignOffFingerprint;
 
-#[derive(Clone, Debug)]
+/// Subtract two `u32`s and crash on overflow.
+///
+/// ### Behavior
+///
+/// ```text
+/// BEFORE: _ [right: 32] [left: u32]
+/// AFTER:  _ [left - right: u32]
+/// ```
+///
+/// ### Preconditions
+///
+/// - all input arguments are properly [`BFieldCodec`] encoded
+/// - `left` is greater than or equal to `right`
+///
+/// ### Postconditions
+///
+/// - the output is properly [`BFieldCodec`] encoded
+#[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct SafeSub;
 
-impl DeprecatedSnippet for SafeSub {
-    fn entrypoint_name(&self) -> String {
+impl SafeSub {
+    pub const OVERFLOW_ERROR_ID: i128 = 470;
+}
+
+impl BasicSnippet for SafeSub {
+    fn inputs(&self) -> Vec<(DataType, String)> {
+        ["right", "left"]
+            .map(|s| (DataType::U32, s.to_string()))
+            .to_vec()
+    }
+
+    fn outputs(&self) -> Vec<(DataType, String)> {
+        vec![(DataType::U32, "left - right".to_string())]
+    }
+
+    fn entrypoint(&self) -> String {
         "tasmlib_arithmetic_u32_safe_sub".to_string()
     }
 
-    fn input_field_names(&self) -> Vec<String> {
-        vec!["rhs".to_string(), "lhs".to_string()]
-    }
-
-    fn input_types(&self) -> Vec<DataType> {
-        vec![DataType::U32, DataType::U32]
-    }
-
-    fn output_field_names(&self) -> Vec<String> {
-        vec!["lhs - rhs".to_string()]
-    }
-
-    fn output_types(&self) -> Vec<DataType> {
-        vec![DataType::U32]
-    }
-
-    fn stack_diff(&self) -> isize {
-        -1
-    }
-
-    fn function_code(&self, _library: &mut crate::library::Library) -> String {
-        let entrypoint = self.entrypoint_name();
-        format!(
-            "
-                // BEFORE: _ rhs lhs
-                // AFTER:  _ (lhs - rhs)
-                {entrypoint}:
-                    swap 1
-                    push -1
-                    mul
-                    add
-                    dup 0  // _ (lhs - rhs) (lhs - rhs)
-                    split  // _ (lhs - rhs) hi lo
-                    pop 1  // _ (lhs - rhs) hi
-                    push 0 // _ (lhs - rhs) hi 0
-                    eq     // _ (lhs - rhs) (hi == 0)
-                    assert // _ (lhs - rhs)
-                    return
-                    "
+    fn code(&self, _: &mut Library) -> Vec<LabelledInstruction> {
+        triton_asm!(
+            // BEFORE: _ right left
+            // AFTER:  _ (left - right)
+            {self.entrypoint()}:
+                pick 1
+                push -1
+                mul
+                add
+                dup 0   // _ diff diff
+                split   // _ diff hi lo
+                pop 1   // _ diff hi
+                push 0  // _ diff hi 0
+                eq      // _ diff (hi == 0)
+                assert error_id {Self::OVERFLOW_ERROR_ID}
+                return
         )
     }
 
-    fn crash_conditions(&self) -> Vec<String> {
-        vec!["u32 overflow".to_string()]
-    }
-
-    fn gen_input_states(&self) -> Vec<InitVmState> {
-        let mut ret: Vec<InitVmState> = vec![];
-        for _ in 0..10 {
-            let mut stack = empty_stack();
-            let lhs = thread_rng().gen_range(0..u32::MAX / 2);
-            let rhs = thread_rng().gen_range(0..=lhs);
-            let lhs = BFieldElement::new(lhs as u64);
-            let rhs = BFieldElement::new(rhs as u64);
-            stack.push(rhs);
-            stack.push(lhs);
-            ret.push(InitVmState::with_stack(stack));
-        }
-
-        ret
-    }
-
-    fn common_case_input_state(&self) -> InitVmState {
-        InitVmState::with_stack(
-            [
-                empty_stack(),
-                vec![BFieldElement::new(1 << 15), BFieldElement::new(1 << 16)],
-            ]
-            .concat(),
-        )
-    }
-
-    fn worst_case_input_state(&self) -> InitVmState {
-        InitVmState::with_stack(
-            [
-                empty_stack(),
-                vec![BFieldElement::zero(), BFieldElement::new((1 << 32) - 1)],
-            ]
-            .concat(),
-        )
-    }
-
-    fn rust_shadowing(
-        &self,
-        stack: &mut Vec<BFieldElement>,
-        _std_in: Vec<BFieldElement>,
-        _secret_in: Vec<BFieldElement>,
-        _memory: &mut std::collections::HashMap<BFieldElement, BFieldElement>,
-    ) {
-        let lhs: u32 = stack.pop().unwrap().try_into().unwrap();
-        let rhs: u32 = stack.pop().unwrap().try_into().unwrap();
-
-        let diff = lhs - rhs;
-        stack.push(BFieldElement::new(diff as u64));
+    fn sign_offs(&self) -> HashMap<Reviewer, SignOffFingerprint> {
+        let mut sign_offs = HashMap::new();
+        sign_offs.insert(Reviewer("ferdinand"), 0x40fd42d47d3b4bf4.into());
+        sign_offs
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-
     use super::*;
-    use crate::test_helpers::test_rust_equivalence_given_input_values_deprecated;
-    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
+    use crate::test_prelude::*;
 
-    #[test]
-    fn snippet_test() {
-        test_rust_equivalence_multiple_deprecated(&SafeSub, true);
+    impl Closure for SafeSub {
+        type Args = (u32, u32);
+
+        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
+            let (right, left) = pop_encodable::<Self::Args>(stack);
+            let diff = left.checked_sub(right).unwrap();
+            push_encodable(stack, &diff);
+        }
+
+        fn pseudorandom_args(
+            &self,
+            seed: [u8; 32],
+            bench_case: Option<BenchmarkCase>,
+        ) -> Self::Args {
+            let Some(bench_case) = bench_case else {
+                let mut rng = StdRng::from_seed(seed);
+                let left = rng.gen();
+                let right = rng.gen_range(0..=left);
+
+                return (right, left);
+            };
+
+            match bench_case {
+                BenchmarkCase::CommonCase => (1 << 15, 1 << 16),
+                BenchmarkCase::WorstCase => (0, u32::MAX),
+            }
+        }
+
+        fn corner_case_args(&self) -> Vec<Self::Args> {
+            vec![(0, 0), (0, u32::MAX), (u32::MAX, u32::MAX)]
+        }
     }
 
     #[test]
-    fn safe_sub_simple_test() {
-        prop_safe_sub(1000, 1, Some(999));
-        prop_safe_sub(10_000, 900, Some(9_100));
-        prop_safe_sub(123, 123, Some(0));
-        prop_safe_sub(1230, 230, Some(1000));
-        prop_safe_sub(1 << 31, 1 << 30, Some(1 << 30));
-        prop_safe_sub(u32::MAX, 0, Some(u32::MAX));
-        prop_safe_sub(u32::MAX, u32::MAX, Some(0));
+    fn rust_shadow() {
+        ShadowedClosure::new(SafeSub).test();
     }
 
-    #[should_panic]
-    #[test]
-    fn overflow_test() {
-        prop_safe_sub(1 << 31, (1 << 31) + 1000, None);
-    }
-
-    #[should_panic]
-    #[test]
-    fn overflow_test_2() {
-        prop_safe_sub(0, 1, None);
-    }
-
-    #[should_panic]
-    #[test]
-    fn overflow_test_3() {
-        prop_safe_sub(0, u32::MAX, None);
-    }
-
-    fn prop_safe_sub(lhs: u32, rhs: u32, _expected: Option<u32>) {
-        let mut init_stack = empty_stack();
-        init_stack.push(BFieldElement::new(rhs as u64));
-        init_stack.push(BFieldElement::new(lhs as u64));
-        let expected = lhs.checked_sub(rhs);
-        let expected = [
-            empty_stack(),
-            vec![expected
-                .map(|x| BFieldElement::new(x as u64))
-                .unwrap_or_else(BFieldElement::zero)],
-        ]
-        .concat();
-
-        test_rust_equivalence_given_input_values_deprecated(
-            &SafeSub,
-            &init_stack,
-            &[],
-            HashMap::default(),
-            Some(&expected),
-        );
+    #[proptest]
+    fn overflow_crashes_vm(
+        #[filter(#left != u32::MAX)] left: u32,
+        #[strategy(#left..)] right: u32,
+    ) {
+        test_assertion_failure(
+            &ShadowedClosure::new(SafeSub),
+            InitVmState::with_stack(SafeSub.set_up_test_stack((right, left))),
+            &[SafeSub::OVERFLOW_ERROR_ID],
+        )
     }
 }
 
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::snippet_bencher::bench_and_write;
+    use crate::test_prelude::*;
 
     #[test]
     fn safe_sub_benchmark() {
-        bench_and_write(SafeSub);
+        ShadowedClosure::new(SafeSub).bench();
     }
 }
