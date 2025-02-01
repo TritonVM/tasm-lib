@@ -55,3 +55,4 @@ often.
 |  430..440 | [`MerkleRoot`](hashing/merkle_root.rs)                                                      |                                                      
 |  440..450 | [`u64::Incr`](arithmetic/u64/incr.rs)                                                       |
 |  450..460 | [`u32::SafeAdd`](arithmetic/u32/safe_add.rs)                                                |
+|  460..470 | [`u32::SafeMul`](arithmetic/u32/safe_mul.rs)                                                |
