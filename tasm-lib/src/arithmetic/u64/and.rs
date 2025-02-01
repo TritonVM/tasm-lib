@@ -95,10 +95,9 @@ pub(crate) mod tests {
         }
 
         fn corner_case_args(&self) -> Vec<Self::Args> {
-            let edge_points = [0, 1 << 32, u64::MAX]
+            let edge_points = [1, 1 << 32, u64::MAX - 1]
                 .into_iter()
-                .flat_map(|p| [p.checked_sub(1), Some(p), p.checked_add(1)])
-                .flatten();
+                .flat_map(|p| [p - 1, p, p + 1]);
 
             edge_points.clone().cartesian_product(edge_points).collect()
         }

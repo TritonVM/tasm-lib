@@ -2,10 +2,10 @@
   {
     "name": "tasmlib_arithmetic_u64_mul_two_u64s_to_u128_u64",
     "benchmark_result": {
-      "clock_cycle_count": 35,
+      "clock_cycle_count": 34,
       "hash_table_height": 36,
       "u32_table_height": 133,
-      "op_stack_table_height": 22,
+      "op_stack_table_height": 20,
       "ram_table_height": 0
     },
     "case": "CommonCase"
@@ -13,10 +13,10 @@
   {
     "name": "tasmlib_arithmetic_u64_mul_two_u64s_to_u128_u64",
     "benchmark_result": {
-      "clock_cycle_count": 35,
+      "clock_cycle_count": 34,
       "hash_table_height": 36,
       "u32_table_height": 133,
-      "op_stack_table_height": 22,
+      "op_stack_table_height": 20,
       "ram_table_height": 0
     },
     "case": "WorstCase"
