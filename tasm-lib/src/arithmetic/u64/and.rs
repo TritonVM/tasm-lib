@@ -70,7 +70,7 @@ impl BasicSnippet for And {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
     use crate::test_prelude::*;
 
@@ -98,14 +98,9 @@ mod tests {
             let edge_points = [0, 1 << 32, u64::MAX]
                 .into_iter()
                 .flat_map(|p| [p.checked_sub(1), Some(p), p.checked_add(1)])
-                .flatten()
-                .collect_vec();
+                .flatten();
 
-            edge_points
-                .iter()
-                .cartesian_product(&edge_points)
-                .map(|(&l, &r)| (l, r))
-                .collect()
+            edge_points.clone().cartesian_product(edge_points).collect()
         }
     }
 

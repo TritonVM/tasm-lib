@@ -1,6 +1,6 @@
 [
   {
-    "name": "tasmlib_arithmetic_u64_or_u64",
+    "name": "tasmlib_arithmetic_u64_or",
     "benchmark_result": {
       "clock_cycle_count": 17,
       "hash_table_height": 18,
@@ -11,7 +11,7 @@
     "case": "CommonCase"
   },
   {
-    "name": "tasmlib_arithmetic_u64_or_u64",
+    "name": "tasmlib_arithmetic_u64_or",
     "benchmark_result": {
       "clock_cycle_count": 17,
       "hash_table_height": 18,

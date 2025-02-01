@@ -117,7 +117,7 @@ pub fn name_to_snippet(fn_name: &str) -> Option<Box<dyn BasicSnippet>> {
         "tasmlib_arithmetic_u64_mul_two_u64s_to_u128_u64" => {
             Some(Box::new(u64::mul_two_u64s_to_u128::MulTwoU64sToU128))
         }
-        "tasmlib_arithmetic_u64_or_u64" => Some(Box::new(u64::or::Or)),
+        "tasmlib_arithmetic_u64_or" => Some(Box::new(u64::or::Or)),
         "tasmlib_arithmetic_u64_overflowing_sub" => {
             Some(Box::new(u64::overflowing_sub::OverflowingSub))
         }
