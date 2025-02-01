@@ -1,172 +1,136 @@
-use rand::prelude::*;
+use std::collections::HashMap;
+
 use triton_vm::prelude::*;
 
-use crate::empty_stack;
 use crate::prelude::*;
-use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::InitVmState;
+use crate::traits::basic_snippet::Reviewer;
+use crate::traits::basic_snippet::SignOffFingerprint;
 
-#[derive(Clone, Debug)]
+/// Add two `u32`s and crash on overflow.
+///
+/// ### Behavior
+///
+/// ```text
+/// BEFORE: _ [right: 32] [left: u32]
+/// AFTER:  _ [left + right: u32]
+/// ```
+///
+/// ### Preconditions
+///
+/// - all input arguments are properly [`BFieldCodec`] encoded
+/// - the sum of `left` and `right` is less than or equal to [`u32::MAX`]
+///
+/// ### Postconditions
+///
+/// - the output is the sum of the input
+/// - the output is properly [`BFieldCodec`] encoded
+#[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct SafeAdd;
 
-impl DeprecatedSnippet for SafeAdd {
-    fn entrypoint_name(&self) -> String {
+impl SafeAdd {
+    pub const OVERFLOW_ERROR_ID: i128 = 450;
+}
+
+impl BasicSnippet for SafeAdd {
+    fn inputs(&self) -> Vec<(DataType, String)> {
+        ["right", "left"]
+            .map(|s| (DataType::U32, s.to_string()))
+            .to_vec()
+    }
+
+    fn outputs(&self) -> Vec<(DataType, String)> {
+        vec![(DataType::U32, "left + right".to_string())]
+    }
+
+    fn entrypoint(&self) -> String {
         "tasmlib_arithmetic_u32_safe_add".to_string()
     }
 
-    fn input_field_names(&self) -> Vec<String> {
-        vec!["rhs".to_string(), "lhs".to_string()]
-    }
-
-    fn input_types(&self) -> Vec<DataType> {
-        vec![DataType::U32, DataType::U32]
-    }
-
-    fn output_field_names(&self) -> Vec<String> {
-        vec!["lhs + rhs".to_string()]
-    }
-
-    fn output_types(&self) -> Vec<DataType> {
-        vec![DataType::U32]
-    }
-
-    fn stack_diff(&self) -> isize {
-        -1
-    }
-
-    fn function_code(&self, _library: &mut crate::library::Library) -> String {
-        let entrypoint = self.entrypoint_name();
-        format!(
-            "
-                {entrypoint}:
-                    add    // _ lhs + rhs
-                    dup 0  // _ (lhs + rhs) (lhs + rhs)
-                    split  // _ (lhs + rhs) hi lo
-                    pop 1  // _ (lhs + rhs) hi
-                    push 0 // _ (lhs + rhs) hi 0
-                    eq     // _ (lhs + rhs) (hi == 0)
-                    assert // _ (lhs + rhs)
-                    return
-                    "
+    fn code(&self, _: &mut Library) -> Vec<LabelledInstruction> {
+        triton_asm!(
+            {self.entrypoint()}:
+                add    // _ sum
+                dup 0  // _ sum sum
+                split  // _ sum hi lo
+                pop 1  // _ sum hi
+                push 0 // _ sum hi 0
+                eq     // _ sum (hi == 0)
+                assert error_id {Self::OVERFLOW_ERROR_ID}
+                return
         )
     }
 
-    fn crash_conditions(&self) -> Vec<String> {
-        vec!["u32 overflow".to_string()]
-    }
-
-    fn gen_input_states(&self) -> Vec<InitVmState> {
-        let mut ret: Vec<InitVmState> = vec![];
-        for _ in 0..10 {
-            let mut stack = empty_stack();
-            let lhs = thread_rng().gen_range(0..u32::MAX / 2);
-            let rhs = thread_rng().gen_range(0..u32::MAX / 2);
-            let lhs = BFieldElement::new(lhs as u64);
-            let rhs = BFieldElement::new(rhs as u64);
-            stack.push(rhs);
-            stack.push(lhs);
-            ret.push(InitVmState::with_stack(stack));
-        }
-
-        ret
-    }
-
-    fn common_case_input_state(&self) -> InitVmState {
-        InitVmState::with_stack(
-            [
-                empty_stack(),
-                vec![BFieldElement::new(1 << 16), BFieldElement::new(1 << 15)],
-            ]
-            .concat(),
-        )
-    }
-
-    fn worst_case_input_state(&self) -> InitVmState {
-        InitVmState::with_stack(
-            [
-                empty_stack(),
-                vec![
-                    BFieldElement::new((1 << 30) - 1),
-                    BFieldElement::new((1 << 31) - 1),
-                ],
-            ]
-            .concat(),
-        )
-    }
-
-    fn rust_shadowing(
-        &self,
-        stack: &mut Vec<BFieldElement>,
-        _std_in: Vec<BFieldElement>,
-        _secret_in: Vec<BFieldElement>,
-        _memory: &mut std::collections::HashMap<BFieldElement, BFieldElement>,
-    ) {
-        let lhs: u32 = stack.pop().unwrap().try_into().unwrap();
-        let rhs: u32 = stack.pop().unwrap().try_into().unwrap();
-
-        let sum = lhs + rhs;
-        stack.push(BFieldElement::new(sum as u64));
+    fn sign_offs(&self) -> HashMap<Reviewer, SignOffFingerprint> {
+        let mut sign_offs = HashMap::new();
+        sign_offs.insert(Reviewer("ferdinand"), 0x92d8f083ca55e1d.into());
+        sign_offs
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-
-    use num::Zero;
-
     use super::*;
-    use crate::test_helpers::test_rust_equivalence_given_input_values_deprecated;
-    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
+    use crate::test_prelude::*;
 
-    #[test]
-    fn snippet_test() {
-        test_rust_equivalence_multiple_deprecated(&SafeAdd, true);
+    impl Closure for SafeAdd {
+        type Args = (u32, u32);
+
+        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
+            let (right, left) = pop_encodable::<Self::Args>(stack);
+            let sum = left.checked_add(right).unwrap();
+            push_encodable(stack, &sum);
+        }
+
+        fn pseudorandom_args(
+            &self,
+            seed: [u8; 32],
+            bench_case: Option<BenchmarkCase>,
+        ) -> Self::Args {
+            let Some(bench_case) = bench_case else {
+                let mut rng = StdRng::from_seed(seed);
+                let left = rng.gen();
+                let right = rng.gen_range(0..=u32::MAX - left);
+
+                return (right, left);
+            };
+
+            match bench_case {
+                BenchmarkCase::CommonCase => (1 << 16, 1 << 15),
+                BenchmarkCase::WorstCase => (u32::MAX >> 1, u32::MAX >> 2),
+            }
+        }
+
+        fn corner_case_args(&self) -> Vec<Self::Args> {
+            vec![(0, u32::MAX)]
+        }
     }
 
     #[test]
-    fn safe_add_simple_test() {
-        prop_safe_add(1000, 1, Some(1001));
-        prop_safe_add(10_000, 900, Some(10_900));
+    fn rust_shadow() {
+        ShadowedClosure::new(SafeAdd).test();
     }
 
-    #[should_panic]
-    #[test]
-    fn overflow_test() {
-        prop_safe_add((1 << 31) + 1000, 1 << 31, None);
-    }
-
-    fn prop_safe_add(lhs: u32, rhs: u32, _expected: Option<u32>) {
-        let mut init_stack = empty_stack();
-        init_stack.push(BFieldElement::new(rhs as u64));
-        init_stack.push(BFieldElement::new(lhs as u64));
-
-        let expected = lhs.checked_add(rhs);
-        let expected = [
-            empty_stack(),
-            vec![expected
-                .map(|x| BFieldElement::new(x as u64))
-                .unwrap_or_else(BFieldElement::zero)],
-        ]
-        .concat();
-
-        test_rust_equivalence_given_input_values_deprecated::<SafeAdd>(
-            &SafeAdd,
-            &init_stack,
-            &[],
-            HashMap::default(),
-            Some(&expected),
-        );
+    #[proptest]
+    fn overflow_crashes_vm(
+        #[filter(#left != 0)] left: u32,
+        #[strategy(u32::MAX - #left + 1..)] right: u32,
+    ) {
+        debug_assert!(left.checked_add(right).is_none());
+        test_assertion_failure(
+            &ShadowedClosure::new(SafeAdd),
+            InitVmState::with_stack(SafeAdd.set_up_test_stack((left, right))),
+            &[SafeAdd::OVERFLOW_ERROR_ID],
+        )
     }
 }
 
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::snippet_bencher::bench_and_write;
+    use crate::test_prelude::*;
 
     #[test]
     fn safe_add_benchmark() {
-        bench_and_write(SafeAdd);
+        ShadowedClosure::new(SafeAdd).bench();
     }
 }

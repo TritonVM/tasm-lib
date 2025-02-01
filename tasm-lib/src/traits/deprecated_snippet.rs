@@ -300,9 +300,7 @@ pub(crate) mod tests {
 
     #[test]
     fn can_return_code() {
-        let mut empty_library = Library::new();
-        let example_snippet =
-            arithmetic::u32::safe_add::SafeAdd.function_code_as_instructions(&mut empty_library);
+        let example_snippet = arithmetic::u32::safe_add::SafeAdd.code(&mut Library::new());
         assert!(!example_snippet.is_empty());
         println!(
             "{}",
