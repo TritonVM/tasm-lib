@@ -63,3 +63,4 @@ often.
 |  520..530 | [`u128::Sub`](arithmetic/u128/sub.rs)                                                       |
 |  530..540 | [`u128::ShiftLeft`](arithmetic/u128/shift_left.rs)                                          |
 |  540..550 | [`u128::ShiftRight`](arithmetic/u128/shift_right.rs)                                        |
+|  550..560 | [`list::Range`](list/range.rs)                                                              |
