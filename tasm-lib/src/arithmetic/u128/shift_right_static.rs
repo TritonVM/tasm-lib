@@ -1,301 +1,137 @@
-use rand::prelude::*;
 use triton_vm::prelude::*;
 
-use crate::empty_stack;
 use crate::prelude::*;
-use crate::push_encodable;
-use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::InitVmState;
 
-#[derive(Clone, Debug)]
+/// [Shift right][shr] for unsigned 128-bit integers, with the shift amount
+/// specified at compile time.
+///
+/// The shift amount `N` must be in range `0..=32`.
+///
+/// ### Behavior
+///
+/// ```text
+/// BEFORE: _ [v: u128]
+/// AFTER:  _ [v >> SHIFT_AMOUNT: u128]
+/// ```
+///
+/// ### Preconditions
+///
+/// - input argument `arg` is properly [`BFieldCodec`] encoded
+///
+/// ### Postconditions
+///
+/// - the output is properly [`BFieldCodec`] encoded
+///
+/// [shr]: core::ops::Shr
+#[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct ShiftRightStatic<const N: u8>;
 
-impl<const N: u8> DeprecatedSnippet for ShiftRightStatic<N> {
-    fn entrypoint_name(&self) -> String {
-        assert!(
-            N <= 32,
-            "Static right shift cannot shift by more than 32 bits"
-        );
+impl<const N: u8> BasicSnippet for ShiftRightStatic<N> {
+    fn inputs(&self) -> Vec<(DataType, String)> {
+        vec![(DataType::U128, "value".to_string())]
+    }
+
+    fn outputs(&self) -> Vec<(DataType, String)> {
+        vec![(DataType::U128, "shifted_value".to_string())]
+    }
+
+    fn entrypoint(&self) -> String {
         format!("tasmlib_arithmetic_u128_shift_right_static_{N}")
     }
 
-    fn input_field_names(&self) -> Vec<String>
-    where
-        Self: Sized,
-    {
-        vec![
-            "value_limb3".to_string(),
-            "value_limb2".to_string(),
-            "value_limb1".to_string(),
-            "value_limb0".to_string(),
-        ]
-    }
+    fn code(&self, _: &mut Library) -> Vec<LabelledInstruction> {
+        assert!(N <= 32, "shift amount must be in range 0..=32");
 
-    fn input_types(&self) -> Vec<DataType> {
-        vec![DataType::U128]
-    }
+        triton_asm!(
+            // BEFORE: _ v_3 v_2 v_1 v_0
+            // AFTER:  _ (v >> s)_3 (v >> s)_2 (v >> s)_1 (v >> s)_0
+            {self.entrypoint()}:
+                pick 3
+                push {1_u64 << (32 - N)}
+                mul
+                place 3             // _ v3s v2 v1 v0
+                push {1_u64 << (32 - N)}
+                xb_mul              // _ v3s v2s v1s v0s
 
-    fn output_field_names(&self) -> Vec<String>
-    where
-        Self: Sized,
-    {
-        vec![
-            "shifted_value_limb3".to_string(),
-            "shifted_value_limb2".to_string(),
-            "shifted_value_limb1".to_string(),
-            "shifted_value_limb0".to_string(),
-        ]
-    }
+                /* see non-static version for stack annotations */
+                pick 3
+                split
+                pick 4
+                split
+                pick 5
+                split
+                pick 6
+                split
 
-    fn output_types(&self) -> Vec<DataType> {
-        vec![DataType::U128]
-    }
-
-    fn stack_diff(&self) -> isize
-    where
-        Self: Sized,
-    {
-        0
-    }
-
-    fn function_code(&self, _library: &mut Library) -> String {
-        assert!(
-            N <= 32,
-            "Static shift-snippet cannot right-shift by more than 32 bits"
-        );
-        let entrypoint = self.entrypoint_name();
-        let pow_2_alt = 2u64.pow(32 - N as u32);
-        format!(
-            "
-            // BEFORE: _ limb3 limb2 limb1 limb0
-            // AFTER:  _ (value >> shift)_3 (value >> shift)_2 (value >> shift)_1 (value >> shift)_0
-            {entrypoint}:
-                push {pow_2_alt}
-                // _ v3 v2 v1 v0 pow2
-
-                mul             // _ v3 v2 v1 v0s
-                swap 3          // _ v0s v2 v1 v3
-                push {pow_2_alt}
-                xb_mul           // _ v0s v2s v1s v3s
-                swap 3          // _ v3s v2s v1s v0s
-
-                // add: v1_lo + v0s_hi etc.
-
-                split  // _ v3s v2s v1s v0s_hi v0s_lo
-                pop 1  // _ v3s v2s v1s v0s_hi
-                swap 1 // _ v3s v2s v0s_hi v1s
-                split  // _ v3s v2s v0s_hi v1s_hi v1s_lo
-                swap 3 // _ v3s v1s_lo v0s_hi v1s_hi v2s
-                split  // _ v3s v1s_lo v0s_hi v1s_hi v2s_hi v2s_lo
-                swap 5 // _ v2s_lo v1s_lo v0s_hi v1s_hi v2s_hi v3s
-                split  // _ v2s_lo v1s_lo v0s_hi v1s_hi v2s_hi v3s_hi v3s_lo
-
-                // send v3s_hi to bottom of stack
-                swap 1 // _ v2s_lo v1s_lo v0s_hi v1s_hi v2s_hi v3s_lo v3s_hi
-                swap 6 // _ v3s_hi v1s_lo v0s_hi v1s_hi v2s_hi v3s_lo v2s_lo
-
-                // add v3s_lo to v2s_hi
-                swap 2 // _ w3 v1s_lo v0s_hi v1s_hi v2s_lo v3s_lo v2s_hi
-                add    // _ w3 v1s_lo v0s_hi v1s_hi v2s_lo w2
-
-                swap 4 // _ w3 w2 v0s_hi v1s_hi v2s_lo v1s_lo
-                swap 2 // _ w3 w2 v0s_hi v1s_lo v2s_lo v1s_hi
-                add    // _ w3 w2 v0s_hi v1s_lo w1
-
-                swap 2 // _ w3 w2 w1 v1s_lo v0s_hi
-                add    // _ w3 w2 w1 w0
+                pop 1
+                add
+                place 4
+                add
+                place 3
+                add
+                place 2
 
                 return
-            "
         )
     }
-
-    fn crash_conditions(&self) -> Vec<String>
-    where
-        Self: Sized,
-    {
-        vec![]
-    }
-
-    fn gen_input_states(&self) -> Vec<InitVmState>
-    where
-        Self: Sized,
-    {
-        let mut ret = vec![];
-        for _ in 0..5 {
-            ret.push(prepare_state(random::<u128>()));
-        }
-        ret
-    }
-
-    fn common_case_input_state(&self) -> InitVmState
-    where
-        Self: Sized,
-    {
-        prepare_state(0x1282)
-    }
-
-    fn worst_case_input_state(&self) -> InitVmState
-    where
-        Self: Sized,
-    {
-        prepare_state(0x123456789abcdef)
-    }
-
-    fn rust_shadowing(
-        &self,
-        stack: &mut Vec<BFieldElement>,
-        _std_in: Vec<BFieldElement>,
-        _secret_in: Vec<BFieldElement>,
-        _memory: &mut std::collections::HashMap<BFieldElement, BFieldElement>,
-    ) where
-        Self: Sized,
-    {
-        // Original value
-        let mut value = 0u128;
-        for i in 0..4 {
-            value |= (stack.pop().unwrap().value() as u128) << (i * 32);
-        }
-
-        value >>= N;
-
-        for i in 0..4 {
-            let limb = ((value >> ((3 - i) * 32)) & u32::MAX as u128) as u32;
-            stack.push(BFieldElement::new(limb as u64));
-        }
-    }
-}
-
-fn prepare_state(value: u128) -> InitVmState {
-    let mut init_stack = empty_stack();
-    push_encodable(&mut init_stack, &value.encode());
-    InitVmState::with_stack(init_stack)
 }
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-
     use super::*;
-    use crate::test_helpers::test_rust_equivalence_given_input_values_deprecated;
-    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
+    use crate::arithmetic::u128::shift_left_static::ShiftLeftStatic;
+    use crate::test_prelude::*;
 
-    #[test]
-    fn shift_right_u128_test() {
-        test_rust_equivalence_multiple_deprecated(&ShiftRightStatic::<0>, false);
-        test_rust_equivalence_multiple_deprecated(&ShiftRightStatic::<1>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftRightStatic::<2>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftRightStatic::<3>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftRightStatic::<4>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftRightStatic::<5>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftRightStatic::<6>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftRightStatic::<7>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftRightStatic::<8>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftRightStatic::<9>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftRightStatic::<10>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftRightStatic::<11>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftRightStatic::<12>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftRightStatic::<13>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftRightStatic::<14>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftRightStatic::<15>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftRightStatic::<16>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftRightStatic::<17>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftRightStatic::<18>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftRightStatic::<19>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftRightStatic::<20>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftRightStatic::<21>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftRightStatic::<22>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftRightStatic::<23>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftRightStatic::<24>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftRightStatic::<25>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftRightStatic::<26>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftRightStatic::<27>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftRightStatic::<28>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftRightStatic::<29>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftRightStatic::<30>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftRightStatic::<31>, true);
-        test_rust_equivalence_multiple_deprecated(&ShiftRightStatic::<32>, true);
+    impl<const N: u8> Closure for ShiftRightStatic<N> {
+        type Args = <ShiftLeftStatic<N> as Closure>::Args;
+
+        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
+            let v = pop_encodable::<Self::Args>(stack);
+            push_encodable(stack, &(v >> N));
+        }
+
+        fn pseudorandom_args(
+            &self,
+            seed: [u8; 32],
+            bench_case: Option<BenchmarkCase>,
+        ) -> Self::Args {
+            ShiftLeftStatic::<N>.pseudorandom_args(seed, bench_case)
+        }
+
+        fn corner_case_args(&self) -> Vec<Self::Args> {
+            ShiftLeftStatic::<N>.corner_case_args()
+        }
     }
 
     #[test]
-    fn shift_right_simple_test() {
-        prop::<1>(1);
-        prop::<2>(8);
-        prop::<3>(1000);
-        prop::<3>(random());
-        prop::<4>(random());
-        prop::<5>(random());
-        prop::<31>(random());
-        prop::<32>(random());
-    }
+    fn rust_shadow() {
+        macro_rules! test_shift_right_static {
+            ($($i:expr),*$(,)?) => {
+                $(ShadowedClosure::new(ShiftRightStatic::<$i>).test();)*
+            };
+        }
 
-    #[test]
-    fn shift_right_max_values_test() {
-        prop::<0>(u128::MAX);
-        prop::<1>(u128::MAX);
-        prop::<12>(u128::MAX);
-        prop::<24>(u128::MAX);
-        prop::<31>(u128::MAX);
-        prop::<32>(u128::MAX);
-    }
-
-    #[test]
-    fn shift_right_zero_test() {
-        prop::<0>(0);
-        prop::<1>(0);
-        prop::<12>(0);
-        prop::<24>(0);
-        prop::<31>(0);
-        prop::<32>(0);
+        test_shift_right_static!(0, 1, 2, 3, 4, 5, 6, 7);
+        test_shift_right_static!(8, 9, 10, 11, 12, 13, 14, 15);
+        test_shift_right_static!(16, 17, 18, 19, 20, 21, 22, 23);
+        test_shift_right_static!(24, 25, 26, 27, 28, 29, 30, 31);
+        test_shift_right_static!(32);
     }
 
     #[test]
     #[should_panic]
     fn shift_beyond_limit() {
-        let mut init_stack = empty_stack();
-        init_stack.push(BFieldElement::new(u32::MAX as u64));
-        init_stack.push(BFieldElement::new(u32::MAX as u64));
-        init_stack.push(BFieldElement::new(u32::MAX as u64));
-        init_stack.push(BFieldElement::new(u32::MAX as u64));
-        ShiftRightStatic::<33>
-            .link_and_run_tasm_from_state_for_test(&mut InitVmState::with_stack(init_stack));
-    }
-
-    fn prop<const N: u8>(value: u128) {
-        let mut init_stack = empty_stack();
-        for i in 0..4 {
-            init_stack.push(BFieldElement::new(
-                ((value >> (32 * (3 - i))) as u32) as u64,
-            ));
-        }
-
-        let expected_u128 = value >> N;
-        println!("{value} >> {N} = {expected_u128}");
-
-        let mut expected_stack = empty_stack();
-        for i in 0..4 {
-            expected_stack.push(BFieldElement::new(
-                ((expected_u128 >> (32 * (3 - i))) & u32::MAX as u128) as u64,
-            ));
-        }
-
-        test_rust_equivalence_given_input_values_deprecated(
-            &ShiftRightStatic::<N>,
-            &init_stack,
-            &[],
-            HashMap::default(),
-            Some(&expected_stack),
-        );
+        ShadowedClosure::new(ShiftRightStatic::<33>).test();
     }
 }
 
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::snippet_bencher::bench_and_write;
+    use crate::test_prelude::*;
 
     #[test]
-    fn shift_right_u128_benchmark() {
-        bench_and_write(ShiftRightStatic::<5>);
+    fn benchmark() {
+        ShadowedClosure::new(ShiftRightStatic::<5>).bench();
     }
 }

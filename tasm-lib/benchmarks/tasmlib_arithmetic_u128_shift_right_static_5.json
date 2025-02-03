@@ -2,9 +2,9 @@
   {
     "name": "tasmlib_arithmetic_u128_shift_right_static_5",
     "benchmark_result": {
-      "clock_cycle_count": 26,
-      "hash_table_height": 30,
-      "u32_table_height": 62,
+      "clock_cycle_count": 24,
+      "hash_table_height": 24,
+      "u32_table_height": 31,
       "op_stack_table_height": 12,
       "ram_table_height": 0
     },
@@ -13,9 +13,9 @@
   {
     "name": "tasmlib_arithmetic_u128_shift_right_static_5",
     "benchmark_result": {
-      "clock_cycle_count": 26,
-      "hash_table_height": 30,
-      "u32_table_height": 95,
+      "clock_cycle_count": 24,
+      "hash_table_height": 24,
+      "u32_table_height": 64,
       "op_stack_table_height": 12,
       "ram_table_height": 0
     },
