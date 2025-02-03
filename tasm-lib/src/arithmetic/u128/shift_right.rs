@@ -1,294 +1,194 @@
-use rand::prelude::*;
+use std::collections::HashMap;
+
 use triton_vm::prelude::*;
-use twenty_first::prelude::U32s;
 
-use crate::empty_stack;
 use crate::prelude::*;
-use crate::push_encodable;
-use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::InitVmState;
+use crate::traits::basic_snippet::Reviewer;
+use crate::traits::basic_snippet::SignOffFingerprint;
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
+/// [Shift right][shr] for unsigned 128-bit integers.
+///
+/// # Behavior
+///
+/// ```text
+/// BEFORE: _ [arg: u128] shift_amount
+/// AFTER:  _ [result: u128]
+/// ```
+///
+/// # Preconditions
+///
+/// - input argument `arg` is properly [`BFieldCodec`] encoded
+/// - input argument `shift_amount` is in `0..128`
+///
+/// # Postconditions
+///
+/// - the output is the input argument `arg` bit-shifted to the right by
+///   input argument `shift_amount`
+/// - the output is properly [`BFieldCodec`] encoded
+///
+/// [shr]: core::ops::Shr
+#[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct ShiftRight;
 
-impl DeprecatedSnippet for ShiftRight {
-    fn entrypoint_name(&self) -> String {
+impl ShiftRight {
+    pub const SHIFT_AMOUNT_TOO_BIG_ERROR_ID: i128 = 540;
+}
+
+impl BasicSnippet for ShiftRight {
+    fn inputs(&self) -> Vec<(DataType, String)> {
+        let arg = (DataType::U128, "arg".to_string());
+        let shift_amount = (DataType::U32, "shift_amount".to_string());
+
+        vec![arg, shift_amount]
+    }
+
+    fn outputs(&self) -> Vec<(DataType, String)> {
+        vec![(DataType::U128, "shifted_arg".to_string())]
+    }
+
+    fn entrypoint(&self) -> String {
         "tasmlib_arithmetic_u128_shift_right".to_string()
     }
 
-    fn input_field_names(&self) -> Vec<String> {
-        vec![
-            "input_3".to_string(),
-            "input_2".to_string(),
-            "input_1".to_string(),
-            "input_0".to_string(),
-            "shamt".to_string(),
-        ]
-    }
+    fn code(&self, _: &mut Library) -> Vec<LabelledInstruction> {
+        let entrypoint = self.entrypoint();
+        let shift_amount_gt_32 = format!("{entrypoint}_shift_amount_gt_32");
 
-    fn input_types(&self) -> Vec<DataType> {
-        vec![DataType::U128, DataType::U32]
-    }
-
-    fn output_field_names(&self) -> Vec<String> {
-        vec![
-            "shifted_value_3".to_string(),
-            "shifted_value_2".to_string(),
-            "shifted_value_1".to_string(),
-            "shifted_value_0".to_string(),
-        ]
-    }
-
-    fn output_types(&self) -> Vec<DataType> {
-        vec![DataType::U128]
-    }
-
-    fn stack_diff(&self) -> isize {
-        -1
-    }
-
-    fn function_code(&self, _library: &mut Library) -> String {
-        let entrypoint = self.entrypoint_name();
-        format!(
-            "
-            // BEFORE: _ v_3 v_2 v_1 v_0 shift
-            // AFTER:  _ (v >> shift)_3 (v >> shift)_2 (v >> shift)_1 (v >> shift)_0
+        triton_asm!(
+            // BEFORE: _ v_3 v_2 v_1 v_0 s
+            // AFTER:  _ (v >> s)_3 (v >> s)_2 (v >> s)_1 (v >> s)_0
             {entrypoint}:
-                // Bounds check: Verify that shift amount is less than 128.
+                /* bounds check */
                 push 128
                 dup 1
                 lt
-                assert
-                // _ v_3 v_2 v_1 v_0 shift
+                assert error_id {Self::SHIFT_AMOUNT_TOO_BIG_ERROR_ID}
+                            // _ v_3 v_2 v_1 v_0 s
 
-                // If shift amount is greater than 32, we need to special-case!
+                /* special case if shift amount is greater than 32 */
                 dup 0
                 push 32
-                lt
-                // _ v_3 v_2 v_1 v_0 shift (shift > 32)
-
+                lt          // _ v_3 v_2 v_1 v_0 s (s > 32)
                 skiz
-                    call {entrypoint}_handle_hi_shift
-                // _ v_3 v_2 v_1 v_0 shift
+                    call {shift_amount_gt_32}
+                            // _ v_3 v_2 v_1 v_0 s
 
+                /* for an explanation, see snippet “u64::ShiftRight” */
                 push -1
                 mul
-                push 32
-                add
-                // _ v_3 v_2 v_1 v_0 (32 - shift)
-
+                addi 32     // _ v_3 v_2 v_1 v_0 (32 - s)
                 push 2
-                pow
-                // _ v_3 v_2 v_1 v_0 (2 ^ (32 - shift))
+                pow         // _ v_3 v_2 v_1 v_0 (2^(32 - s))
 
-                swap 4 swap 3 swap 2 swap 1
-                // _ (2 ^ (32 - shift)) v_3 v_2 v_1 v_0
+                dup 0
+                pick 5
+                mul         // _ v_2 v_1 v_0 (2^(32 - s)) v_3s
+                place 4
+                xb_mul      // _ v_3s v_2s v_1s v_0s
 
-                dup 4
-                // _ (2 ^ (32 - shift)) v_3 v_2 v_1 v_0 (2 ^ (32 - shift))
+                pick 3
+                split       // _ v_2s v_1s v_0s (v >> s)_3 c_2
+                pick 4
+                split       // _ v_1s v_0s (v >> s)_3 c_2 (v_2 >> s) c_1
+                pick 5
+                split       // _ v_0s (v >> s)_3 c_2 (v_2 >> s) c_1 (v_1 >> s) c_0
+                pick 6
+                split       // _ (v >> s)_3 c_2 (v_2 >> s) c_1 (v_1 >> s) c_0 (v_0 >> s) trash
 
-                mul
-                split
-                pop 1
-                // _ (2 ^ (32 - shift)) v_3 v_2 v_1 (v_0 >> shift)
-
-                swap 1
-                // _ (2 ^ (32 - shift)) v_3 v_2 (v_0 >> shift) v_1
-
-                dup 4 // _ (2 ^ (32 - shift)) v_3 v_2 (v_0 >> shift) v_1 (2 ^ (32 - shift))
-                mul
-                split
-                // _ (2 ^ (32 - shift)) v_3 v_2 (v_0 >> shift) (v_1 >> shift) carry
-
-                swap 1 swap 2 add
-                // _ (2 ^ (32 - shift)) v_3 v_2 (v_1 >> shift) (v >> shift)_0
-
-                swap 2 dup 4
-                // _ (2 ^ (32 - shift)) v_3 (v >> shift)_0 (v_1 >> shift) v_2 (2 ^ (32 - shift))
-
-                mul split
-                // _ (2 ^ (32 - shift)) v_3 (v >> shift)_0 (v_1 >> shift) (v_2 >> shift) carry
-
-                swap 1 swap 2 add
-                // _ (2 ^ (32 - shift)) v_3 (v >> shift)_0 (v_2 >> shift) (v >> shift)_1
-
-                swap 3
-                // _ (2 ^ (32 - shift)) (v >> shift)_1 (v >> shift)_0 (v_2 >> shift) v_3
-
-                dup 4 mul split
-                // _ (2 ^ (32 - shift)) (v >> shift)_1 (v >> shift)_0 (v_2 >> shift) (v_3 >> shift) carry
-
-                swap 1 swap 2 add
-                // _ (2 ^ (32 - shift)) (v >> shift)_1 (v >> shift)_0 (v_3 >> shift) (v >> shift)_2
-
-                // _ (2 ^ (32 - shift)) (v >> shift)_1 (v >> shift)_0 (v >> shift)_3 (v >> shift)_2
-
-                swap 1 swap 4 pop 1
-                // _ (v >> shift)_3 (v >> shift)_1 (v >> shift)_0 (v >> shift)_2
-
-                swap 2 swap 1
-                // _ (v >> shift)_3 (v >> shift)_2 (v >> shift)_0 (v >> shift)_1
+                pop 1       // _ (v >> s)_3 c_2 (v_2 >> s) c_1 (v_1 >> s) c_0 (v_0 >> s)
+                add         // _ (v >> s)_3 c_2 (v_2 >> s) c_1 (v_1 >> s) (v >> s)_0
+                place 4     // _ (v >> s)_3 (v >> s)_0 c_2 (v_2 >> s) c_1 (v_1 >> s)
+                add         // _ (v >> s)_3 (v >> s)_0 c_2 (v_2 >> s) (v >> s)_1
+                place 3     // _ (v >> s)_3 (v >> s)_1 (v >> s)_0 c_2 (v_2 >> s)
+                add         // _ (v >> s)_3 (v >> s)_1 (v >> s)_0 (v_2 >> s)_2
+                place 2     // _ (v >> s)_3 (v_2 >> s)_2 (v >> s)_1 (v >> s)_0
 
                 return
 
-            // start: _ v_3 v_2 v_1 v_0 shift
-            // end: _ (v >> 32)_3 (v >> 32)_2 (v >> 32)_1 (v >> 32)_0 (shift - 32)
-            {entrypoint}_handle_hi_shift:
-                push -32
-                add
-                // _ v_3 v_2 v_1 v_0 (shift - 32)
+            // BEFORE: _ [v: u128] s
+            // AFTER:  _ [v >> i·32: u128] (s - i·32)
+            // such that i·32 <= s < (i+1)·32
+            {shift_amount_gt_32}:
+                addi -32    // _ v_3 v_2 v_1 v_0 (s - 32)
+                pick 1
+                pop 1       // _ v_3 v_2 v_1 (s - 32)
+                push 0
+                place 4     // _ 0 v_3 v_2 v_1 (s - 32)
 
-                swap 4 swap 3 swap 2 swap 1 push 32
-                // _ (shift - 32) v_3 v_2 v_1 v_0 32
-
-                call {entrypoint}
-                // _ (shift - 32) (v >> 32)_3 (v >> 32)_2 (v >> 32)_1 (v >> 32)_0
-
-                swap 1 swap 2 swap 3 swap 4
-                // _ (v >> 32)_3 (v >> 32)_2 (v >> 32)_1 (v >> 32)_0 (shift - 32)
-
-                // if shift - 32 is still greater than 32, we need to special-case again!
                 dup 0
                 push 32
                 lt
-                // _ (v >> 32)_3 (v >> 32)_2 (v >> 32)_1 (v >> 32)_0 (shift - 32) (shift - 32 > 32)
                 skiz
                     recurse
-
                 return
-            "
         )
     }
 
-    fn crash_conditions(&self) -> Vec<String> {
-        vec!["Shift amount is greater than 128".to_string()]
+    fn sign_offs(&self) -> HashMap<Reviewer, SignOffFingerprint> {
+        let mut sign_offs = HashMap::new();
+        sign_offs.insert(Reviewer("ferdinand"), 0x9875596d880d6dd0.into());
+        sign_offs
     }
-
-    fn gen_input_states(&self) -> Vec<InitVmState> {
-        let mut ret = vec![];
-        for i in 0..128 {
-            ret.push(prepare_state(random::<u128>(), i));
-        }
-
-        ret
-    }
-
-    fn common_case_input_state(&self) -> InitVmState {
-        prepare_state(0x642, 20)
-    }
-
-    fn worst_case_input_state(&self) -> InitVmState {
-        prepare_state(0x123, 127)
-    }
-
-    fn rust_shadowing(
-        &self,
-        stack: &mut Vec<BFieldElement>,
-        _std_in: Vec<BFieldElement>,
-        _secret_in: Vec<BFieldElement>,
-        _memory: &mut std::collections::HashMap<BFieldElement, BFieldElement>,
-    ) {
-        // Find shift amount
-        let shift_amount: u32 = stack.pop().unwrap().try_into().unwrap();
-
-        // Original value
-        let a_0: u32 = stack.pop().unwrap().try_into().unwrap();
-        let a_1: u32 = stack.pop().unwrap().try_into().unwrap();
-        let a_2: u32 = stack.pop().unwrap().try_into().unwrap();
-        let a_3: u32 = stack.pop().unwrap().try_into().unwrap();
-        let a =
-            ((a_3 as u128) << 96) + ((a_2 as u128) << 64) + ((a_1 as u128) << 32) + (a_0 as u128);
-
-        let ret = a >> shift_amount;
-        push_encodable(stack, &ret);
-    }
-}
-
-fn prepare_state(value: u128, shift_amount: u32) -> InitVmState {
-    let value = U32s::<4>::try_from(value).unwrap();
-    let mut init_stack = empty_stack();
-    push_encodable(&mut init_stack, &value);
-    init_stack.push(BFieldElement::new(shift_amount as u64));
-    InitVmState::with_stack(init_stack)
 }
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-
     use super::*;
-    use crate::test_helpers::test_rust_equivalence_given_input_values_deprecated;
-    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
+    use crate::test_prelude::*;
 
-    #[test]
-    fn shift_right_u128_test() {
-        test_rust_equivalence_multiple_deprecated(&ShiftRight, true);
-    }
+    impl Closure for ShiftRight {
+        type Args = (u128, u32);
 
-    #[test]
-    fn shift_right_unit_test() {
-        prop_shift_right(8, 2);
-        prop_shift_right(1 << 65, 2);
-        prop_shift_right(1 << 127, 31);
-        prop_shift_right(1 << 127, 32);
-        prop_shift_right(1 << 127, 33);
-        prop_shift_right(u128::MAX, 0);
-        prop_shift_right(u128::MAX, 1);
-        prop_shift_right(u128::MAX, 31);
-        prop_shift_right(u128::MAX, 32);
-        prop_shift_right(u128::MAX, 33);
-    }
-
-    #[test]
-    fn regression_test_crashing_code_shift_right_u128() {
-        prop_shift_right(1 << 127, 65)
-    }
-
-    #[test]
-    fn shift_right_max_values_and_zeros_test() {
-        for i in 0..128 {
-            prop_shift_right((u64::MAX as u128) << 38, i);
+        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
+            let (arg, shift_amount) = pop_encodable::<Self::Args>(stack);
+            assert!(shift_amount < 128);
+            push_encodable(stack, &(arg >> shift_amount));
         }
-        for i in 0..128 {
-            prop_shift_right(u128::MAX, i);
-            prop_shift_right(0, i);
+
+        fn pseudorandom_args(
+            &self,
+            seed: [u8; 32],
+            bench_case: Option<BenchmarkCase>,
+        ) -> Self::Args {
+            let mut rng = StdRng::from_seed(seed);
+
+            match bench_case {
+                Some(BenchmarkCase::CommonCase) => (0x642, 20),
+                Some(BenchmarkCase::WorstCase) => (0x123, 127),
+                None => (rng.gen(), rng.gen_range(0..128)),
+            }
+        }
+
+        fn corner_case_args(&self) -> Vec<Self::Args> {
+            [0, 1 << 3, 1 << 64, u64::MAX.into(), 1 << 127, u128::MAX]
+                .into_iter()
+                .cartesian_product(0..128)
+                .collect()
         }
     }
 
-    fn prop_shift_right(value: u128, shift_amount: u32) {
-        let mut init_stack = empty_stack();
-        let value_as_u32s = U32s::<4>::try_from(value).unwrap();
-        for limb in value_as_u32s.encode().into_iter().rev() {
-            init_stack.push(limb);
-        }
+    #[test]
+    fn rust_shadow() {
+        ShadowedClosure::new(ShiftRight).test();
+    }
 
-        init_stack.push(BFieldElement::new(shift_amount as u64));
-
-        let expected_u128 = value >> shift_amount;
-
-        let mut expected_stack = empty_stack();
-        let expected_value_as_u32s = U32s::<4>::try_from(expected_u128).unwrap();
-        for limb in expected_value_as_u32s.encode().into_iter().rev() {
-            expected_stack.push(limb);
-        }
-
-        test_rust_equivalence_given_input_values_deprecated(
-            &ShiftRight,
-            &init_stack,
-            &[],
-            HashMap::default(),
-            Some(&expected_stack),
-        );
+    #[proptest]
+    fn too_large_shift_crashes_vm(arg: u128, #[strategy(128_u32..)] shift_amount: u32) {
+        test_assertion_failure(
+            &ShadowedClosure::new(ShiftRight),
+            InitVmState::with_stack(ShiftRight.set_up_test_stack((arg, shift_amount))),
+            &[ShiftRight::SHIFT_AMOUNT_TOO_BIG_ERROR_ID],
+        )
     }
 }
 
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::snippet_bencher::bench_and_write;
+    use crate::test_prelude::*;
 
     #[test]
     fn benchmark() {
-        bench_and_write(ShiftRight);
+        ShadowedClosure::new(ShiftRight).bench();
     }
 }
