@@ -1,374 +1,180 @@
 use std::collections::HashMap;
 
-use rand::prelude::*;
 use triton_vm::prelude::*;
-use twenty_first::prelude::U32s;
 
-use crate::empty_stack;
 use crate::prelude::*;
-use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::InitVmState;
+use crate::traits::basic_snippet::Reviewer;
+use crate::traits::basic_snippet::SignOffFingerprint;
 
-#[derive(Clone, Debug)]
+/// [Subtraction][sub] for unsigned 128-bit integers.
+///
+/// # Behavior
+///
+/// ```text
+/// BEFORE: _ [subtrahend: u128] [minuend: u128]
+/// AFTER:  _ [difference: u128]
+/// ```
+///
+/// # Preconditions
+///
+/// - the `minuend` is greater than or equal to the `subtrahend`
+/// - all input arguments are properly [`BFieldCodec`] encoded
+///
+/// # Postconditions
+///
+/// - the output is the `minuend` minus the `subtrahend`
+/// - the output is properly [`BFieldCodec`] encoded
+///
+/// [sub]: core::ops::Sub
+#[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct Sub;
 
-impl DeprecatedSnippet for Sub {
-    fn entrypoint_name(&self) -> String {
+impl Sub {
+    pub const OVERFLOW_ERROR_ID: i128 = 520;
+}
+
+impl BasicSnippet for Sub {
+    fn inputs(&self) -> Vec<(DataType, String)> {
+        ["subtrahend", "minuend"]
+            .map(|s| (DataType::U128, s.to_string()))
+            .to_vec()
+    }
+
+    fn outputs(&self) -> Vec<(DataType, String)> {
+        vec![(DataType::U128, "difference".to_string())]
+    }
+
+    fn entrypoint(&self) -> String {
         "tasmlib_arithmetic_u128_sub".to_string()
     }
 
-    fn input_field_names(&self) -> Vec<String> {
-        vec![
-            "rhs_3".to_string(),
-            "rhs_2".to_string(),
-            "rhs_1".to_string(),
-            "rhs_0".to_string(),
-            "lhs_3".to_string(),
-            "lhs_2".to_string(),
-            "lhs_1".to_string(),
-            "lhs_0".to_string(),
-        ]
-    }
-
-    fn input_types(&self) -> Vec<DataType> {
-        vec![DataType::U128, DataType::U128]
-    }
-
-    fn output_field_names(&self) -> Vec<String> {
-        vec![
-            "(lhs - rhs)_3".to_string(),
-            "(lhs - rhs)_2".to_string(),
-            "(lhs - rhs)_1".to_string(),
-            "(lhs - rhs)_0".to_string(),
-        ]
-    }
-
-    fn output_types(&self) -> Vec<DataType> {
-        vec![DataType::U128]
-    }
-
-    fn stack_diff(&self) -> isize {
-        -4
-    }
-
-    fn function_code(&self, _library: &mut Library) -> String {
-        let entrypoint = self.entrypoint_name();
-        const TWO_POW_32: &str = "4294967296";
-
-        format!(
-            "
-            // BEFORE: _ rhs_3 rhs_2 rhs_1 rhs_0 lhs_3 lhs_2 lhs_1 lhs_0
-            // AFTER:  _ sum_3 sum_2 sum_1 sum_0
-            {entrypoint}:
-                swap 1 swap 4
+    fn code(&self, _: &mut Library) -> Vec<LabelledInstruction> {
+        triton_asm!(
+            // BEFORE: _ r_3 r_2 r_1 r_0 l_3 l_2 l_1 l_0
+            // AFTER:  _ diff_3 diff_2 diff_1 diff_0
+            {self.entrypoint()}:
+                pick 4
                 push -1
                 mul
+                add         // _ r_3 r_2 r_1 l_3 l_2 l_1 (l_0 - r_0)
+                push {1_u64 << 32}
                 add
-                // _ rhs_3 rhs_2 rhs_1 lhs_1 lhs_3 lhs_2 (lhs_0 - rhs_0)
+                split       // _ r_3 r_2 r_1 l_3 l_2 l_1 !carry diff_0
+                place 7     // _ diff_0 r_3 r_2 r_1 l_3 l_2 l_1 !carry
 
-                push {TWO_POW_32}
+                push 0
+                eq          // _ diff_0 r_3 r_2 r_1 l_3 l_2 l_1 carry
+                pick 4
                 add
+                push -1
+                mul         // _ diff_0 r_3 r_2 l_3 l_2 l_1 (-r_1-carry)
+                add         // _ diff_0 r_3 r_2 l_3 l_2 (l_1-r_1-carry)
+                push {1_u64 << 32}
+                add
+                split       // _ diff_0 r_3 r_2 l_3 l_2 !carry diff_1
+                place 6     // _ diff_1 diff_0 r_3 r_2 l_3 l_2 !carry
 
-                split
-                // _ rhs_3 rhs_2 rhs_1 lhs_1 lhs_3 lhs_2 !carry diff_0
+                push 0
+                eq          // _ diff_1 diff_0 r_3 r_2 l_3 l_2 carry
+                pick 3
+                add
+                push -1
+                mul         // _ diff_1 diff_0 r_3 l_3 l_2 (-r_2-carry)
+                add         // _ diff_1 diff_0 r_3 l_3 (l_2-r_2-carry)
+                push {1_u64 << 32}
+                add
+                split       // _ diff_1 diff_0 r_3 l_3 !carry diff_2
+                place 5     // _ diff_2 diff_1 diff_0 r_3 l_3 !carry
 
-                swap 5 swap 1
-                // _ rhs_3 rhs_2 diff_0 lhs_1 lhs_3 lhs_2 rhs_1 !carry
+                push 0
+                eq          // _ diff_2 diff_1 diff_0 r_3 l_3 carry
+                pick 2
+                add
+                push -1
+                mul         // _ diff_2 diff_1 diff_0 l_3 (-r_3-carry)
+                add
+                split       // _ diff_2 diff_1 diff_0 overflow diff_3
+                place 4     // _ [diff: u128] overflow
 
                 push 0
                 eq
-                // _ rhs_3 rhs_2 diff_0 lhs_1 lhs_3 lhs_2 rhs_1 carry
-
-                add
-                // _ rhs_3 rhs_2 diff_0 lhs_1 lhs_3 lhs_2 rhs_1'
-
-                push -1
-                mul
-                // _ rhs_3 rhs_2 diff_0 lhs_1 lhs_3 lhs_2 -rhs_1'
-
-                swap 1 swap 3
-                // _ rhs_3 rhs_2 diff_0 lhs_2 lhs_3 -rhs_1' lhs_1
-
-                add
-                // _ rhs_3 rhs_2 diff_0 lhs_2 lhs_3 (lhs_1 - rhs_1')
-
-                push {TWO_POW_32}
-                add
-                split
-                // _ rhs_3 rhs_2 diff_0 lhs_2 lhs_3 !carry diff_1
-
-                swap 5 swap 1
-                // _ rhs_3 diff_1 diff_0 lhs_2 lhs_3 rhs_2 !carry
-
-                push 0
-                eq
-                // _ rhs_3 diff_1 diff_0 lhs_2 lhs_3 rhs_2 carry
-
-                add
-                // _ rhs_3 diff_1 diff_0 lhs_2 lhs_3 rhs_2'
-
-                push -1
-                mul
-                // _ rhs_3 diff_1 diff_0 lhs_2 lhs_3 -rhs_2'
-
-                swap 1 swap 2
-                // _ rhs_3 diff_1 diff_0 lhs_3 -rhs_2' lhs_2
-
-                add
-                // _ rhs_3 diff_1 diff_0 lhs_3 (lhs_2 - rhs_2')
-
-                push {TWO_POW_32}
-                add
-                split
-                // _ rhs_3 diff_1 diff_0 lhs_3 !carry diff_2
-
-                swap 5 swap 1
-                // _ diff_2 diff_1 diff_0 lhs_3 rhs_3 !carry
-
-                push 0
-                eq
-                // _ diff_2 diff_1 diff_0 lhs_3 rhs_3 carry
-
-                add
-                // _ diff_2 diff_1 diff_0 lhs_3 rhs_3'
-
-                push -1
-                mul
-                add
-                // _ diff_2 diff_1 diff_0 (lhs_3 -rhs_3')
-
-                split
-                // _ diff_2 diff_1 diff_0 overflow diff_3
-
-                // Assert that there is no overflow
-                swap 1
-                push 0
-                eq
-                assert
-                // _ diff_2 diff_1 diff_0 diff_3
-
-                swap 3 swap 2 swap 1
-                // _ diff_3 diff_2 diff_1 diff_0
-
+                assert error_id {Self::OVERFLOW_ERROR_ID}
+                            // _ [diff: u128]
                 return
-            "
         )
     }
 
-    fn crash_conditions(&self) -> Vec<String> {
-        vec!["(lhs - rhs) overflows u128".to_string()]
+    fn sign_offs(&self) -> HashMap<Reviewer, SignOffFingerprint> {
+        let mut sign_offs = HashMap::new();
+        sign_offs.insert(Reviewer("ferdinand"), 0xcfbc5c77452584fd.into());
+        sign_offs
     }
-
-    fn gen_input_states(&self) -> Vec<InitVmState> {
-        let mut rng = rand::thread_rng();
-
-        let mut ret = vec![];
-        for _ in 0..30 {
-            {
-                let a: u128 = rng.gen();
-                let b: u128 = rng.gen_range(0..=a);
-                ret.push(prepare_state(a, b));
-            }
-
-            {
-                let a: u128 = rng.gen();
-                let b: u128 = rng.gen_range(0..=a) >> 32;
-                ret.push(prepare_state(a, b));
-            }
-
-            {
-                let a: u128 = rng.gen();
-                let b: u128 = rng.gen_range(0..=a) >> 64;
-                ret.push(prepare_state(a, b));
-            }
-
-            {
-                let a: u128 = rng.gen();
-                let b: u128 = rng.gen_range(0..=a) >> 96;
-                ret.push(prepare_state(a, b));
-            }
-        }
-
-        ret
-    }
-
-    fn common_case_input_state(&self) -> InitVmState {
-        prepare_state(1u128 << 127, 1u128 << 126)
-    }
-
-    fn worst_case_input_state(&self) -> InitVmState {
-        prepare_state(
-            (1u128 << 127) + (1u128 << 64),
-            (1u128 << 126) + (1u128 << 56),
-        )
-    }
-
-    fn rust_shadowing(
-        &self,
-        stack: &mut Vec<BFieldElement>,
-        _std_in: Vec<BFieldElement>,
-        _secret_in: Vec<BFieldElement>,
-        _memory: &mut HashMap<BFieldElement, BFieldElement>,
-    ) {
-        // top element on stack
-        let a0: u32 = stack.pop().unwrap().try_into().unwrap();
-        let b0: u32 = stack.pop().unwrap().try_into().unwrap();
-        let c0: u32 = stack.pop().unwrap().try_into().unwrap();
-        let d0: u32 = stack.pop().unwrap().try_into().unwrap();
-        let ab0 = U32s::<4>::new([a0, b0, c0, d0]);
-
-        // second element on stack
-        let a1: u32 = stack.pop().unwrap().try_into().unwrap();
-        let b1: u32 = stack.pop().unwrap().try_into().unwrap();
-        let c1: u32 = stack.pop().unwrap().try_into().unwrap();
-        let d1: u32 = stack.pop().unwrap().try_into().unwrap();
-        let ab1 = U32s::<4>::new([a1, b1, c1, d1]);
-        let ab0_minus_ab1 = ab0 - ab1;
-        let mut res = ab0_minus_ab1.encode();
-        for _ in 0..res.len() {
-            stack.push(res.pop().unwrap());
-        }
-    }
-}
-
-fn prepare_state(lhs: u128, rhs: u128) -> InitVmState {
-    let mut init_stack = empty_stack();
-    for elem in rhs.encode().into_iter().rev() {
-        init_stack.push(elem);
-    }
-    for elem in lhs.encode().into_iter().rev() {
-        init_stack.push(elem);
-    }
-
-    InitVmState::with_stack(init_stack)
 }
 
 #[cfg(test)]
 mod tests {
-    use num::One;
-    use num::Zero;
     use BFieldElement;
 
     use super::*;
-    use crate::empty_stack;
-    use crate::test_helpers::test_rust_equivalence_given_input_values_deprecated;
-    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
+    use crate::test_prelude::*;
 
-    #[test]
-    fn sub_u128_test() {
-        test_rust_equivalence_multiple_deprecated(&Sub, true);
-    }
+    impl Closure for Sub {
+        type Args = (u128, u128);
 
-    #[test]
-    fn subtraction_involving_zeros() {
-        // 0 - 0 = 0
-        let mut expected_end_stack = [
-            empty_stack(),
-            vec![
-                BFieldElement::zero(),
-                BFieldElement::zero(),
-                BFieldElement::zero(),
-                BFieldElement::zero(),
-            ],
-        ]
-        .concat();
-        prop_sub(U32s::from(0), U32s::from(0), Some(&expected_end_stack));
-
-        // 1 - 0 = 1
-        expected_end_stack = [
-            empty_stack(),
-            vec![
-                BFieldElement::zero(),
-                BFieldElement::zero(),
-                BFieldElement::zero(),
-                BFieldElement::one(),
-            ],
-        ]
-        .concat();
-        prop_sub(U32s::from(1), U32s::from(0), Some(&expected_end_stack));
-
-        // 1 - 1 = 0
-        expected_end_stack = [
-            empty_stack(),
-            vec![
-                BFieldElement::zero(),
-                BFieldElement::zero(),
-                BFieldElement::zero(),
-                BFieldElement::zero(),
-            ],
-        ]
-        .concat();
-        prop_sub(U32s::from(1), U32s::from(1), Some(&expected_end_stack));
-
-        // u64::MAX - u64::MAX = 0
-        expected_end_stack = [
-            empty_stack(),
-            vec![
-                BFieldElement::zero(),
-                BFieldElement::zero(),
-                BFieldElement::zero(),
-                BFieldElement::zero(),
-            ],
-        ]
-        .concat();
-        prop_sub(
-            U32s::try_from(u64::MAX).unwrap(),
-            U32s::try_from(u64::MAX).unwrap(),
-            Some(&expected_end_stack),
-        );
-
-        // u128::MAX - u128::MAX = 0
-        expected_end_stack = [
-            empty_stack(),
-            vec![
-                BFieldElement::zero(),
-                BFieldElement::zero(),
-                BFieldElement::zero(),
-                BFieldElement::zero(),
-            ],
-        ]
-        .concat();
-        prop_sub(
-            U32s::new([u32::MAX, u32::MAX, u32::MAX, u32::MAX]),
-            U32s::new([u32::MAX, u32::MAX, u32::MAX, u32::MAX]),
-            Some(&expected_end_stack),
-        );
-    }
-
-    #[test]
-    fn sub_u128_cascading_carry() {
-        let expected_end_stack = [
-            empty_stack(),
-            vec![
-                BFieldElement::zero(),
-                BFieldElement::zero(),
-                BFieldElement::zero(),
-                BFieldElement::one(),
-            ],
-        ]
-        .concat();
-        prop_sub(
-            U32s::new([0, 0, 0, 1]),
-            U32s::new([u32::MAX, u32::MAX, u32::MAX, 0]),
-            Some(&expected_end_stack),
-        );
-    }
-
-    fn prop_sub(lhs: U32s<4>, rhs: U32s<4>, expected: Option<&[BFieldElement]>) {
-        let mut init_stack = empty_stack();
-        for elem in rhs.encode().into_iter().rev() {
-            init_stack.push(elem);
-        }
-        for elem in lhs.encode().into_iter().rev() {
-            init_stack.push(elem);
+        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
+            let (subtrahend, minuend) = pop_encodable::<Self::Args>(stack);
+            let difference = minuend.checked_sub(subtrahend).unwrap();
+            push_encodable(stack, &difference);
         }
 
-        test_rust_equivalence_given_input_values_deprecated(
-            &Sub,
-            &init_stack,
-            &[],
-            HashMap::default(),
-            expected,
+        fn pseudorandom_args(
+            &self,
+            seed: [u8; 32],
+            bench_case: Option<BenchmarkCase>,
+        ) -> Self::Args {
+            let Some(bench_case) = bench_case else {
+                let mut rng = StdRng::from_seed(seed);
+                let subtrahend = rng.gen();
+                let minuend = rng.gen_range(subtrahend..=u128::MAX);
+                return (subtrahend, minuend);
+            };
+
+            match bench_case {
+                BenchmarkCase::CommonCase => (1 << 126, 1 << 127),
+                BenchmarkCase::WorstCase => ((1 << 126) + (1 << 56), (1 << 127) + (1 << 64)),
+            }
+        }
+
+        fn corner_case_args(&self) -> Vec<Self::Args> {
+            vec![
+                (0, 0),
+                (0, 1),
+                (1, 1),
+                (1, 0xffff_ffff_ffff_ffff_ffff_ffff_0000_0000),
+                (2, 0xffff_ffff_ffff_ffff_0000_0000_0000_0001),
+                (3, 0xffff_ffff_0000_0000_0000_0000_0000_0002),
+                (4, 1 << 127),
+                (u32::MAX.into(), u32::MAX.into()),
+                (u64::MAX.into(), u64::MAX.into()),
+                (u128::MAX, u128::MAX),
+            ]
+        }
+    }
+
+    #[test]
+    fn rust_shadow() {
+        ShadowedClosure::new(Sub).test();
+    }
+
+    #[proptest]
+    fn overflow_crashes_vm(
+        #[strategy(1_u128..)] subtrahend: u128,
+        #[strategy(..#subtrahend)] minuend: u128,
+    ) {
+        test_assertion_failure(
+            &ShadowedClosure::new(Sub),
+            InitVmState::with_stack(Sub.set_up_test_stack((subtrahend, minuend))),
+            &[Sub::OVERFLOW_ERROR_ID],
         );
     }
 }
@@ -376,10 +182,10 @@ mod tests {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::snippet_bencher::bench_and_write;
+    use crate::test_prelude::*;
 
     #[test]
-    fn sub_u128_benchmark() {
-        bench_and_write(Sub);
+    fn benchmark() {
+        ShadowedClosure::new(Sub).bench();
     }
 }

@@ -2,8 +2,8 @@
   {
     "name": "tasmlib_arithmetic_u128_sub",
     "benchmark_result": {
-      "clock_cycle_count": 53,
-      "hash_table_height": 54,
+      "clock_cycle_count": 45,
+      "hash_table_height": 42,
       "u32_table_height": 34,
       "op_stack_table_height": 34,
       "ram_table_height": 0
@@ -13,8 +13,8 @@
   {
     "name": "tasmlib_arithmetic_u128_sub",
     "benchmark_result": {
-      "clock_cycle_count": 53,
-      "hash_table_height": 54,
+      "clock_cycle_count": 45,
+      "hash_table_height": 42,
       "u32_table_height": 67,
       "op_stack_table_height": 34,
       "ram_table_height": 0
