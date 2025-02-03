@@ -194,7 +194,7 @@ mod tests {
             // set length
             stack.push(output_list);
             stack.push(BFieldElement::new(len as u64));
-            SetLength.rust_shadowing(stack, vec![], vec![], memory);
+            SetLength.rust_shadow(stack, memory);
             stack.pop();
 
             // forall elements, read + map + maybe copy
@@ -235,7 +235,7 @@ mod tests {
             // set length
             stack.push(output_list);
             stack.push(BFieldElement::new(output_index as u64));
-            SetLength.rust_shadowing(stack, vec![], vec![], memory);
+            SetLength.rust_shadow(stack, memory);
         }
 
         fn pseudorandom_initial_state(
