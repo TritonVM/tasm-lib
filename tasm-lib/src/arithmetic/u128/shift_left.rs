@@ -1,295 +1,186 @@
-use rand::prelude::*;
+use std::collections::HashMap;
+
 use triton_vm::prelude::*;
 
-use crate::empty_stack;
+use crate::arithmetic::u128::shift_right::ShiftRight;
 use crate::prelude::*;
-use crate::push_encodable;
-use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::InitVmState;
+use crate::traits::basic_snippet::Reviewer;
+use crate::traits::basic_snippet::SignOffFingerprint;
 
-#[derive(Clone, Debug)]
+/// [Shift left][shl] for unsigned 128-bit integers.
+///
+/// # Behavior
+///
+/// ```text
+/// BEFORE: _ [arg: u128] shift_amount
+/// AFTER:  _ [result: u128]
+/// ```
+///
+/// # Preconditions
+///
+/// - input argument `arg` is properly [`BFieldCodec`] encoded
+/// - input argument `shift_amount` is in `0..128`
+///
+/// # Postconditions
+///
+/// - the output is the input argument `arg` bit-shifted to the left by
+///   input argument `shift_amount`
+/// - the output is properly [`BFieldCodec`] encoded
+///
+/// [shl]: core::ops::Shl
+#[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct ShiftLeft;
 
-impl DeprecatedSnippet for ShiftLeft {
-    fn entrypoint_name(&self) -> String {
+impl ShiftLeft {
+    pub const SHIFT_AMOUNT_TOO_BIG_ERROR_ID: i128 = 530;
+}
+
+impl BasicSnippet for ShiftLeft {
+    fn inputs(&self) -> Vec<(DataType, String)> {
+        ShiftRight.inputs()
+    }
+
+    fn outputs(&self) -> Vec<(DataType, String)> {
+        ShiftRight.outputs()
+    }
+
+    fn entrypoint(&self) -> String {
         "tasmlib_arithmetic_u128_shift_left".to_string()
     }
 
-    fn input_field_names(&self) -> Vec<String>
-    where
-        Self: Sized,
-    {
-        vec![
-            "value_limb3".to_string(),
-            "value_limb2".to_string(),
-            "value_limb1".to_string(),
-            "value_limb0".to_string(),
-            "shift_amount".to_string(),
-        ]
-    }
+    fn code(&self, _: &mut Library) -> Vec<LabelledInstruction> {
+        let entrypoint = self.entrypoint();
+        let shift_amount_gt_32 = format!("{entrypoint}_shift_amount_gt_32");
 
-    fn input_types(&self) -> Vec<DataType> {
-        vec![DataType::U128, DataType::U32]
-    }
-
-    fn output_field_names(&self) -> Vec<String>
-    where
-        Self: Sized,
-    {
-        vec![
-            "shifted_value_limb3".to_string(),
-            "shifted_value_limb2".to_string(),
-            "shifted_value_limb1".to_string(),
-            "shifted_value_limb0".to_string(),
-        ]
-    }
-
-    fn output_types(&self) -> Vec<DataType> {
-        vec![DataType::U128]
-    }
-
-    fn stack_diff(&self) -> isize
-    where
-        Self: Sized,
-    {
-        -1
-    }
-
-    fn function_code(&self, _library: &mut Library) -> String {
-        let entrypoint = self.entrypoint_name();
-        format!(
-            "
-            // BEFORE: _ limb3 limb2 limb1 limb0 shamt
-            // AFTER:  _ (value << shift)_3 (value << shift)_2 (value << shift)_1 (value << shift)_0
+        triton_asm!(
+            // BEFORE: _ v_3 v_2 v_1 v_0 s
+            // AFTER:  _ (value << s)_3 (value << s)_2 (value << s)_1 (value << s)_0
             {entrypoint}:
-                // Bounds check: Verify that shift amount is less than 128.
+                /* bounds check */
                 push 128
                 dup 1
                 lt
-                assert
-                // _ limb3 limb2 limb1 limb0 shamt
+                assert error_id {Self::SHIFT_AMOUNT_TOO_BIG_ERROR_ID}
+                            // _ v_3 v_2 v_1 v_0 s
 
-                // If shift amount is greater than 32, we need to special-case!
+                /* special case if shift amount is greater than 32 */
                 dup 0
                 push 32
                 lt
-                // _ v3 v2 v1 v0 shift (shift > 32)
-
                 skiz
-                    call {entrypoint}_handle_hi_shift
-                // _ v3 v2 v1 v0 shift
+                    call {shift_amount_gt_32}
+                            // _ v_3 v_2 v_1 v_0 s
 
                 push 2
-                pow
-                // _ v3 v2 v1 v0 (2 ^ shift)
+                pow         // _ v_3 v_2 v_1 v_0 (2^s)
 
-                dup 0  // _ v3 v2 v1 v0 (2 ^ shift) (2 ^ shift)
-                swap 5 // _ (2 ^ shift) v2 v1 v0 (2 ^ shift) v3
+                dup 0
+                pick 5      // _ v_2 v_1 v_0 (2^s) (2^s) v_3
+                mul
+                place 4     // _ v_3<<s v_2 v_1 v_0 (2^s)
+                xb_mul      // _ v_3<<s v_2<<s v_1<<s v_0<<s
 
-                mul    // _ (2 ^ shift) v2 v1 v0 v3<<shift
-                swap 4 // _ v3<<shift v2 v1 v0 (2^shift)
-                xb_mul  // _ v3<<shift v2<<shift v1<<shift v0<<shift
-
-                split  // _ v3s v2s v1s v0s_hi v0s_lo
-                swap 2 // _ v3s v2s v0s_lo v0s_hi v1s
-                split  // _ v3s v2s v0s_lo v0s_hi v1s_hi v1s_lo
-                swap 4 // _ v3s v1s_lo v0s_lo v0s_hi v1s_hi v2s
-                split  // _ v3s v1s_lo v0s_lo v0s_hi v1s_hi v2s_hi v2s_lo
-                swap 6 // _ v2s_lo v1s_lo v0s_lo v0s_hi v1s_hi v2s_hi v3s
-                split  // _ v2s_lo v1s_lo v0s_lo v0s_hi v1s_hi v2s_hi v3s_hi v3s_lo
-
-
-                swap 1 // _ v2s_lo v1s_lo v0s_lo v0s_hi v1s_hi v2s_hi v3s_lo v3s_hi
-                pop 1  // _ v2s_lo v1s_lo v0s_lo v0s_hi v1s_hi v2s_hi v3s_lo
-                add    // _ v2s_lo v1s_lo v0s_lo v0s_hi v1s_hi w3
-                swap 5 // _ w3 v1s_lo v0s_lo v0s_hi v1s_hi v2s_lo
-                add    // _ w3 v1s_lo v0s_lo v0s_hi w2
-                swap 3 // _ w3 w2 v0s_lo v0s_hi v1s_lo
-                add    // _ w3 w2 v0s_lo w1
-                swap 1 // _ w3 w2 w1 w0
+                pick 3
+                split
+                pick 4
+                split
+                pick 5
+                split
+                pick 6
+                split       // _ v_3s_hi v_3s_lo v_2s_hi v_2s_lo v_1s_hi v_1s_lo v_0s_hi v_0s_lo
+                            // _ ╰─ 🗑 ╯ ╰──── w_3 ────╯ ╰──── w_2 ────╯ ╰──── w_1 ────╯ ╰ w_0 ╯
+                place 7
+                add
+                place 6
+                add
+                place 5
+                add
+                place 4
+                pop 1
 
                 return
 
-            // start: _ v3 v2 v1 v0 shift
-            // end: _ (value << 32)_3 (value << 32)_2 (value << 32)_1 (value << 32)_0 (shift - 32)
-            {entrypoint}_handle_hi_shift:
-                push -32
-                add
-                // _ v3 v2 v1 v0 (shift - 32)
+            // BEFORE: _ [v: u128] s
+            // AFTER:  _ [v << i·32: u128] (s - i·32)
+            // such that i·32 <= s < (i+1)·32
+            {shift_amount_gt_32}:
+                addi -32    // _ v_3 v_2 v_1 v_0 (s - 32)
+                pick 4
+                pop 1       // _ v_2 v_1 v_0 (s - 32)
+                push 0
+                place 1     // _ v_2 v_1 v_0 0 (s - 32)
 
-                swap 4 // _ (shift-32) v2 v1 v0 v3
-                swap 3
-                swap 2
-                swap 1 // _ (shift-32) v3 v2 v1 v0
-                push 32
-                // _ (shift - 32) v3 v2 v1 v0 32
-
-                call {entrypoint}
-                // _ (shift - 32) (value << 32)_3 (value << 32)_2 (value << 32)_1 (value << 32)_0
-
-                swap 1 // _ (shift - 32) (value << 32)_3 (value << 32)_2 (value << 32)_0 (value << 32)_1
-                swap 2 // _ (shift - 32) (value << 32)_3 (value << 32)_1 (value << 32)_0 (value << 32)_2
-                swap 3 // _ (shift - 32) (value << 32)_2 (value << 32)_1 (value << 32)_0 (value << 32)_3
-                swap 4 // _ (value << 32)_3 (value << 32)_2 (value << 32)_1 (value << 32)_0 (shift - 32)
-
-                // if (shift - 32) > 32, we need to special-case again
                 dup 0
                 push 32
                 lt
                 skiz
                     recurse
-
                 return
-            "
         )
     }
 
-    fn crash_conditions(&self) -> Vec<String>
-    where
-        Self: Sized,
-    {
-        vec![
-            "Shift amount is 128 or greater".to_string(),
-            "inputs are not valid u32s".to_string(),
-        ]
+    fn sign_offs(&self) -> HashMap<Reviewer, SignOffFingerprint> {
+        let mut sign_offs = HashMap::new();
+        sign_offs.insert(Reviewer("ferdinand"), 0x4898e915d48c39b7.into());
+        sign_offs
     }
-
-    fn gen_input_states(&self) -> Vec<InitVmState>
-    where
-        Self: Sized,
-    {
-        let mut ret = vec![];
-        for _ in 0..3 {
-            for i in 0..128 {
-                ret.push(prepare_state(random::<u128>(), i));
-            }
-        }
-        ret
-    }
-
-    fn common_case_input_state(&self) -> InitVmState
-    where
-        Self: Sized,
-    {
-        prepare_state(0x1282, 15)
-    }
-
-    fn worst_case_input_state(&self) -> InitVmState
-    where
-        Self: Sized,
-    {
-        prepare_state(0x123456789abcdef, 125)
-    }
-
-    fn rust_shadowing(
-        &self,
-        stack: &mut Vec<BFieldElement>,
-        _std_in: Vec<BFieldElement>,
-        _secret_in: Vec<BFieldElement>,
-        _memory: &mut std::collections::HashMap<BFieldElement, BFieldElement>,
-    ) where
-        Self: Sized,
-    {
-        // Find shift amount
-        let shift_amount: u32 = stack.pop().unwrap().try_into().unwrap();
-
-        // Original value
-        let mut value = 0u128;
-        for i in 0..4 {
-            value |= (stack.pop().unwrap().value() as u128) << (i * 32);
-        }
-
-        value <<= shift_amount;
-
-        for i in 0..4 {
-            let limb = ((value >> ((3 - i) * 32)) & u32::MAX as u128) as u32;
-            stack.push(BFieldElement::new(limb as u64));
-        }
-    }
-}
-
-fn prepare_state(value: u128, shift_amount: u32) -> InitVmState {
-    let mut init_stack = empty_stack();
-    push_encodable(&mut init_stack, &value.encode());
-    init_stack.push(BFieldElement::new(shift_amount as u64));
-    InitVmState::with_stack(init_stack)
 }
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-
     use super::*;
-    use crate::test_helpers::test_rust_equivalence_given_input_values_deprecated;
-    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
+    use crate::test_prelude::*;
 
-    #[test]
-    fn shift_left_u128_test() {
-        test_rust_equivalence_multiple_deprecated(&ShiftLeft, true);
-    }
+    impl Closure for ShiftLeft {
+        type Args = <ShiftRight as Closure>::Args;
 
-    #[test]
-    fn shift_left_simple_test() {
-        prop_left_left(1, 1);
-        prop_left_left(8, 2);
-    }
+        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
+            let (arg, shift_amount) = pop_encodable::<Self::Args>(stack);
+            assert!(shift_amount < 128);
+            push_encodable(stack, &(arg << shift_amount));
+        }
 
-    #[test]
-    fn shift_left_max_values_and_zeros_test() {
-        for i in 0..128 {
-            prop_left_left(u128::MAX, i);
-            prop_left_left(0, i);
+        fn pseudorandom_args(
+            &self,
+            seed: [u8; 32],
+            bench_case: Option<BenchmarkCase>,
+        ) -> Self::Args {
+            let mut rng = StdRng::from_seed(seed);
+
+            match bench_case {
+                Some(BenchmarkCase::CommonCase) => (0x1282, 15),
+                Some(BenchmarkCase::WorstCase) => (0x123456789abcdef, 125),
+                None => (rng.gen(), rng.gen_range(0..128)),
+            }
+        }
+
+        fn corner_case_args(&self) -> Vec<Self::Args> {
+            ShiftRight.corner_case_args()
         }
     }
 
     #[test]
-    #[should_panic]
-    fn shift_beyond_limit() {
-        let mut init_stack = empty_stack();
-        init_stack.push(BFieldElement::new(u32::MAX as u64));
-        init_stack.push(BFieldElement::new(u32::MAX as u64));
-        init_stack.push(BFieldElement::new(u32::MAX as u64));
-        init_stack.push(BFieldElement::new(u32::MAX as u64));
-        init_stack.push(128u64.into());
-        ShiftLeft.link_and_run_tasm_from_state_for_test(&mut InitVmState::with_stack(init_stack));
+    fn rust_shadow() {
+        ShadowedClosure::new(ShiftLeft).test();
     }
 
-    fn prop_left_left(value: u128, shift_amount: u32) {
-        let mut init_stack = empty_stack();
-        for i in 0..4 {
-            init_stack.push(BFieldElement::new(
-                ((value >> (32 * (3 - i))) as u32) as u64,
-            ));
-        }
-        init_stack.push(BFieldElement::new(shift_amount as u64));
-
-        let expected_u128 = value << shift_amount;
-        println!("{value} << {shift_amount} = {expected_u128}");
-
-        let mut expected_stack = empty_stack();
-        for i in 0..4 {
-            expected_stack.push(BFieldElement::new(
-                ((expected_u128 >> (32 * (3 - i))) & u32::MAX as u128) as u64,
-            ));
-        }
-
-        test_rust_equivalence_given_input_values_deprecated(
-            &ShiftLeft,
-            &init_stack,
-            &[],
-            HashMap::default(),
-            Some(&expected_stack),
-        );
+    #[proptest]
+    fn too_large_shift_crashes_vm(arg: u128, #[strategy(128_u32..)] shift_amount: u32) {
+        test_assertion_failure(
+            &ShadowedClosure::new(ShiftLeft),
+            InitVmState::with_stack(ShiftLeft.set_up_test_stack((arg, shift_amount))),
+            &[ShiftLeft::SHIFT_AMOUNT_TOO_BIG_ERROR_ID],
+        )
     }
 }
 
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::snippet_bencher::bench_and_write;
+    use crate::test_prelude::*;
 
     #[test]
-    fn shift_left_u128_benchmark() {
-        bench_and_write(ShiftLeft);
+    fn benchmark() {
+        ShadowedClosure::new(ShiftLeft).bench();
     }
 }

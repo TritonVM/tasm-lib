@@ -61,4 +61,5 @@ often.
 |  490..500 | [`u32::ShiftRight`](arithmetic/u32/shift_right.rs)                                          |
 |  500..520 | [`u128::SafeMul`](arithmetic/u128/safe_mul.rs)                                              |
 |  520..530 | [`u128::Sub`](arithmetic/u128/sub.rs)                                                       |
+|  530..540 | [`u128::ShiftLeft`](arithmetic/u128/shift_left.rs)                                          |
 |  540..550 | [`u128::ShiftRight`](arithmetic/u128/shift_right.rs)                                        |
