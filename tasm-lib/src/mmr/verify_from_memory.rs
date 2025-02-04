@@ -1,380 +1,224 @@
-use std::collections::HashMap;
-
-use itertools::Itertools;
-use num::One;
-use rand::prelude::*;
 use triton_vm::prelude::*;
-use twenty_first::math::other::random_elements;
-use twenty_first::prelude::MmrMembershipProof;
-use twenty_first::util_types::mmr::mmr_accumulator::util::mmra_with_mps;
-use twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
-use twenty_first::util_types::mmr::mmr_trait::Mmr;
 
 use super::leaf_index_to_mt_index_and_peak_index::MmrLeafIndexToMtIndexAndPeakIndex;
-use super::MAX_MMR_HEIGHT;
 use crate::arithmetic::u64::div2::Div2;
-use crate::empty_stack;
 use crate::list::get::Get;
-use crate::prelude::Digest;
 use crate::prelude::*;
-use crate::rust_shadowing_helper_functions;
-use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::InitVmState;
 
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct MmrVerifyFromMemory;
 
-impl MmrVerifyFromMemory {
-    fn prepare_vm_state(
-        &self,
-        mmr: &MmrAccumulator,
-        leaf: Digest,
-        leaf_index: u64,
-        auth_path: Vec<Digest>,
-    ) -> InitVmState {
-        // BEFORE: _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo [digest (leaf_digest)] *auth_path
-        // AFTER:  _ validation_result
-        let mut stack = empty_stack();
+impl MmrVerifyFromMemory {}
 
-        let peaks_pointer = BFieldElement::one();
-        stack.push(peaks_pointer);
+impl BasicSnippet for MmrVerifyFromMemory {
+    fn inputs(&self) -> Vec<(DataType, String)> {
+        let list_type = DataType::List(Box::new(DataType::Digest));
 
-        let leaf_count: u64 = mmr.num_leafs();
-        stack.push(BFieldElement::new(leaf_count >> 32));
-        stack.push(BFieldElement::new(leaf_count & u32::MAX as u64));
-
-        let leaf_index_hi = BFieldElement::new(leaf_index >> 32);
-        let leaf_index_lo = BFieldElement::new(leaf_index & u32::MAX as u64);
-        stack.push(leaf_index_hi);
-        stack.push(leaf_index_lo);
-
-        // push digests such that element 0 of digest is on top of stack
-        for value in leaf.values().iter().rev() {
-            stack.push(*value);
-        }
-
-        // We assume that the auth paths can safely be stored in memory on this address
-        let auth_path_pointer = BFieldElement::new((MAX_MMR_HEIGHT * Digest::LEN + 1) as u64);
-        stack.push(auth_path_pointer);
-
-        // Initialize memory
-        let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::default();
-        rust_shadowing_helper_functions::list::list_new(peaks_pointer, &mut memory);
-
-        for peak in mmr.peaks() {
-            rust_shadowing_helper_functions::list::list_push(
-                peaks_pointer,
-                peak.values().to_vec(),
-                &mut memory,
-            );
-        }
-
-        rust_shadowing_helper_functions::list::list_new(auth_path_pointer, &mut memory);
-        for ap_element in auth_path.iter() {
-            rust_shadowing_helper_functions::list::list_push(
-                auth_path_pointer,
-                ap_element.values().to_vec(),
-                &mut memory,
-            );
-        }
-
-        InitVmState::with_stack_and_memory(stack, memory)
+        vec![
+            (list_type.clone(), "*peaks".to_string()),
+            (DataType::U64, "leaf_count".to_string()),
+            (DataType::U64, "leaf_index".to_string()),
+            (DataType::Digest, "leaf".to_string()),
+            (list_type, "*auth_path".to_string()),
+        ]
     }
-}
 
-impl DeprecatedSnippet for MmrVerifyFromMemory {
-    fn entrypoint_name(&self) -> String {
+    fn outputs(&self) -> Vec<(DataType, String)> {
+        vec![(DataType::Bool, "validation_result".to_string())]
+    }
+
+    fn entrypoint(&self) -> String {
         "tasmlib_mmr_verify_from_memory".into()
     }
 
-    fn input_field_names(&self) -> Vec<String> {
-        vec![
-            "*peaks".to_string(),
-            "leaf_count_hi".to_string(),
-            "leaf_count_lo".to_string(),
-            "leaf_index_hi".to_string(),
-            "leaf_index_lo".to_string(),
-            "leaf_digest_4".to_string(),
-            "leaf_digest_3".to_string(),
-            "leaf_digest_2".to_string(),
-            "leaf_digest_1".to_string(),
-            "leaf_digest_0".to_string(),
-            "*auth_path".to_string(),
-        ]
-    }
-
-    fn input_types(&self) -> Vec<DataType> {
-        vec![
-            DataType::List(Box::new(DataType::Digest)),
-            DataType::U64,
-            DataType::U64,
-            DataType::Digest,
-            DataType::List(Box::new(DataType::Digest)),
-        ]
-    }
-
-    fn output_field_names(&self) -> Vec<String> {
-        vec!["validation_result".to_string()]
-    }
-
-    fn output_types(&self) -> Vec<crate::data_type::DataType> {
-        vec![DataType::Bool]
-    }
-
-    fn stack_diff(&self) -> isize {
-        -10
-    }
-
-    fn function_code(&self, library: &mut Library) -> String {
+    fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
         let leaf_index_to_mt_index = library.import(Box::new(MmrLeafIndexToMtIndexAndPeakIndex));
         let get_list_element = library.import(Box::new(Get::new(DataType::Digest)));
         let div_2 = library.import(Box::new(Div2));
 
-        let entrypoint = self.entrypoint_name();
+        let entrypoint = self.entrypoint();
         let loop_label = format!("{entrypoint}_loop");
         let swap_digests = format!("{entrypoint}_swap_digests");
 
-        let u32_is_even = triton_asm!(
-            // _ val
-
-            push 1
-            and
-            // _ is_odd
-
-            push 0
-            eq
-            // _ is_even
-        );
-
-        let loop_code = triton_asm!(
-                // INVARIANT: _ *auth_path[n] peak_index mt_index_hi mt_index_lo [digest (acc_hash)]
-                {loop_label}:
-                    dup 6 push 0 eq
-                    dup 6 push 1 eq
-                    mul
-                    // _ *auth_path[n] peak_index mt_index_hi mt_index_lo [digest (acc_hash)] (mt_index == 1)
-
-                    skiz return
-                    // _ *auth_path[n] peak_index mt_index_hi mt_index_lo [digest (acc_hash)]
-
-                    // declare `ap_element = auth_path[i]`
-                    dup 8
-                    read_mem {Digest::LEN}
-                    push {Digest::LEN * 2}
-                    add
-                    swap 14
-                    pop 1
-                    // _ *auth_path[n+1] peak_index mt_index_hi mt_index_lo [digest (acc_hash)] [digest (ap_element)]
-
-                    dup 10
-                    {&u32_is_even}
-                    // _ *auth_path[n+1] peak_index mt_index_hi mt_index_lo [digest (acc_hash)] [digest (ap_element)] (mt_index % 2 == 0)
-
-                    skiz call {swap_digests}
-                    // _ *auth_path[n+1] peak_index mt_index_hi mt_index_lo [digest (right_node)] [digest (left_node)]
-
-                    hash
-                    // _ *auth_path[n+1] peak_index mt_index_hi mt_index_lo [digest (acc_hash)]
-
-                    // mt_index -> mt_index / 2
-                    swap 6 swap 1 swap 5
-                    call {div_2}
-                    swap 5 swap 1 swap 6
-                    // _ *auth_path[n+1] peak_index (mt_index / 2)_hi (mt_index / 2)_lo acc_hash_4 acc_hash_3 acc_hash_2 acc_hash_1 acc_hash_0
-
-                    // Rename: (mt_index / 2) -> mt_index
-                    // _ *auth_path[n+1] peak_index mt_index_hi mt_index_lo [digest (acc_hash)]
-
-                    recurse
-
-                {swap_digests}:
-                    pick 9 pick 9 pick 9 pick 9 pick 9
-                    return
-        );
-
         triton_asm!(
-                // BEFORE: _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo [digest (leaf_digest)] *auth_path
-                // AFTER:  _ validation_result
-                // Will crash if `leaf_index >= leaf_count`
-                {entrypoint}:
-                    dup 9 dup 9 dup 9 dup 9
-                    call {leaf_index_to_mt_index}
-                    // stack: _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo [digest (leaf_digest)] *auth_path mt_index_hi mt_index_lo peak_index
+            // BEFORE: _ *peaks [leaf_count: u64] [leaf_index: u64] [leaf: Digest] *auth_path
+            // AFTER:  _ validation_result
+            // Will crash if `leaf_index >= leaf_count`
+            {entrypoint}:
+                pick 9 pick 9
+                pick 9 pick 9
+                call {leaf_index_to_mt_index}
+                // _ *peaks [leaf: Digest] *auth_path [mt_index: u64] peak_index
 
-                    swap 7
-                    swap 3
-                    swap 8
-                    swap 4
-                    swap 6
-                    swap 2
-                    swap 6
-                    swap 1
-                    swap 5
-                    swap 1
-                    // stack: _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo *auth_path peak_index mt_index_hi mt_index_lo [digest (leaf_digest)]
+                place 8
+                // _ *peaks peak_index [leaf: Digest] *auth_path [mt_index: u64]
 
-                    // rename: leaf_digest -> acc_hash
-                    // stack: _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo *auth_path peak_index mt_index_hi mt_index_lo [digest (acc_hash)]
+                pick 7 pick 7 pick 7 pick 7 pick 7
+                // _ *peaks peak_index *auth_path [mt_index: u64] [leaf: Digest]
 
-                    swap 8
-                    push {Digest::LEN}
-                    add
-                    swap 8
-                    // _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo *auth_path[0] peak_index mt_index_hi mt_index_lo [digest (acc_hash)]
+                pick 7
+                addi {Digest::LEN}
+                place 7
 
-                    call {loop_label}
-                    // _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo *auth_path peak_index mt_index_hi mt_index_lo [digest (acc_hash)]
+                call {loop_label}
+                // _ *peaks peak_index *auth_path [1: u64] [peak: Digest]
 
-                    // Compare `acc_hash` to the `expected_peak`, where `expected_peak = peaks[peak_index]`
-                    dup 13 dup 8
-                    // _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo *auth_path peak_index mt_index_hi mt_index_lo [digest (acc_hash)] *peaks peak_index
+                /* Compare computed `peak` to the `expected_peak`,
+                 * where `expected_peak = peaks[peak_index]`
+                 */
+                pick 9 pick 9
+                // _ *auth_path [1: u64] [acc: Digest] *peaks peak_index
 
-                    call {get_list_element}
-                    // _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo *auth_path peak_index mt_index_hi mt_index_lo [digest (acc_hash)] [digest (expected_peak)]
+                call {get_list_element}
+                // _ *auth_path [1: u64] [acc: Digest] [expected_peak: Digest]
 
-                    // Compare top two digests
-                    {&DataType::Digest.compare()}
-                    // _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo *auth_path peak_index mt_index_hi mt_index_lo (expected_peak == acc_hash)
+                {&DataType::Digest.compare()}
+                // _ *auth_path [1: u64] (expected_peak == acc_hash)
 
-                    // Rename: expected_peak == acc_hash -> validation_result
-                    // _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo *auth_path peak_index mt_index_hi mt_index_lo validation_result
+                // Rename: expected_peak == acc_hash -> validation_result
+                // _ *auth_path [1: u64] validation_result
 
-                    swap 9
-                    pop 5
-                    pop 4
-                    // _ validation_result
+                place 3
+                pop 3
+                // _ validation_result
 
-                    return
+                return
 
-                    {&loop_code}
+            // INVARIANT: _ *auth_path[n] [mt_index: u64] [acc: Digest]
+            // todo: use `MerkleStepMemU64Index` to speed up this loop
+            {loop_label}:
+                dup 6 push 0 eq
+                dup 6 push 1 eq
+                mul
+                // _ *auth_path[n] [mt_index: u64] [acc: Digest] (mt_index == 1)
 
+                skiz return
+                // _ *auth_path[n] [mt_index: u64] [acc: Digest]
+
+                // declare `ap_element = auth_path[i]`
+                pick 7
+                read_mem {Digest::LEN}
+                addi {Digest::LEN * 2}
+                place 12
+                // _ *auth_path[n+1] [mt_index: u64] [acc: Digest] [sibling: Digest]
+
+                dup 10
+                push 1
+                and
+                // _ *auth_path[n+1] [mt_index: u64] [acc: Digest] [sibling: Digest] (index%2 == 1)
+
+                push 0
+                eq
+                // _ *auth_path[n+1] [mt_index: u64] [acc: Digest] [sibling: Digest] (index%2 == 0)
+
+                skiz call {swap_digests}
+                // _ *auth_path[n+1] [mt_index: u64] [right_node: Digest] [left_node: Digest]
+
+                hash
+                // _ *auth_path[n+1] [mt_index: u64] [acc: Digest]
+
+                // mt_index -> mt_index / 2
+                pick 6 pick 6
+                call {div_2}
+                place 6 place 6
+                // _ *auth_path[n+1] [mt_index / 2: u64] [acc: Digest]
+
+                recurse
+
+            {swap_digests}:
+                pick 9 pick 9 pick 9 pick 9 pick 9
+                return
         )
-        .iter()
-        .join("\n")
-    }
-
-    fn crash_conditions(&self) -> Vec<String> {
-        vec![
-            "leaf_index >= leaf_count".to_string(),
-            "leaf_index values not u32s".to_string(),
-        ]
-    }
-
-    fn gen_input_states(&self) -> Vec<crate::InitVmState> {
-        let mut rng = thread_rng();
-        let max_size = 100;
-        let size = rng.gen_range(1..max_size);
-        let digests: Vec<Digest> = random_elements(size);
-        let leaf_index = rng.gen_range(0..size);
-        let leaf = digests[leaf_index];
-        let (mmra, mps) = mmra_with_mps(size as u64, vec![(leaf_index as u64, leaf)]);
-        let ret0 = self.prepare_vm_state(
-            &mmra,
-            leaf,
-            leaf_index as u64,
-            mps[0].authentication_path.clone(),
-        );
-
-        vec![ret0]
-    }
-
-    fn common_case_input_state(&self) -> InitVmState {
-        let log2_size = 31;
-        let leaf_count_after_add = 1u64 << log2_size;
-        let peaks: Vec<Digest> = random_elements(log2_size as usize);
-        let mut mmra = MmrAccumulator::init(peaks, leaf_count_after_add - 1);
-        let new_leaf: Digest = random();
-        let mp = mmra.append(new_leaf);
-        let auth_path = mp.authentication_path;
-
-        // Sanity check of length of auth path
-        assert_eq!(log2_size, auth_path.len() as u64);
-        self.prepare_vm_state(&mmra, new_leaf, leaf_count_after_add - 1, auth_path)
-    }
-
-    fn worst_case_input_state(&self) -> InitVmState {
-        let log2_size = 62;
-        let leaf_count_after_add = 1u64 << log2_size;
-        let peaks: Vec<Digest> = random_elements(log2_size as usize);
-        let mut mmra = MmrAccumulator::init(peaks, leaf_count_after_add - 1);
-        let new_leaf: Digest = random();
-        let mp = mmra.append(new_leaf);
-        let auth_path = mp.authentication_path;
-
-        // Sanity check of length of auth path
-        assert_eq!(log2_size, auth_path.len() as u64);
-        self.prepare_vm_state(&mmra, new_leaf, leaf_count_after_add - 1, auth_path)
-    }
-
-    fn rust_shadowing(
-        &self,
-        stack: &mut Vec<BFieldElement>,
-        _std_in: Vec<BFieldElement>,
-        _secret_in: Vec<BFieldElement>,
-        memory: &mut HashMap<BFieldElement, BFieldElement>,
-    ) {
-        // BEFORE: _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo [digest (leaf_digest)] *auth_path
-        // AFTER:  _ validation_result
-        let auth_path_pointer = stack.pop().unwrap();
-
-        let list_get = rust_shadowing_helper_functions::list::list_get;
-        let auth_path_length = memory[&auth_path_pointer].value();
-        let mut auth_path: Vec<Digest> = vec![];
-        for i in 0..auth_path_length {
-            let digest = Digest::new(
-                list_get(auth_path_pointer, i as usize, memory, Digest::LEN)
-                    .try_into()
-                    .unwrap(),
-            );
-            auth_path.push(digest);
-        }
-
-        let mut new_leaf_digest_values = [BFieldElement::new(0); Digest::LEN];
-        for elem in new_leaf_digest_values.iter_mut() {
-            *elem = stack.pop().unwrap();
-        }
-
-        let leaf_digest = Digest::new(new_leaf_digest_values);
-
-        let leaf_index_lo: u32 = stack.pop().unwrap().try_into().unwrap();
-        let leaf_index_hi: u32 = stack.pop().unwrap().try_into().unwrap();
-        let leaf_index: u64 = ((leaf_index_hi as u64) << 32) + leaf_index_lo as u64;
-
-        let leaf_count_lo: u32 = stack.pop().unwrap().try_into().unwrap();
-        let leaf_count_hi: u32 = stack.pop().unwrap().try_into().unwrap();
-        let leaf_count: u64 = ((leaf_count_hi as u64) << 32) + leaf_count_lo as u64;
-
-        let peaks_pointer = stack.pop().unwrap();
-        let peaks_count: u64 = memory[&peaks_pointer].value();
-        let mut peaks: Vec<Digest> = vec![];
-        for i in 0..peaks_count {
-            let digest = Digest::new(
-                list_get(peaks_pointer, i as usize, memory, Digest::LEN)
-                    .try_into()
-                    .unwrap(),
-            );
-            peaks.push(digest);
-        }
-
-        let valid_mp =
-            MmrMembershipProof::new(auth_path).verify(leaf_index, leaf_digest, &peaks, leaf_count);
-
-        stack.push(BFieldElement::new(valid_mp as u64));
     }
 }
 
 #[cfg(test)]
 mod tests {
     use itertools::Itertools;
+    use rand::prelude::*;
+    use twenty_first::math::other::random_elements;
+    use twenty_first::util_types::mmr::mmr_accumulator::util::mmra_with_mps;
 
     use super::*;
     use crate::empty_stack;
-    use crate::test_helpers::test_rust_equivalence_given_input_values_deprecated;
-    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
+    use crate::mmr::MAX_MMR_HEIGHT;
+    use crate::test_prelude::*;
+    use crate::twenty_first::prelude::*;
+    use crate::twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
+
+    impl MmrVerifyFromMemory {
+        fn set_up_initial_state(
+            &self,
+            mmr: &MmrAccumulator,
+            leaf: Digest,
+            leaf_index: u64,
+            auth_path: Vec<Digest>,
+        ) -> FunctionInitialState {
+            let peaks_pointer = bfe!(1);
+            let auth_path_pointer = bfe!(MAX_MMR_HEIGHT * Digest::LEN + 1);
+
+            let mut stack = self.init_stack_for_isolated_run();
+            stack.push(peaks_pointer);
+            push_encodable(&mut stack, &mmr.num_leafs());
+            push_encodable(&mut stack, &leaf_index);
+            push_encodable(&mut stack, &leaf);
+            stack.push(auth_path_pointer);
+
+            let mut memory = HashMap::default();
+            encode_to_memory(&mut memory, peaks_pointer, &mmr.peaks());
+            encode_to_memory(&mut memory, auth_path_pointer, &auth_path);
+
+            FunctionInitialState { stack, memory }
+        }
+    }
+
+    impl Function for MmrVerifyFromMemory {
+        fn rust_shadow(
+            &self,
+            stack: &mut Vec<BFieldElement>,
+            memory: &mut HashMap<BFieldElement, BFieldElement>,
+        ) {
+            let auth_path_pointer = stack.pop().unwrap();
+            let leaf = pop_encodable(stack);
+            let leaf_index = pop_encodable(stack);
+            let leaf_count = pop_encodable(stack);
+            let peaks_pointer = stack.pop().unwrap();
+
+            let auth_path = *Vec::<Digest>::decode_from_memory(memory, auth_path_pointer).unwrap();
+            let peaks = *Vec::<Digest>::decode_from_memory(memory, peaks_pointer).unwrap();
+
+            let proof = MmrMembershipProof::new(auth_path);
+            let is_valid = proof.verify(leaf_index, leaf, &peaks, leaf_count);
+            push_encodable(stack, &is_valid);
+        }
+
+        fn pseudorandom_initial_state(
+            &self,
+            seed: [u8; 32],
+            bench_case: Option<BenchmarkCase>,
+        ) -> FunctionInitialState {
+            let mut rng = StdRng::from_seed(seed);
+            let (leaf_index, leaf_count) = match bench_case {
+                Some(BenchmarkCase::CommonCase) => ((1 << 31) - 1, 1 << 31),
+                Some(BenchmarkCase::WorstCase) => ((1 << 62) - 1, 1 << 62),
+                None => {
+                    let leaf_count = rng.gen_range(1..=1 << 62);
+                    let leaf_index = rng.gen_range(0..leaf_count);
+                    (leaf_index, leaf_count)
+                }
+            };
+
+            let leaf = rng.gen();
+            let (mmra, mps) = mmra_with_mps(leaf_count, vec![(leaf_index, leaf)]);
+            let auth_path = mps[0].authentication_path.clone();
+
+            self.set_up_initial_state(&mmra, leaf, leaf_index, auth_path)
+        }
+    }
 
     #[test]
-    fn verify_from_memory_test() {
-        test_rust_equivalence_multiple_deprecated(&MmrVerifyFromMemory, true);
+    fn rust_shadow() {
+        ShadowedFunction::new(MmrVerifyFromMemory).test();
     }
 
     // This will crash the VM because leaf?index is not strictly less than leaf_count
@@ -544,20 +388,19 @@ mod tests {
         auth_path: Vec<Digest>,
         expect_validation_success: bool,
     ) {
-        let snippet = MmrVerifyFromMemory;
-        let exec_state = snippet.prepare_vm_state(mmr, leaf, leaf_index, auth_path.clone());
+        let exec_state =
+            MmrVerifyFromMemory.set_up_initial_state(mmr, leaf, leaf_index, auth_path.clone());
 
-        let init_stack = exec_state.stack;
-
-        // AFTER: _ *auth_path leaf_index_hi leaf_index_lo validation_result
+        // AFTER: _ validation_result
         let mut expected_final_stack = empty_stack();
-        expected_final_stack.push(BFieldElement::new(expect_validation_success as u64));
+        expected_final_stack.push(bfe!(expect_validation_success as u64));
 
-        test_rust_equivalence_given_input_values_deprecated(
-            &snippet,
-            &init_stack,
+        test_rust_equivalence_given_complete_state(
+            &ShadowedFunction::new(MmrVerifyFromMemory),
+            &exec_state.stack,
             &[],
-            exec_state.nondeterminism.ram,
+            &NonDeterminism::default().with_ram(exec_state.memory),
+            &None,
             Some(&expected_final_stack),
         );
 
@@ -577,10 +420,10 @@ mod tests {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::snippet_bencher::bench_and_write;
+    use crate::test_prelude::*;
 
     #[test]
-    fn verify_from_memory_benchmark() {
-        bench_and_write(MmrVerifyFromMemory);
+    fn benchmark() {
+        ShadowedFunction::new(MmrVerifyFromMemory).bench();
     }
 }
