@@ -2,10 +2,10 @@
   {
     "name": "tasmlib_memory_memcpy",
     "benchmark_result": {
-      "clock_cycle_count": 85,
-      "hash_table_height": 84,
+      "clock_cycle_count": 91,
+      "hash_table_height": 48,
       "u32_table_height": 49,
-      "op_stack_table_height": 83,
+      "op_stack_table_height": 69,
       "ram_table_height": 34
     },
     "case": "CommonCase"
@@ -13,10 +13,10 @@
   {
     "name": "tasmlib_memory_memcpy",
     "benchmark_result": {
-      "clock_cycle_count": 2834,
-      "hash_table_height": 84,
+      "clock_cycle_count": 2626,
+      "hash_table_height": 48,
       "u32_table_height": 2034,
-      "op_stack_table_height": 3229,
+      "op_stack_table_height": 2815,
       "ram_table_height": 2000
     },
     "case": "WorstCase"

@@ -178,7 +178,6 @@ mod tests {
             let input_type = self.f.domain();
 
             let element_size = self.f.domain().stack_size();
-            let memcpy = MemCpy::rust_shadowing;
             let safety_offset = LIST_METADATA_SIZE;
 
             let list_pointer = stack.pop().unwrap();
@@ -193,7 +192,7 @@ mod tests {
 
             // set length
             stack.push(output_list);
-            stack.push(BFieldElement::new(len as u64));
+            stack.push(bfe!(len));
             SetLength.rust_shadow(stack, memory);
             stack.pop();
 
@@ -214,27 +213,17 @@ mod tests {
 
                 // maybe copy
                 if satisfied {
-                    stack.push(
-                        list_pointer
-                            + BFieldElement::new(
-                                safety_offset as u64 + i as u64 * element_size as u64,
-                            ),
-                    ); // read source
-                    stack.push(
-                        output_list
-                            + BFieldElement::new(
-                                safety_offset as u64 + output_index as u64 * element_size as u64,
-                            ),
-                    ); // write dest
-                    stack.push(BFieldElement::new(element_size as u64)); // number of words
-                    memcpy(&MemCpy, stack, vec![], vec![], memory);
+                    stack.push(list_pointer + bfe!(safety_offset + i * element_size)); // read source
+                    stack.push(output_list + bfe!(safety_offset + output_index * element_size)); // write dest
+                    stack.push(bfe!(element_size)); // number of words
+                    MemCpy.rust_shadow(stack, memory);
                     output_index += 1;
                 }
             }
 
             // set length
             stack.push(output_list);
-            stack.push(BFieldElement::new(output_index as u64));
+            stack.push(bfe!(output_index));
             SetLength.rust_shadow(stack, memory);
         }
 
