@@ -4,7 +4,6 @@ use triton_vm::isa::instruction::AnInstruction;
 use triton_vm::prelude::*;
 
 use crate::prelude::*;
-use crate::traits::deprecated_snippet::DeprecatedSnippet;
 
 const MORE_THAN_ONE_INPUT_OR_OUTPUT_TYPE_IN_INNER_FUNCTION: &str = "higher-order functions \
 currently only work with *one* input element in inner function. \
@@ -120,7 +119,6 @@ impl RawCode {
 
 pub enum InnerFunction {
     RawCode(RawCode),
-    DeprecatedSnippet(Box<dyn DeprecatedSnippet>),
     BasicSnippet(Box<dyn BasicSnippet>),
 
     // Used when a snippet is declared somewhere else, and it's not the responsibility of
@@ -139,12 +137,6 @@ impl InnerFunction {
     pub fn domain(&self) -> DataType {
         match self {
             InnerFunction::RawCode(raw) => raw.input_type.clone(),
-            InnerFunction::DeprecatedSnippet(f) => {
-                let [ref input] = f.input_types()[..] else {
-                    panic!("{MORE_THAN_ONE_INPUT_OR_OUTPUT_TYPE_IN_INNER_FUNCTION}");
-                };
-                input.clone()
-            }
             InnerFunction::NoFunctionBody(f) => f.input_type.clone(),
             InnerFunction::BasicSnippet(bs) => {
                 let [(ref input, _)] = bs.inputs()[..] else {
@@ -158,12 +150,6 @@ impl InnerFunction {
     pub fn range(&self) -> DataType {
         match self {
             InnerFunction::RawCode(rc) => rc.output_type.clone(),
-            InnerFunction::DeprecatedSnippet(sn) => {
-                let [ref output] = sn.output_types()[..] else {
-                    panic!("{MORE_THAN_ONE_INPUT_OR_OUTPUT_TYPE_IN_INNER_FUNCTION}");
-                };
-                output.clone()
-            }
             InnerFunction::NoFunctionBody(lnat) => lnat.output_type.clone(),
             InnerFunction::BasicSnippet(bs) => {
                 let [(ref output, _)] = bs.outputs()[..] else {
@@ -178,7 +164,6 @@ impl InnerFunction {
     pub fn entrypoint(&self) -> String {
         match self {
             InnerFunction::RawCode(rc) => rc.entrypoint(),
-            InnerFunction::DeprecatedSnippet(sn) => sn.entrypoint_name(),
             InnerFunction::NoFunctionBody(sn) => sn.label_name.to_owned(),
             InnerFunction::BasicSnippet(bs) => bs.entrypoint(),
         }
@@ -192,9 +177,6 @@ impl InnerFunction {
     ) {
         match &self {
             InnerFunction::RawCode(rc) => Self::run_vm(&rc.function, stack, memory),
-            InnerFunction::DeprecatedSnippet(sn) => {
-                sn.rust_shadowing(stack, vec![], vec![], &mut memory.clone());
-            }
             InnerFunction::NoFunctionBody(_lnat) => {
                 panic!("Cannot apply inner function without function body")
             }

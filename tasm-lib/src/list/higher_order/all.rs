@@ -1,5 +1,4 @@
 use itertools::Itertools;
-use triton_vm::isa::parser::tokenize;
 use triton_vm::prelude::*;
 
 use super::inner_function::InnerFunction;
@@ -44,12 +43,6 @@ impl BasicSnippet for All {
 
         let inner_function_name = match &self.f {
             InnerFunction::RawCode(rc) => rc.entrypoint(),
-            InnerFunction::DeprecatedSnippet(sn) => {
-                let fn_body = sn.function_code(library);
-                let (_, instructions) = tokenize(&fn_body).unwrap();
-                let labelled_instructions = isa::parser::to_labelled_instructions(&instructions);
-                library.explicit_import(&sn.entrypoint_name(), &labelled_instructions)
-            }
             InnerFunction::NoFunctionBody(_) => todo!(),
             InnerFunction::BasicSnippet(bs) => {
                 let labelled_instructions = bs.annotated_code(library);
@@ -61,7 +54,6 @@ impl BasicSnippet for All {
         // body. Otherwise, `library` handles the imports.
         let maybe_inner_function_body_raw = match &self.f {
             InnerFunction::RawCode(rc) => rc.function.iter().map(|x| x.to_string()).join("\n"),
-            InnerFunction::DeprecatedSnippet(_) => Default::default(),
             InnerFunction::NoFunctionBody(_) => todo!(),
             InnerFunction::BasicSnippet(_) => Default::default(),
         };

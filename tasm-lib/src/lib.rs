@@ -16,11 +16,9 @@ use std::collections::HashMap;
 use std::io::Write;
 use std::time::SystemTime;
 
-use anyhow::bail;
 use itertools::Itertools;
 use memory::dyn_malloc;
 use num_traits::Zero;
-use snippet_bencher::BenchmarkResult;
 use triton_vm::isa::op_stack::NUM_OP_STACK_REGISTERS;
 use triton_vm::prelude::*;
 
@@ -117,54 +115,6 @@ pub(crate) fn pop_encodable<T: BFieldCodec>(stack: &mut Vec<BFieldElement>) -> T
     let len = T::static_length().unwrap();
     let limbs = (0..len).map(|_| stack.pop().unwrap()).collect_vec();
     *T::decode(&limbs).unwrap()
-}
-
-/// Execute a Triton-VM program and return its output and execution trace length
-pub fn execute_bench_deprecated(
-    code: &[LabelledInstruction],
-    stack: &mut Vec<BFieldElement>,
-    expected_stack_diff: isize,
-    std_in: Vec<BFieldElement>,
-    nondeterminism: NonDeterminism,
-) -> anyhow::Result<BenchmarkResult> {
-    let init_stack = stack.to_owned();
-    let initial_stack_height = init_stack.len() as isize;
-    let public_input = PublicInput::new(std_in.clone());
-    let program = Program::new(code);
-
-    let mut vm_state = VMState::new(program.clone(), public_input, nondeterminism.clone());
-    vm_state.op_stack.stack.clone_from(&init_stack);
-
-    let (simulation_trace, terminal_state) = VM::trace_execution_of_state(vm_state)?;
-
-    let jump_stack = &terminal_state.jump_stack;
-    if !jump_stack.is_empty() {
-        bail!("Jump stack must be unchanged after code execution but was {jump_stack:?}")
-    }
-
-    let final_stack_height = terminal_state.op_stack.stack.len() as isize;
-    if expected_stack_diff != final_stack_height - initial_stack_height {
-        bail!(
-            "Code must grow/shrink stack with expected number of elements.\n
-            init height: {initial_stack_height}\n
-            end height:  {final_stack_height}\n
-            expected difference: {expected_stack_diff}\n\n
-            final stack: {}",
-            terminal_state.op_stack.stack.iter().join(",")
-        )
-    }
-
-    // If this environment variable is set, all programs, including the code to prepare the state,
-    // will be proven and then verified.
-    // Notice that this is only done after the successful execution of the program above, so all
-    // produced proofs here should be valid.
-    // If you run this, make sure `opt-level` is set to 3.
-    if std::env::var("DYING_TO_PROVE").is_ok() {
-        prove_and_verify(program, &std_in, &nondeterminism, Some(init_stack));
-    }
-
-    stack.clone_from(&terminal_state.op_stack.stack);
-    Ok(BenchmarkResult::new(&simulation_trace))
 }
 
 /// Execute a Triton-VM program and test correct behavior indicators.
@@ -375,8 +325,7 @@ pub fn generate_full_profile(
 
 /// Glob-import this module to reduce the number of imports in a test module.
 ///
-/// Feel free to add anything you frequently `use` in a test module. It is
-/// discouraged to add deprecated types or functions – get rid of them instead.
+/// Feel free to add anything you frequently `use` in a test module.
 #[cfg(test)]
 pub mod test_prelude {
     pub use std::collections::HashMap;

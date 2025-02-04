@@ -1,5 +1,4 @@
 use itertools::Itertools;
-use triton_vm::isa::parser::tokenize;
 use triton_vm::prelude::*;
 
 use super::inner_function::InnerFunction;
@@ -52,12 +51,6 @@ impl BasicSnippet for Filter {
 
         let inner_function_name = match &self.f {
             InnerFunction::RawCode(rc) => rc.entrypoint(),
-            InnerFunction::DeprecatedSnippet(sn) => {
-                let fn_body = sn.function_code(library);
-                let (_, instructions) = tokenize(&fn_body).unwrap();
-                let labelled_instructions = isa::parser::to_labelled_instructions(&instructions);
-                library.explicit_import(&sn.entrypoint_name(), &labelled_instructions)
-            }
             InnerFunction::NoFunctionBody(_) => todo!(),
             InnerFunction::BasicSnippet(bs) => {
                 let labelled_instructions = bs.annotated_code(library);
@@ -71,7 +64,6 @@ impl BasicSnippet for Filter {
         // body. Otherwise, `library` handles the imports.
         let maybe_inner_function_body_raw = match &self.f {
             InnerFunction::RawCode(rc) => rc.function.iter().join("\n"),
-            InnerFunction::DeprecatedSnippet(_) => String::default(),
             InnerFunction::NoFunctionBody(_) => todo!(),
             InnerFunction::BasicSnippet(_) => String::default(),
         };
@@ -167,7 +159,6 @@ mod tests {
     use crate::list::higher_order::inner_function::RawCode;
     use crate::rust_shadowing_helper_functions;
     use crate::test_prelude::*;
-    use crate::traits::deprecated_snippet::DeprecatedSnippet;
 
     impl Function for Filter {
         fn rust_shadow(
@@ -272,150 +263,61 @@ mod tests {
     #[derive(Debug, Clone)]
     pub struct TestHashXFieldElementLsb;
 
-    impl DeprecatedSnippet for TestHashXFieldElementLsb {
-        fn entrypoint_name(&self) -> String {
+    impl BasicSnippet for TestHashXFieldElementLsb {
+        fn inputs(&self) -> Vec<(DataType, String)> {
+            vec![(DataType::Xfe, "element".to_string())]
+        }
+
+        fn outputs(&self) -> Vec<(DataType, String)> {
+            vec![(DataType::Bool, "b".to_string())]
+        }
+
+        fn entrypoint(&self) -> String {
             "test_hash_xfield_element_lsb".to_string()
         }
 
-        fn input_field_names(&self) -> Vec<String>
-        where
-            Self: Sized,
-        {
-            vec![
-                "elem2".to_string(),
-                "elem1".to_string(),
-                "elem0".to_string(),
-            ]
-        }
-
-        fn input_types(&self) -> Vec<DataType> {
-            vec![DataType::Xfe]
-        }
-
-        fn output_field_names(&self) -> Vec<String>
-        where
-            Self: Sized,
-        {
-            vec!["bool".to_string()]
-        }
-
-        fn output_types(&self) -> Vec<DataType> {
-            vec![DataType::Bool]
-        }
-
-        fn stack_diff(&self) -> isize
-        where
-            Self: Sized,
-        {
-            -2
-        }
-
-        fn function_code(&self, library: &mut Library) -> String {
-            let entrypoint = self.entrypoint_name();
+        fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
+            let entrypoint = self.entrypoint();
             let unused_import = library.import(Box::new(arithmetic::u32::safe_add::SafeAdd));
-            format!(
-            "
-    // BEFORE: _ x2 x1 x0
-    // AFTER:  _ b
-    {entrypoint}:
-        // Useless additions, to ensure that dependencies are accepted inside the filter generated code
-            push 0
-            push 0
-            call {unused_import}
-            pop 1
+            triton_asm!(
+            // BEFORE: _ x2 x1 x0
+            // AFTER:  _ b
+            {entrypoint}:
+                // Useless additions, to ensure that dependencies are accepted inside
+                // the filter-generated code
+                    push 0
+                    push 0
+                    call {unused_import}
+                    pop 1
 
-        push 0
-        push 0
-        push 0
-        push 1 // _ x2 x1 x0 0 0 0 1
-        push 0 swap 7 // _ 0 x1 x0 0 0 0 1 x2
-        push 0 swap 7 // _ 0 0 x0 0 0 0 1 x2 x1
-        push 0 swap 7 // _ 0 0 0 0 0 0 1 x2 x1 x0
+                push 0
+                push 0
+                push 0
+                push 1 // _ x2 x1 x0 0 0 0 1
+                push 0 swap 7 // _ 0 x1 x0 0 0 0 1 x2
+                push 0 swap 7 // _ 0 0 x0 0 0 0 1 x2 x1
+                push 0 swap 7 // _ 0 0 0 0 0 0 1 x2 x1 x0
 
-        sponge_init
-        sponge_absorb
-        sponge_squeeze  // _ d9 d8 d7 d6 d5 d4 d3 d2 d1 d0
-        swap 5 pop 1    // _ d9 d8 d7 d6 d0 d4 d3 d2 d1
-        swap 5 pop 1    // _ d9 d8 d7 d1 d0 d4 d3 d2
-        swap 5 pop 1
-        swap 5 pop 1
-        swap 5 pop 1
+                sponge_init
+                sponge_absorb
+                sponge_squeeze  // _ d9 d8 d7 d6 d5 d4 d3 d2 d1 d0
+                swap 5 pop 1    // _ d9 d8 d7 d6 d0 d4 d3 d2 d1
+                swap 5 pop 1    // _ d9 d8 d7 d1 d0 d4 d3 d2
+                swap 5 pop 1
+                swap 5 pop 1
+                swap 5 pop 1
 
-        // _ d4 d3 d2 d1 d0
+                // _ d4 d3 d2 d1 d0
 
-        split // _ d4 d3 d2 d1 hi lo
-        push 2 // _ d4 d3 d2 d1 hi lo 2
-        swap 1
-        div_mod // _ d4 d3 d2 d1 hi q r
-        swap 6
-        pop 5 pop 1
-        return
-    "
-        )
+                split // _ d4 d3 d2 d1 hi lo
+                push 2 // _ d4 d3 d2 d1 hi lo 2
+                swap 1
+                div_mod // _ d4 d3 d2 d1 hi q r
+                swap 6
+                pop 5 pop 1
+                return
+            )
         }
-
-        fn crash_conditions(&self) -> Vec<String>
-        where
-            Self: Sized,
-        {
-            vec![]
-        }
-
-        fn gen_input_states(&self) -> Vec<InitVmState>
-        where
-            Self: Sized,
-        {
-            let mut stack = empty_stack();
-            stack.extend(random::<[BFieldElement; 3]>());
-
-            vec![InitVmState::with_stack(stack)]
-        }
-
-        fn common_case_input_state(&self) -> InitVmState
-        where
-            Self: Sized,
-        {
-            let mut stack = empty_stack();
-            stack.extend(random::<[BFieldElement; 3]>());
-
-            InitVmState::with_stack(stack)
-        }
-
-        fn worst_case_input_state(&self) -> InitVmState
-        where
-            Self: Sized,
-        {
-            let mut stack = empty_stack();
-            stack.extend(random::<[BFieldElement; 3]>());
-
-            InitVmState::with_stack(stack)
-        }
-
-        fn rust_shadowing(
-            &self,
-            stack: &mut Vec<BFieldElement>,
-            _: Vec<BFieldElement>,
-            _: Vec<BFieldElement>,
-            _: &mut HashMap<BFieldElement, BFieldElement>,
-        ) where
-            Self: Sized,
-        {
-            let mut xfield_element = vec![];
-            for _ in 0..3 {
-                xfield_element.push(stack.pop().unwrap());
-            }
-            let digest = Tip5::hash_varlen(&xfield_element).values().to_vec();
-            let b = digest[0].value() % 2;
-            stack.push(BFieldElement::new(b));
-        }
-    }
-
-    #[test]
-    fn prop_test() {
-        ShadowedFunction::new(Filter {
-            f: InnerFunction::DeprecatedSnippet(Box::new(TestHashXFieldElementLsb)),
-        })
-        .test();
     }
 
     #[test]
@@ -472,7 +374,7 @@ mod benches {
     #[test]
     fn benchmark() {
         ShadowedFunction::new(Filter {
-            f: InnerFunction::DeprecatedSnippet(Box::new(TestHashXFieldElementLsb)),
+            f: InnerFunction::BasicSnippet(Box::new(TestHashXFieldElementLsb)),
         })
         .bench();
     }

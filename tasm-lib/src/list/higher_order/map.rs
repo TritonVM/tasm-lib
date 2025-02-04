@@ -2,9 +2,7 @@ use itertools::Itertools;
 use strum::EnumCount;
 use tasm_lib::list::higher_order::inner_function::InnerFunction;
 use tasm_lib::structure::tasm_object::DEFAULT_MAX_DYN_FIELD_SIZE;
-use triton_vm::isa;
 use triton_vm::isa::op_stack::OpStackElement;
-use triton_vm::isa::parser::tokenize;
 use triton_vm::prelude::*;
 
 use crate::list::new::New;
@@ -378,14 +376,6 @@ impl<const NUM_INPUT_LISTS: usize> ChainMap<NUM_INPUT_LISTS> {
                 code.inlined_body()
                     .unwrap_or(triton_asm!(call {code.entrypoint()}))
             }
-            InnerFunction::DeprecatedSnippet(sn) => {
-                assert_eq!(1, sn.input_types().len(), "{INNER_FN_INCORRECT_NUM_INPUTS}");
-                let fn_body = sn.function_code(library);
-                let (_, instructions) = tokenize(&fn_body).unwrap();
-                let labelled_instructions = isa::parser::to_labelled_instructions(&instructions);
-                let label = library.explicit_import(&sn.entrypoint_name(), &labelled_instructions);
-                triton_asm!(call { label })
-            }
             InnerFunction::BasicSnippet(snippet) => {
                 assert_eq!(1, snippet.inputs().len(), "{INNER_FN_INCORRECT_NUM_INPUTS}");
                 let labelled_instructions = snippet.annotated_code(library);
@@ -423,8 +413,6 @@ impl<const NUM_INPUT_LISTS: usize> ChainMap<NUM_INPUT_LISTS> {
 #[cfg(test)]
 mod tests {
     use itertools::Itertools;
-    use num_traits::Zero;
-    use twenty_first::math::other::random_elements;
 
     use super::*;
     use crate::arithmetic;
@@ -439,8 +427,6 @@ mod tests {
     use crate::rust_shadowing_helper_functions::list::list_set_length;
     use crate::test_helpers::test_rust_equivalence_given_execution_state;
     use crate::test_prelude::*;
-    use crate::traits::deprecated_snippet::DeprecatedSnippet;
-    use crate::twenty_first::prelude::x_field_element::EXTENSION_DEGREE;
 
     impl<const NUM_INPUT_LISTS: usize> ChainMap<NUM_INPUT_LISTS> {
         fn init_state(
@@ -550,58 +536,24 @@ mod tests {
         }
     }
 
-    /// Specifically exists to implement [`DeprecatedSnippet`]. Should only be
-    /// upgraded to a regular snippet once [`InnerFunction`] stops supporting
-    /// `DeprecatedSnippet`.
     #[derive(Debug, Clone)]
     pub(crate) struct TestHashXFieldElement;
 
-    impl DeprecatedSnippet for TestHashXFieldElement {
-        fn entrypoint_name(&self) -> String {
+    impl BasicSnippet for TestHashXFieldElement {
+        fn inputs(&self) -> Vec<(DataType, String)> {
+            vec![(DataType::Xfe, "element".to_string())]
+        }
+
+        fn outputs(&self) -> Vec<(DataType, String)> {
+            vec![(DataType::Digest, "digest".to_string())]
+        }
+
+        fn entrypoint(&self) -> String {
             "test_hash_xfield_element".to_string()
         }
 
-        fn input_field_names(&self) -> Vec<String>
-        where
-            Self: Sized,
-        {
-            vec![
-                "elem2".to_string(),
-                "elem1".to_string(),
-                "elem0".to_string(),
-            ]
-        }
-
-        fn input_types(&self) -> Vec<DataType> {
-            vec![DataType::Xfe]
-        }
-
-        fn output_field_names(&self) -> Vec<String>
-        where
-            Self: Sized,
-        {
-            vec![
-                "digelem4".to_string(),
-                "digelem3".to_string(),
-                "digelem2".to_string(),
-                "digelem1".to_string(),
-                "digelem0".to_string(),
-            ]
-        }
-
-        fn output_types(&self) -> Vec<DataType> {
-            vec![DataType::Digest]
-        }
-
-        fn stack_diff(&self) -> isize
-        where
-            Self: Sized,
-        {
-            2
-        }
-
-        fn function_code(&self, library: &mut Library) -> String {
-            let entrypoint = self.entrypoint_name();
+        fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
+            let entrypoint = self.entrypoint();
             let unused_import = library.import(Box::new(arithmetic::u32::safe_add::SafeAdd));
             triton_asm!(
                 // BEFORE: _ x2 x1 x0
@@ -615,7 +567,8 @@ mod tests {
                     pick 9          // _ x0 0 0 0 0 0 0 1 x2 x1
                     pick 9          // _ 0 0 0 0 0 0 1 x2 x1 x0
 
-                    // Useless additions, to ensure that imports are accepted inside the map generated code
+                    // Useless additions, to ensure that imports are accepted inside the
+                    // map-generated code
                     push 0
                     push 0
                     call {unused_import}
@@ -629,72 +582,6 @@ mod tests {
                     pick 9 pop 5   // _ d4 d3 d2 d1 d0
                     return
             )
-            .iter()
-            .join("\n")
-        }
-
-        fn crash_conditions(&self) -> Vec<String>
-        where
-            Self: Sized,
-        {
-            vec![]
-        }
-
-        fn gen_input_states(&self) -> Vec<InitVmState>
-        where
-            Self: Sized,
-        {
-            vec![InitVmState::with_stack(
-                [
-                    vec![BFieldElement::zero(); 16],
-                    random_elements::<BFieldElement>(3),
-                ]
-                .concat(),
-            )]
-        }
-
-        fn common_case_input_state(&self) -> InitVmState
-        where
-            Self: Sized,
-        {
-            InitVmState::with_stack(
-                [
-                    vec![BFieldElement::zero(); 16],
-                    random_elements::<BFieldElement>(3),
-                ]
-                .concat(),
-            )
-        }
-
-        fn worst_case_input_state(&self) -> InitVmState
-        where
-            Self: Sized,
-        {
-            InitVmState::with_stack(
-                [
-                    vec![BFieldElement::zero(); 16],
-                    random_elements::<BFieldElement>(3),
-                ]
-                .concat(),
-            )
-        }
-
-        fn rust_shadowing(
-            &self,
-            stack: &mut Vec<BFieldElement>,
-            _std_in: Vec<BFieldElement>,
-            _secret_in: Vec<BFieldElement>,
-            _memory: &mut HashMap<BFieldElement, BFieldElement>,
-        ) where
-            Self: Sized,
-        {
-            let mut xfield_element = vec![];
-            for _ in 0..EXTENSION_DEGREE {
-                xfield_element.push(stack.pop().unwrap());
-            }
-
-            let digest = Tip5::hash_varlen(&xfield_element);
-            stack.extend(digest.reversed().values());
         }
     }
 
@@ -715,12 +602,6 @@ mod tests {
         ShadowedFunction::new(ChainMap::<7>::new(f())).test();
         ShadowedFunction::new(ChainMap::<11>::new(f())).test();
         ShadowedFunction::new(ChainMap::<15>::new(f())).test();
-    }
-
-    #[test]
-    fn prop_test() {
-        let f = || InnerFunction::DeprecatedSnippet(Box::new(TestHashXFieldElement));
-        test_chain_map_with_different_num_input_lists(f);
     }
 
     #[test]
@@ -972,7 +853,7 @@ mod benches {
 
     #[test]
     fn map_benchmark() {
-        let f = InnerFunction::DeprecatedSnippet(Box::new(TestHashXFieldElement));
+        let f = InnerFunction::BasicSnippet(Box::new(TestHashXFieldElement));
         ShadowedFunction::new(Map::new(f)).bench();
     }
 

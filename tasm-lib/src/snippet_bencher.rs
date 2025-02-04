@@ -9,8 +9,6 @@ use serde_json::to_writer_pretty;
 use triton_vm::aet::AlgebraicExecutionTrace;
 use triton_vm::prelude::TableId;
 
-use crate::traits::deprecated_snippet::DeprecatedSnippet;
-
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct BenchmarkResult {
     pub clock_cycle_count: usize,
@@ -45,27 +43,6 @@ impl BenchmarkResult {
     }
 }
 
-pub fn benchmark_snippet_deprecated<T: DeprecatedSnippet>(snippet: T) -> Vec<NamedBenchmarkResult> {
-    let mut benchmarks = Vec::with_capacity(2);
-
-    for (case, mut execution_state) in [
-        (BenchmarkCase::CommonCase, snippet.common_case_input_state()),
-        (BenchmarkCase::WorstCase, snippet.worst_case_input_state()),
-    ] {
-        let benchmark_result = snippet
-            .link_and_run_tasm_from_state_for_bench(&mut execution_state)
-            .unwrap();
-        let benchmark = NamedBenchmarkResult {
-            name: snippet.entrypoint_name(),
-            benchmark_result,
-            case,
-        };
-        benchmarks.push(benchmark);
-    }
-
-    benchmarks
-}
-
 pub fn write_benchmarks(benchmarks: Vec<NamedBenchmarkResult>) {
     let mut path = PathBuf::new();
     path.push("benchmarks");
@@ -82,8 +59,4 @@ pub fn write_benchmarks(benchmarks: Vec<NamedBenchmarkResult>) {
     path.push(Path::new(&function_name).with_extension("json"));
     let output = File::create(&path).expect("open file for writing");
     to_writer_pretty(output, &benchmarks).expect("write json to file");
-}
-
-pub fn bench_and_write<T: DeprecatedSnippet>(snippet: T) {
-    write_benchmarks(benchmark_snippet_deprecated(snippet));
 }
