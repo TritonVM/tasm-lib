@@ -182,6 +182,8 @@ impl BasicSnippet for VerifyMmrSuccessor {
                 /* nominal case */
                 dup 2 dup 2
                 dup 7 dup 7
+                //  _ [old_num_leafs: u64] *old_peaks [new_num_leafs: u64] *new_peaks [new_num_leafs: u64] [old_num_leafs: u64]
+
                 call {leaf_index_to_mti_and_pki}    hint num_unchanged_peaks = stack[0]
                                                     hint merkle_tree_idx: u64 = stack[1..3]
                 // _ [old_num_leafs: u64] *old_peaks [new_num_leafs: u64] *new_peaks [mt_index: u64] num_unchanged_peaks
@@ -199,6 +201,8 @@ impl BasicSnippet for VerifyMmrSuccessor {
                 addi -1
                 push {Digest::LEN}
                 mul
+                // _ [mt_index: u64] [old_num_leafs: u64] [new_num_leafs: u64] *new_peaks num_unchanged_peaks *old_peaks[0] (old_num_peaks-1)*DIGEST_LENGTH
+
                 dup 1
                 add hint last_old_peak: Pointer = stack[0]
                 place 1
@@ -381,6 +385,7 @@ impl BasicSnippet for VerifyMmrSuccessor {
     fn sign_offs(&self) -> HashMap<Reviewer, SignOffFingerprint> {
         let mut sign_offs = HashMap::new();
         sign_offs.insert(Reviewer("ferdinand"), 0xeb1e81bd042d7a0c.into());
+        sign_offs.insert(Reviewer("alan"), 0xeb1e81bd042d7a0c.into());
         sign_offs
     }
 }
@@ -434,16 +439,19 @@ mod tests {
             let dummy_proof = MmrSuccessorProof::new_from_batch_append(&old_mmr, &new_dummy_leafs);
             let auth_path_len = dummy_proof.paths.len();
 
-            let mut paths = vec![];
+            // grab first path element from nd tokens
+            let mut path = vec![];
             if auth_path_len > 0 {
                 let first_element = (0..Digest::LEN).rev().map(|i| nd_tokens[i]).collect_vec();
-                paths.push(Digest::new(first_element.try_into().unwrap()));
-            }
-            if auth_path_len > 1 {
-                paths.extend((0..auth_path_len - 1).map(|i| nd_digests[i]));
+                path.push(Digest::new(first_element.try_into().unwrap()));
             }
 
-            assert!(MmrSuccessorProof { paths }.verify(&old_mmr, &new_mmr));
+            // grab remaining path elements from nd digests
+            if auth_path_len > 1 {
+                path.extend((0..auth_path_len - 1).map(|i| nd_digests[i]));
+            }
+
+            assert!(MmrSuccessorProof { paths: path }.verify(&old_mmr, &new_mmr));
         }
 
         fn pseudorandom_initial_state(
