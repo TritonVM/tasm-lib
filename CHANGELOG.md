@@ -1,3 +1,31 @@
+## [0.47.0](https://github.com/TritonVM/tasm-lib/compare/v0.46.0..v0.47.0) - 2025-02-10
+
+### ♻️ Refactor
+
+- (!) Remove trait `DeprecatedSnippet` ([eb53c844](https://github.com/TritonVM/tasm-lib/commit/eb53c844))
+
+### 🖋 Snippet Sign-Off
+
+- U128::overflowing_add ([5a006ad7](https://github.com/TritonVM/tasm-lib/commit/5a006ad7))
+- (!) U32::is_odd ([a9f3f885](https://github.com/TritonVM/tasm-lib/commit/a9f3f885))
+- (!) U32::is_u32 ([647c2795](https://github.com/TritonVM/tasm-lib/commit/647c2795))
+- (!) U32::or ([b303c7f4](https://github.com/TritonVM/tasm-lib/commit/b303c7f4))
+- (!) U32::safe_add ([73f92c33](https://github.com/TritonVM/tasm-lib/commit/73f92c33))
+- (!) U32::safe_mul ([b69af017](https://github.com/TritonVM/tasm-lib/commit/b69af017))
+- (!) U32::safe_sub ([1db90474](https://github.com/TritonVM/tasm-lib/commit/1db90474))
+- (!) U32::shift_left and u32::shift_right ([99e38029](https://github.com/TritonVM/tasm-lib/commit/99e38029))
+- (!) U64::or ([0914583d](https://github.com/TritonVM/tasm-lib/commit/0914583d))
+- (!) U64::MulTwoU64sToU128 ([84e2fd1f](https://github.com/TritonVM/tasm-lib/commit/84e2fd1f))
+- (!) U128::SafeMul ([fc5ac068](https://github.com/TritonVM/tasm-lib/commit/fc5ac068))
+- (!) U128::Sub ([dfec7488](https://github.com/TritonVM/tasm-lib/commit/dfec7488))
+- (!) U128::ShiftRight ([5ccbad33](https://github.com/TritonVM/tasm-lib/commit/5ccbad33))
+- (!) U128::ShiftLeft ([4e36025c](https://github.com/TritonVM/tasm-lib/commit/4e36025c))
+- (!) U128::ShiftRightStatic ([23361590](https://github.com/TritonVM/tasm-lib/commit/23361590))
+- (!) List::SetLength ([f42a2449](https://github.com/TritonVM/tasm-lib/commit/f42a2449))
+- (!) List::Range ([f7d708c4](https://github.com/TritonVM/tasm-lib/commit/f7d708c4))
+- Mmr::verify_from_memory ([655ca1f2](https://github.com/TritonVM/tasm-lib/commit/655ca1f2))
+- `VerifyMmrSuccessorProof` ([2af7c95d](https://github.com/TritonVM/tasm-lib/commit/2af7c95d))
+
 ## [0.46.0](https://github.com/TritonVM/tasm-lib/compare/v0.45.0..v0.46.0) - 2025-01-31
 
 ### ✨ Features
