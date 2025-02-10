@@ -1,14 +1,41 @@
+use std::collections::HashMap;
+
 use triton_vm::prelude::*;
 
 use super::leaf_index_to_mt_index_and_peak_index::MmrLeafIndexToMtIndexAndPeakIndex;
-use crate::arithmetic::u64::div2::Div2;
+use crate::hashing::merkle_step_mem_u64_index::MerkleStepMemU64Index;
 use crate::list::get::Get;
 use crate::prelude::*;
+use crate::traits::basic_snippet::Reviewer;
+use crate::traits::basic_snippet::SignOffFingerprint;
 
+/// Check whether a given leaf is a member of a pointed-to [MMR], with the
+/// inclusion proof (the authentication path) residing in RAM.
+///
+/// ### Behavior
+///
+/// ```text
+/// BEFORE: _ *peaks [leaf_count: u64] [leaf_index: u64] [leaf: Digest] *auth_path
+/// AFTER:  _ [validation_result: bool]
+/// ```
+///
+/// ### Preconditions
+///
+/// - all input arguments are properly [`BFieldCodec`] encoded
+/// - input arguments `*peaks` points to a properly [`BFieldCodec`] encoded list
+///   of [`Digest`]s
+/// - input arguments `*auth_path` points to a properly [`BFieldCodec`] encoded
+///   list of [`Digest`]s
+/// - the `leaf_count` is consistent with the pointed-to MMR
+/// - the `leaf_index` is smaller than the `leaf_count`
+///
+/// ### Postconditions
+///
+/// - all output is properly [`BFieldCodec`] encoded
+///
+/// [MMR]: twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct MmrVerifyFromMemory;
-
-impl MmrVerifyFromMemory {}
 
 impl BasicSnippet for MmrVerifyFromMemory {
     fn inputs(&self) -> Vec<(DataType, String)> {
@@ -34,16 +61,14 @@ impl BasicSnippet for MmrVerifyFromMemory {
     fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
         let leaf_index_to_mt_index = library.import(Box::new(MmrLeafIndexToMtIndexAndPeakIndex));
         let get_list_element = library.import(Box::new(Get::new(DataType::Digest)));
-        let div_2 = library.import(Box::new(Div2));
+        let merkle_step_mem = library.import(Box::new(MerkleStepMemU64Index));
 
         let entrypoint = self.entrypoint();
         let loop_label = format!("{entrypoint}_loop");
-        let swap_digests = format!("{entrypoint}_swap_digests");
 
         triton_asm!(
             // BEFORE: _ *peaks [leaf_count: u64] [leaf_index: u64] [leaf: Digest] *auth_path
             // AFTER:  _ validation_result
-            // Will crash if `leaf_index >= leaf_count`
             {entrypoint}:
                 pick 9 pick 9
                 pick 9 pick 9
@@ -53,30 +78,28 @@ impl BasicSnippet for MmrVerifyFromMemory {
                 place 8
                 // _ *peaks peak_index [leaf: Digest] *auth_path [mt_index: u64]
 
-                pick 7 pick 7 pick 7 pick 7 pick 7
-                // _ *peaks peak_index *auth_path [mt_index: u64] [leaf: Digest]
+                place 7 place 7
+                // _ *peaks peak_index [mt_index: u64] [leaf: Digest] *auth_path
 
-                pick 7
-                addi {Digest::LEN}
+                addi 1
                 place 7
+                // _ *peaks peak_index *auth_path[0] [mt_index: u64] [leaf: Digest]
 
                 call {loop_label}
-                // _ *peaks peak_index *auth_path [1: u64] [peak: Digest]
+                // _ *peaks peak_index *auth_path[n] [1: u64] [peak: Digest]
 
-                /* Compare computed `peak` to the `expected_peak`,
-                 * where `expected_peak = peaks[peak_index]`
+                /* Compare computed `peak` to `peaks[peak_index]`,
+                 * which is the expected peak.
                  */
                 pick 9 pick 9
-                // _ *auth_path [1: u64] [acc: Digest] *peaks peak_index
+                // _ *auth_path[n] [1: u64] [acc: Digest] *peaks peak_index
 
                 call {get_list_element}
-                // _ *auth_path [1: u64] [acc: Digest] [expected_peak: Digest]
+                // _ *auth_path[n] [1: u64] [acc: Digest] [expected_peak: Digest]
 
                 {&DataType::Digest.compare()}
-                // _ *auth_path [1: u64] (expected_peak == acc_hash)
-
-                // Rename: expected_peak == acc_hash -> validation_result
-                // _ *auth_path [1: u64] validation_result
+                // _ *auth_path[n] [1: u64] (expected_peak == acc_hash)
+                // _ *auth_path[n] [1: u64] validation_result
 
                 place 3
                 pop 3
@@ -85,7 +108,6 @@ impl BasicSnippet for MmrVerifyFromMemory {
                 return
 
             // INVARIANT: _ *auth_path[n] [mt_index: u64] [acc: Digest]
-            // todo: use `MerkleStepMemU64Index` to speed up this loop
             {loop_label}:
                 dup 6 push 0 eq
                 dup 6 push 1 eq
@@ -95,40 +117,15 @@ impl BasicSnippet for MmrVerifyFromMemory {
                 skiz return
                 // _ *auth_path[n] [mt_index: u64] [acc: Digest]
 
-                // declare `ap_element = auth_path[i]`
-                pick 7
-                read_mem {Digest::LEN}
-                addi {Digest::LEN * 2}
-                place 12
-                // _ *auth_path[n+1] [mt_index: u64] [acc: Digest] [sibling: Digest]
-
-                dup 10
-                push 1
-                and
-                // _ *auth_path[n+1] [mt_index: u64] [acc: Digest] [sibling: Digest] (index%2 == 1)
-
-                push 0
-                eq
-                // _ *auth_path[n+1] [mt_index: u64] [acc: Digest] [sibling: Digest] (index%2 == 0)
-
-                skiz call {swap_digests}
-                // _ *auth_path[n+1] [mt_index: u64] [right_node: Digest] [left_node: Digest]
-
-                hash
-                // _ *auth_path[n+1] [mt_index: u64] [acc: Digest]
-
-                // mt_index -> mt_index / 2
-                pick 6 pick 6
-                call {div_2}
-                place 6 place 6
-                // _ *auth_path[n+1] [mt_index / 2: u64] [acc: Digest]
-
+                call {merkle_step_mem}
                 recurse
-
-            {swap_digests}:
-                pick 9 pick 9 pick 9 pick 9 pick 9
-                return
         )
+    }
+
+    fn sign_offs(&self) -> HashMap<Reviewer, SignOffFingerprint> {
+        let mut sign_offs = HashMap::new();
+        sign_offs.insert(Reviewer("ferdinand"), 0xc35bd96dd2348c49.into());
+        sign_offs
     }
 }
 
