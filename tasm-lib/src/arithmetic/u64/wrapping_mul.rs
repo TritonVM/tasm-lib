@@ -107,7 +107,7 @@ mod tests {
             match bench_case {
                 Some(BenchmarkCase::CommonCase) => (1 << 31, (1 << 25) - 1),
                 Some(BenchmarkCase::WorstCase) => (1 << 53, (1 << 33) - 1),
-                None => StdRng::from_seed(seed).gen(),
+                None => StdRng::from_seed(seed).random(),
             }
         }
     }

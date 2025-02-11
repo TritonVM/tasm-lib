@@ -29,11 +29,11 @@ pub type Map = ChainMap<1>;
 /// length is [statically known][len]. The input type may have either
 /// statically or dynamically known length:
 /// - In the static case, the entire element is placed on the stack before
-///     passing control to `f`.
+///   passing control to `f`.
 /// - In the dynamic case, a memory pointer to the encoded element and the
-///     item's length is placed on the stack before passing control to `f`. The
-///     input list **must** be encoded according to [`BFieldCodec`]. Otherwise,
-///     behavior of `ChainMap` is undefined!
+///   item's length is placed on the stack before passing control to `f`. The
+///   input list **must** be encoded according to [`BFieldCodec`]. Otherwise,
+///   behavior of `ChainMap` is undefined!
 ///
 /// The stack layout is independent of the list currently being processed. This
 /// allows the [`InnerFunction`] `f` to use runtime parameters from the stack.
@@ -73,9 +73,9 @@ impl<const NUM_INPUT_LISTS: usize> ChainMap<NUM_INPUT_LISTS> {
     /// # Panics
     ///
     /// - if the input type has [static length] _and_ takes up
-    ///     [`OpStackElement::COUNT`] or more words
+    ///   [`OpStackElement::COUNT`] or more words
     /// - if the input type has dynamic length and is _anything but_ a tuple
-    ///     `(_, `[`BFieldElement`][bfe]`)`
+    ///   `(_, `[`BFieldElement`][bfe]`)`
     /// - if the output type takes up [`OpStackElement::COUNT`]` - 1` or more words
     /// - if the output type does not have a [static length][len]
     ///
@@ -476,7 +476,7 @@ mod tests {
                 .collect_vec();
 
             // the inner function _must not_ rely on these elements
-            let buffer = (0..Self::NUM_INTERNAL_REGISTERS).map(|_| random::<BFieldElement>());
+            let buffer = (0..Self::NUM_INTERNAL_REGISTERS).map(|_| rand::random::<BFieldElement>());
             stack.extend(buffer);
 
             let mut total_output_len = 0;
@@ -523,16 +523,16 @@ mod tests {
             bench: Option<BenchmarkCase>,
         ) -> FunctionInitialState {
             let mut rng = StdRng::from_seed(seed);
-            let environment_args = rng.gen::<[BFieldElement; OpStackElement::COUNT]>();
+            let environment_args = rng.random::<[BFieldElement; OpStackElement::COUNT]>();
 
             let list_lengths = match bench {
-                None => rng.gen::<[u8; NUM_INPUT_LISTS]>(),
+                None => rng.random::<[u8; NUM_INPUT_LISTS]>(),
                 Some(BenchmarkCase::CommonCase) => [10; NUM_INPUT_LISTS],
                 Some(BenchmarkCase::WorstCase) => [100; NUM_INPUT_LISTS],
             };
             let list_lengths = list_lengths.map(Into::into);
 
-            self.init_state(environment_args, list_lengths, rng.gen())
+            self.init_state(environment_args, list_lengths, rng.random())
         }
     }
 
@@ -771,9 +771,9 @@ mod tests {
         // this code only works with 1 input list
         let raw_code = InnerFunction::RawCode(u32_to_u128_add_another_u128());
         let snippet = Map::new(raw_code);
-        let encoded_u128 = random::<u128>().encode();
-        let input_list_len = thread_rng().gen_range(0u16..200);
-        let initial_state = snippet.init_state(encoded_u128, [input_list_len], random());
+        let encoded_u128 = rand::random::<u128>().encode();
+        let input_list_len = rand::rng().random_range(0u16..200);
+        let initial_state = snippet.init_state(encoded_u128, [input_list_len], rand::random());
         test_rust_equivalence_given_execution_state(
             &ShadowedFunction::new(snippet),
             initial_state.into(),
@@ -790,7 +790,7 @@ mod tests {
                 DataType::Tuple(vec![]),
             ));
             let snippet = ChainMap::<N>::new(raw_code);
-            let initial_state = snippet.init_state(vec![guard], [1; N], random());
+            let initial_state = snippet.init_state(vec![guard], [1; N], rand::random());
             test_rust_equivalence_given_execution_state(
                 &ShadowedFunction::new(snippet),
                 initial_state.into(),

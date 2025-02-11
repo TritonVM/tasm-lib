@@ -77,7 +77,7 @@ mod tests {
             match bench_case {
                 Some(BenchmarkCase::CommonCase) => bfe!(1 << 16),
                 Some(BenchmarkCase::WorstCase) => bfe!(u32::MAX),
-                None => StdRng::from_seed(seed).gen(),
+                None => StdRng::from_seed(seed).random(),
             }
         }
 

@@ -178,7 +178,7 @@ mod tests {
                     .collect_vec(),
             );
 
-            let bad_leaf: Digest = thread_rng().gen();
+            let bad_leaf: Digest = rand::rng().random();
             for (leaf_index, leaf_digest) in digests.into_iter().enumerate() {
                 let auth_path = mps[leaf_index].clone();
 
@@ -218,12 +218,12 @@ mod tests {
             let mut mmr: MmrAccumulator = MmrAccumulator::init(fake_peaks, init_leaf_count);
 
             // Insert the 1st leaf
-            let second_to_last_leaf: Digest = thread_rng().gen();
+            let second_to_last_leaf: Digest = rand::rng().random();
             let second_to_last_leaf_index = init_leaf_count;
             let mut real_membership_proof_second_to_last = mmr.append(second_to_last_leaf);
 
             // Insert one more leaf and update the existing membership proof
-            let last_leaf: Digest = thread_rng().gen();
+            let last_leaf: Digest = rand::rng().random();
             let last_leaf_index = second_to_last_leaf_index + 1;
             MmrMembershipProof::update_from_append(
                 &mut real_membership_proof_second_to_last,
@@ -251,7 +251,7 @@ mod tests {
             );
 
             // Negative tests
-            let bad_leaf: Digest = thread_rng().gen();
+            let bad_leaf: Digest = rand::rng().random();
             MmrVerifyFromSecretInSecretLeafIndex.prop_verify_from_secret_in_negative_test(
                 &mmr,
                 bad_leaf,
@@ -335,8 +335,8 @@ mod tests {
             bench_case: Option<BenchmarkCase>,
         ) -> ProcedureInitialState {
             let mut rng = StdRng::from_seed(seed);
-            let leaf_count = rng.gen_range(1..10000);
-            let leaf_index = rng.gen_range(0..leaf_count);
+            let leaf_count = rng.random_range(1..10000);
+            let leaf_index = rng.random_range(0..leaf_count);
 
             match bench_case {
                 Some(BenchmarkCase::CommonCase) => {
@@ -444,12 +444,12 @@ mod tests {
             leaf_index: u64,
             generate_valid_proof: bool,
         ) -> ProcedureInitialState {
-            let valid_leaf: Digest = random();
+            let valid_leaf: Digest = rand::random();
             let (mmr, mps) = mmra_with_mps(size as u64, vec![(leaf_index, valid_leaf)]);
             let claimed_leaf = if generate_valid_proof {
                 valid_leaf
             } else {
-                random()
+                rand::random()
             };
 
             self.prepare_state(
@@ -468,7 +468,7 @@ mod tests {
             let leaf_count = 2u64.pow(log_2_leaf_count as u32);
             let peaks: Vec<Digest> = random_elements(log_2_leaf_count as usize);
             let mut mmra = MmrAccumulator::init(peaks, leaf_count - 1);
-            let new_leaf: Digest = random();
+            let new_leaf: Digest = rand::random();
             let authentication_path = mmra.append(new_leaf).authentication_path;
 
             let mut vm_init_state = self.mmr_to_init_vm_state(&mmra);

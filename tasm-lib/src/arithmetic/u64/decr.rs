@@ -112,7 +112,7 @@ mod tests {
             match bench_case {
                 Some(BenchmarkCase::CommonCase) => 7,
                 Some(BenchmarkCase::WorstCase) => 1 << 35,
-                None => StdRng::from_seed(seed).gen_range(1..=u64::MAX),
+                None => StdRng::from_seed(seed).random_range(1..=u64::MAX),
             }
         }
     }

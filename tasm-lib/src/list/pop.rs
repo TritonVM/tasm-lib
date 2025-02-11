@@ -172,8 +172,8 @@ mod tests {
             _: Option<BenchmarkCase>,
         ) -> FunctionInitialState {
             let mut rng = StdRng::from_seed(seed);
-            let list_length = rng.gen_range(1..1 << 12);
-            let list_pointer = rng.gen();
+            let list_length = rng.random_range(1..1 << 12);
+            let list_pointer = rng.random();
 
             self.set_up_initial_state(list_length, list_pointer)
         }

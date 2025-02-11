@@ -61,7 +61,7 @@ mod tests {
             &self,
             input_length: usize,
         ) -> (HashMap<BFieldElement, BFieldElement>, Vec<BFieldElement>) {
-            let list_pointer: BFieldElement = random();
+            let list_pointer: BFieldElement = rand::random();
             let init_stack = [empty_stack(), vec![list_pointer]].concat();
             let mut init_memory = HashMap::default();
             insert_random_list(&DataType::Bfe, list_pointer, input_length, &mut init_memory);
@@ -103,7 +103,7 @@ mod tests {
             let input_length = match bench_case {
                 Some(BenchmarkCase::CommonCase) => 100,
                 Some(BenchmarkCase::WorstCase) => 10000,
-                None => rng.gen_range(0..200),
+                None => rng.random_range(0..200),
             };
             let (memory, stack) = self.init_memory_and_stack(input_length);
 

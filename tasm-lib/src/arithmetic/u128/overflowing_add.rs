@@ -91,6 +91,8 @@ impl BasicSnippet for OverflowingAdd {
 
 #[cfg(test)]
 pub(crate) mod tests {
+    use rand::rngs::StdRng;
+
     use super::*;
     use crate::test_prelude::*;
 
@@ -131,7 +133,7 @@ pub(crate) mod tests {
         }
 
         fn pseudorandom_args(&self, seed: [u8; 32], _: Option<BenchmarkCase>) -> Self::Args {
-            StdRng::from_seed(seed).gen()
+            StdRng::from_seed(seed).random()
         }
 
         fn corner_case_args(&self) -> Vec<Self::Args> {

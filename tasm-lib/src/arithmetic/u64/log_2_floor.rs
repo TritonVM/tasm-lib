@@ -121,7 +121,7 @@ mod tests {
             match bench_case {
                 Some(BenchmarkCase::CommonCase) => u64::from(u32::MAX),
                 Some(BenchmarkCase::WorstCase) => u64::MAX,
-                None => StdRng::from_seed(seed).gen(),
+                None => StdRng::from_seed(seed).random(),
             }
         }
 

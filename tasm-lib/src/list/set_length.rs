@@ -93,7 +93,7 @@ pub(crate) mod tests {
             let mut rng = StdRng::from_seed(seed);
 
             let mut stack = empty_stack();
-            stack.push(rng.gen());
+            stack.push(rng.random());
             stack.push(bfe!(rng.next_u32()));
 
             FunctionInitialState {

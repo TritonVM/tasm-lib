@@ -172,7 +172,7 @@ pub(crate) mod tests {
             match bench_case {
                 Some(BenchmarkCase::CommonCase) => ((1 << 63) - 1, 1 << 63),
                 Some(BenchmarkCase::WorstCase) => (1 << 50, 1 << 63),
-                None => StdRng::from_seed(seed).gen(),
+                None => StdRng::from_seed(seed).random(),
             }
         }
 

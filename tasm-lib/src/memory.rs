@@ -1,14 +1,14 @@
 //! Memory convention used in this crate:
 //!
 //! - A memory page is contiguous memory of size 2^32 words, aligned to 2^32 word boundaries.
-//!     There is one exception: due to the [base field's prime][prime] being 2^64 - 2^32 + 1,
-//!     the last page, starting at address 2^64 - 2^32, is of size 1.
+//!   There is one exception: due to the [base field's prime][prime] being 2^64 - 2^32 + 1,
+//!   the last page, starting at address 2^64 - 2^32, is of size 1.
 //! - The dynamic allocator lives at address [`DYN_MALLOC_ADDRESS`][dyn_malloc_addr], _i.e._, -1.
-//!     It is a single word, containing a counter of allocated pages.
-//!     It occupies the only page that is not of size 2^32 words.
+//!   It is a single word, containing a counter of allocated pages.
+//!   It occupies the only page that is not of size 2^32 words.
 //! - Page 0 is reserved for non-deterministically initialized memory.
 //! - The last full page, number (2^32)-2, starting at address 2^64 - 2·(2^32),
-//!     is reserved for [static allocations][static_malloc_addr].
+//!   is reserved for [static allocations][static_malloc_addr].
 //! - The two preceding pages, number 2^32-4 and 2^32-3 are used by the
 //!   [STARK verifier][stark_verifier] (when standard memory layouts are used).
 //! - Pages 1 through 2^31-1 are dynamically allocated by the

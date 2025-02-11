@@ -127,7 +127,8 @@ impl BasicSnippet for VerifyFriAuthenticationPaths {
 
 #[cfg(test)]
 mod tests {
-    use rand::distributions::Standard;
+    use rand::distr::Distribution;
+    use rand::distr::StandardUniform;
     use strum::EnumIter;
     use strum::IntoEnumIterator;
     use twenty_first::prelude::*;
@@ -142,9 +143,9 @@ mod tests {
         B,
     }
 
-    impl Distribution<IndexType> for Standard {
-        fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> IndexType {
-            if rng.gen() {
+    impl Distribution<IndexType> for StandardUniform {
+        fn sample<R: rand::Rng + ?Sized>(&self, rng: &mut R) -> IndexType {
+            if rng.random() {
                 IndexType::A
             } else {
                 IndexType::B
@@ -217,10 +218,10 @@ mod tests {
             let (height, num_indices) = match bench_case {
                 Some(BenchmarkCase::CommonCase) => (10, 80),
                 Some(BenchmarkCase::WorstCase) => (20, 80),
-                None => (rng.gen_range(6..=15), rng.gen_range(2..10) as usize),
+                None => (rng.random_range(6..=15), rng.random_range(2..10) as usize),
             };
 
-            let index_type = rng.gen();
+            let index_type = rng.random();
 
             self.prepare_state(&mut rng, height, num_indices, index_type)
         }
@@ -260,7 +261,7 @@ mod tests {
             let dom_len_half: u32 = dom_len / 2;
 
             let xfe_leafs = (0..dom_len)
-                .map(|_| rng.gen::<XFieldElement>())
+                .map(|_| rng.random::<XFieldElement>())
                 .collect_vec();
             let leafs_as_digest: Vec<Digest> =
                 xfe_leafs.iter().map(|&xfe| xfe.into()).collect_vec();
@@ -268,7 +269,7 @@ mod tests {
             let root = tree.root();
 
             let a_indices = (0..num_indices)
-                .map(|_| rng.gen_range(0..dom_len) as usize)
+                .map(|_| rng.random_range(0..dom_len) as usize)
                 .collect_vec();
 
             // TODO: Generalize for other values than round=0

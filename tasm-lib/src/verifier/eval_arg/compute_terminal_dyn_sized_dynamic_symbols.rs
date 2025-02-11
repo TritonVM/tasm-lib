@@ -176,11 +176,11 @@ mod tests {
             let symbols_length = match bench_case {
                 Some(BenchmarkCase::CommonCase) => 30,
                 Some(BenchmarkCase::WorstCase) => 100,
-                None => rng.gen_range(0..100),
+                None => rng.random_range(0..100),
             };
-            let symbols_pointer = rng.gen();
-            let rand_initial = rng.gen();
-            let rand_challenge = rng.gen();
+            let symbols_pointer = rng.random();
+            let rand_initial = rng.random();
+            let rand_challenge = rng.random();
             self.prepare_state(
                 symbols_length,
                 symbols_pointer,
@@ -191,9 +191,9 @@ mod tests {
 
         fn corner_case_initial_states(&self) -> Vec<FunctionInitialState> {
             let mut rng = StdRng::from_seed([101u8; 32]);
-            let symbols_pointer = rng.gen();
-            let rand_initial = rng.gen();
-            let rand_challenge = rng.gen();
+            let symbols_pointer = rng.random();
+            let rand_initial = rng.random();
+            let rand_challenge = rng.random();
             vec![
                 self.prepare_state(0, symbols_pointer, rand_initial, rand_challenge),
                 self.prepare_state(1, symbols_pointer, rand_initial, rand_challenge),

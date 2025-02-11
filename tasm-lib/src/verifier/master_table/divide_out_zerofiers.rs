@@ -151,7 +151,6 @@ mod tests {
 
     use itertools::Itertools;
     use rand::prelude::*;
-    use twenty_first::math::traits::Inverse;
     use twenty_first::math::traits::ModPowU32;
     use twenty_first::math::traits::PrimitiveRootOfUnity;
 
@@ -163,7 +162,7 @@ mod tests {
     fn divide_out_zerofiers_test() {
         let snippet = DivideOutZerofiers;
         let mut seed: [u8; 32] = [0u8; 32];
-        thread_rng().fill_bytes(&mut seed);
+        rand::rng().fill_bytes(&mut seed);
         snippet.test_equivalence_with_host_machine(seed);
     }
 
@@ -207,9 +206,9 @@ mod tests {
             BFieldElement,
         ) {
             let air_evaluation_result =
-                rng.gen::<[XFieldElement; MasterAuxTable::NUM_CONSTRAINTS]>();
-            let ood_point_curr_row: XFieldElement = rng.gen();
-            let padded_height = 2u32.pow(rng.gen_range(8..32));
+                rng.random::<[XFieldElement; MasterAuxTable::NUM_CONSTRAINTS]>();
+            let ood_point_curr_row: XFieldElement = rng.random();
+            let padded_height = 2u32.pow(rng.random_range(8..32));
             let trace_domain_generator =
                 BFieldElement::primitive_root_of_unity(padded_height as u64).unwrap();
 
@@ -363,8 +362,8 @@ mod bench {
             // Used for benchmarking
             let mut rng = StdRng::from_seed(seed);
             let air_evaluation_result =
-                rng.gen::<[XFieldElement; MasterAuxTable::NUM_CONSTRAINTS]>();
-            let ood_point_current_row = rng.gen::<XFieldElement>();
+                rng.random::<[XFieldElement; MasterAuxTable::NUM_CONSTRAINTS]>();
+            let ood_point_current_row = rng.random::<XFieldElement>();
             let padded_height = 1 << 20;
             let trace_domain_generator =
                 BFieldElement::primitive_root_of_unity(padded_height).unwrap();

@@ -139,16 +139,16 @@ mod tests {
             let mut rng = StdRng::from_seed(seed);
 
             let coefficients = (0..self.num_coefficients)
-                .map(|_| rng.gen::<XFieldElement>())
+                .map(|_| rng.random::<XFieldElement>())
                 .collect();
-            let address = rng.gen();
+            let address = rng.random();
 
             let mut memory = HashMap::new();
             insert_as_array(address, &mut memory, coefficients);
 
             let mut stack = self.init_stack_for_isolated_run();
             stack.push(address);
-            push_encodable(&mut stack, &rng.gen::<XFieldElement>()); // indeterminate
+            push_encodable(&mut stack, &rng.random::<XFieldElement>()); // indeterminate
 
             AccessorInitialState { stack, memory }
         }

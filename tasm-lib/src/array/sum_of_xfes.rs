@@ -120,7 +120,7 @@ mod tests {
             _bench_case: Option<BenchmarkCase>,
         ) -> crate::traits::function::FunctionInitialState {
             let mut rng = StdRng::from_seed(seed);
-            let list_pointer = BFieldElement::new(rng.gen());
+            let list_pointer = BFieldElement::new(rng.random());
             self.prepare_state(list_pointer)
         }
 

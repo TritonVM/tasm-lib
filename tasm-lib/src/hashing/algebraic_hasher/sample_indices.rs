@@ -187,7 +187,7 @@ mod tests {
                     BenchmarkCase::WorstCase => 80,
                 }
             } else {
-                rng.gen_range(0..20)
+                rng.random_range(0..20)
             };
             let upper_bound = if let Some(case) = bench_case {
                 match case {
@@ -195,7 +195,7 @@ mod tests {
                     BenchmarkCase::WorstCase => 1 << 23,
                 }
             } else {
-                1 << rng.gen_range(0..20)
+                1 << rng.random_range(0..20)
             };
 
             let mut stack = empty_stack();
@@ -203,7 +203,7 @@ mod tests {
             stack.push(BFieldElement::new(upper_bound as u64));
 
             let public_input: Vec<BFieldElement> = vec![];
-            let state = Tip5 { state: rng.gen() };
+            let state = Tip5 { state: rng.random() };
 
             ProcedureInitialState {
                 stack,

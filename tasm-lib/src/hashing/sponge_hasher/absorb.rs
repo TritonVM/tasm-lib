@@ -84,7 +84,7 @@ mod tests {
     use crate::test_prelude::*;
 
     fn init_memory_and_stack() -> (HashMap<BFieldElement, BFieldElement>, Vec<BFieldElement>) {
-        let array_pointer: BFieldElement = random();
+        let array_pointer: BFieldElement = rand::random();
         let init_stack = [empty_stack(), vec![array_pointer]].concat();
         let init_memory: HashMap<BFieldElement, BFieldElement> = (0..RATE)
             .map(|i| array_pointer + BFieldElement::new(i as u64))

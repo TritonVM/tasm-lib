@@ -84,7 +84,9 @@ mod tests {
                 stack: self.init_stack_for_isolated_run(),
                 nondeterminism: NonDeterminism::default(),
                 public_input: vec![],
-                sponge: Some(Tip5 { state: random() }),
+                sponge: Some(Tip5 {
+                    state: rand::random(),
+                }),
             }
         }
     }

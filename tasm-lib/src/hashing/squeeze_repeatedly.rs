@@ -104,10 +104,12 @@ mod tests {
             let num_squeezes = match bench_case {
                 Some(BenchmarkCase::CommonCase) => 10,
                 Some(BenchmarkCase::WorstCase) => 200,
-                None => rng.gen_range(0..10),
+                None => rng.random_range(0..10),
             };
 
-            let sponge = Tip5 { state: rng.gen() };
+            let sponge = Tip5 {
+                state: rng.random(),
+            };
             let mut stack = empty_stack();
             let address = BFieldElement::new(rng.next_u64() % (1 << 20));
             stack.push(address);
@@ -128,11 +130,11 @@ mod tests {
 
         let shadow = ShadowedProcedure::new(SqueezeRepeatedly);
         let num_states = 15;
-        let mut rng = thread_rng();
+        let mut rng = rand::rng();
         let entrypoint = shadow.inner().entrypoint();
 
         for _ in 0..num_states {
-            let seed: [u8; 32] = rng.gen();
+            let seed: [u8; 32] = rng.random();
             println!("testing {} common case with seed: {:x?}", entrypoint, seed);
             let ProcedureInitialState {
                 stack,

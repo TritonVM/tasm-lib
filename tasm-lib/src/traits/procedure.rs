@@ -102,7 +102,7 @@ impl<P: Procedure> RustShadow for ShadowedProcedure<P> {
 
     fn test(&self) {
         let num_states = 5;
-        let seed: [u8; 32] = thread_rng().gen();
+        let seed: [u8; 32] = rand::rng().random();
         let mut rng = StdRng::from_seed(seed);
         let procedure = &self.procedure;
 
@@ -111,7 +111,7 @@ impl<P: Procedure> RustShadow for ShadowedProcedure<P> {
         }
 
         for _ in 0..num_states {
-            let seed: [u8; 32] = rng.gen();
+            let seed: [u8; 32] = rng.random();
             let state = procedure.pseudorandom_initial_state(seed, None);
 
             self.test_initial_state(state);
@@ -135,7 +135,7 @@ impl<P: Procedure> RustShadow for ShadowedProcedure<P> {
                 sponge,
             } = self
                 .procedure
-                .pseudorandom_initial_state(rng.gen(), Some(bench_case));
+                .pseudorandom_initial_state(rng.random(), Some(bench_case));
             let program = self.procedure.link_for_isolated_run();
             let benchmark = execute_bench(&program, &stack, public_input, nondeterminism, sponge);
             let benchmark = NamedBenchmarkResult {

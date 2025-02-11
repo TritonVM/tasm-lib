@@ -213,11 +213,11 @@ mod tests {
             bench_case: Option<BenchmarkCase>,
         ) -> FunctionInitialState {
             let mut rng = StdRng::from_seed(seed);
-            let list_pointer = rng.gen();
+            let list_pointer = rng.random();
             let list_length = match bench_case {
                 Some(BenchmarkCase::CommonCase) => 104,
                 Some(BenchmarkCase::WorstCase) => 1004,
-                None => rng.gen_range(0..200),
+                None => rng.random_range(0..200),
             };
             self.prepare_state(list_pointer, list_length)
         }
@@ -255,7 +255,7 @@ mod tests {
     #[test]
     fn sum_xfes_unit_test() {
         let snippet = SumOfXfes;
-        let input_list_2_long: Vec<XFieldElement> = vec![random(), random()];
+        let input_list_2_long: Vec<XFieldElement> = vec![rand::random(), rand::random()];
         let expected_sum: XFieldElement = input_list_2_long.clone().into_iter().sum();
 
         let mut memory = HashMap::default();

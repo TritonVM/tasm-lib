@@ -268,11 +268,11 @@ mod tests {
                 Some(BenchmarkCase::WorstCase) => self.random_equal_lists(100),
                 None => {
                     let mut rng = StdRng::from_seed(seed);
-                    let length = rng.gen_range(1..50);
-                    let index = rng.gen_range(0..length);
-                    let digest_word_index = rng.gen_range(0..Digest::LEN);
-                    let another_length = length + rng.gen_range(1..10);
-                    match rng.gen_range(0..=3) {
+                    let length = rng.random_range(1..50);
+                    let index = rng.random_range(0..length);
+                    let digest_word_index = rng.random_range(0..Digest::LEN);
+                    let another_length = length + rng.random_range(1..10);
+                    match rng.random_range(0..=3) {
                         0 => self.random_equal_lists(length),
                         1 => self.random_unequal_lists(length),
                         2 => self.random_unequal_length_lists(length, another_length),
@@ -330,9 +330,9 @@ mod tests {
             let list_a: Vec<Digest> = random_elements(length);
             let mut list_b = list_a.clone();
             list_b.sort();
-            let pointer_a: BFieldElement = random();
+            let pointer_a: BFieldElement = rand::random();
             let pointer_b: BFieldElement =
-                BFieldElement::new(pointer_a.value() + random::<u32>() as u64);
+                BFieldElement::new(pointer_a.value() + rand::random::<u32>() as u64);
 
             let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::new();
 
@@ -346,9 +346,9 @@ mod tests {
         fn random_unequal_lists(&self, length: usize) -> FunctionInitialState {
             let list_a: Vec<Digest> = random_elements(length);
             let list_b: Vec<Digest> = random_elements(length);
-            let pointer_a: BFieldElement = random();
+            let pointer_a: BFieldElement = rand::random();
             let pointer_b: BFieldElement =
-                BFieldElement::new(pointer_a.value() + random::<u32>() as u64);
+                BFieldElement::new(pointer_a.value() + rand::random::<u32>() as u64);
             let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::new();
 
             rust_shadowing_helper_functions::list::list_insert(pointer_a, list_a, &mut memory);
@@ -365,9 +365,9 @@ mod tests {
         ) -> FunctionInitialState {
             let list_a: Vec<Digest> = random_elements(length_a);
             let list_b: Vec<Digest> = random_elements(length_b);
-            let pointer_a: BFieldElement = random();
+            let pointer_a: BFieldElement = rand::random();
             let pointer_b: BFieldElement =
-                BFieldElement::new(pointer_a.value() + random::<u32>() as u64);
+                BFieldElement::new(pointer_a.value() + rand::random::<u32>() as u64);
             let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::new();
 
             rust_shadowing_helper_functions::list::list_insert(pointer_a, list_a, &mut memory);
@@ -389,9 +389,9 @@ mod tests {
             let mut list_b = list_a.clone();
             list_b.sort();
             list_b[manipulated_index].0[manipulated_digest_word_index] += BFieldElement::one();
-            let pointer_a: BFieldElement = random();
+            let pointer_a: BFieldElement = rand::random();
             let pointer_b: BFieldElement =
-                BFieldElement::new(pointer_a.value() + random::<u32>() as u64);
+                BFieldElement::new(pointer_a.value() + rand::random::<u32>() as u64);
 
             let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::new();
 

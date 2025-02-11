@@ -188,12 +188,14 @@ mod tests {
             let old_num_leafs: u64 = match bench_case {
                 Some(BenchmarkCase::CommonCase) => (1 << 31) - 1,
                 Some(BenchmarkCase::WorstCase) => (1 << 62) - 1,
-                None => rng.gen_range(0..1 << 63),
+                None => rng.random_range(0..1 << 63),
             };
-            let peaks = (0..old_num_leafs.count_ones()).map(|_| rng.gen()).collect();
+            let peaks = (0..old_num_leafs.count_ones())
+                .map(|_| rng.random())
+                .collect();
             let mmr = MmrAccumulator::init(peaks, old_num_leafs);
 
-            self.set_up_initial_state(mmr, rng.gen())
+            self.set_up_initial_state(mmr, rng.random())
         }
 
         fn corner_case_initial_states(&self) -> Vec<FunctionInitialState> {

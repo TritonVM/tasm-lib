@@ -5,7 +5,6 @@ use triton_vm::prelude::*;
 use crate::prelude::*;
 use crate::traits::basic_snippet::Reviewer;
 use crate::traits::basic_snippet::SignOffFingerprint;
-use crate::twenty_first::prelude::Inverse;
 
 /// Compute the Merkle root of a slice of `Digest`s. Corresponds to
 /// `MerkleTree::`[`sequential_new`][new]`(leafs).`[`root`][root]`()`.
@@ -259,10 +258,10 @@ mod tests {
             let num_leafs = match bench_case {
                 Some(BenchmarkCase::CommonCase) => 512,
                 Some(BenchmarkCase::WorstCase) => 1024,
-                None => 1 << rng.gen_range(0..=8),
+                None => 1 << rng.random_range(0..=8),
             };
-            let leafs = (0..num_leafs).map(|_| rng.gen()).collect_vec();
-            let digests_pointer = rng.gen();
+            let leafs = (0..num_leafs).map(|_| rng.random()).collect_vec();
+            let digests_pointer = rng.random();
 
             self.init_state(leafs, digests_pointer)
         }

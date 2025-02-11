@@ -134,7 +134,7 @@ impl Function for DynMalloc {
         let stack = empty_stack();
 
         let mut memory = HashMap::new();
-        let page_number = rng.gen_range(0..1_u64 << 31);
+        let page_number = rng.random_range(0..1_u64 << 31);
         memory.insert(DYN_MALLOC_ADDRESS, page_number.into());
 
         FunctionInitialState { stack, memory }

@@ -124,10 +124,10 @@ where
         }
 
         let num_rng_states = 5;
-        let mut rng = thread_rng();
+        let mut rng = rand::rng();
 
         for _ in 0..num_rng_states {
-            let initial_state = self.function.pseudorandom_initial_state(rng.gen(), None);
+            let initial_state = self.function.pseudorandom_initial_state(rng.random(), None);
             self.test_initial_state(initial_state)
         }
     }
@@ -145,7 +145,7 @@ where
         for bench_case in [BenchmarkCase::CommonCase, BenchmarkCase::WorstCase] {
             let FunctionInitialState { stack, memory } = self
                 .function
-                .pseudorandom_initial_state(rng.gen(), Some(bench_case));
+                .pseudorandom_initial_state(rng.random(), Some(bench_case));
             let program = self.function.link_for_isolated_run();
             let non_determinism = NonDeterminism::default().with_ram(memory);
             let benchmark = execute_bench(&program, &stack, vec![], non_determinism, None);

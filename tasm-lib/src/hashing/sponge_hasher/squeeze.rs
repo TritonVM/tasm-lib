@@ -105,7 +105,7 @@ mod tests {
             let mut rng = StdRng::from_seed(seed);
             let mut init_memory: HashMap<BFieldElement, BFieldElement> = HashMap::default();
             let random_dynmalloc_init_page_counter =
-                rng.gen_range(0..dyn_malloc::NUM_ALLOCATABLE_PAGES);
+                rng.random_range(0..dyn_malloc::NUM_ALLOCATABLE_PAGES);
             init_memory.insert(DYN_MALLOC_ADDRESS, bfe!(random_dynmalloc_init_page_counter));
 
             let mut rng = StdRng::from_seed(seed);

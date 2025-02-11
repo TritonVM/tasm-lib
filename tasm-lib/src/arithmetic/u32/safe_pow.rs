@@ -160,8 +160,8 @@ mod tests {
         ) -> Self::Args {
             let Some(bench_case) = bench_case else {
                 let mut seeded_rng = StdRng::from_seed(seed);
-                let base = seeded_rng.gen_range(0..0x10);
-                let exponent = seeded_rng.gen_range(0..0x8);
+                let base = seeded_rng.random_range(0..0x10);
+                let exponent = seeded_rng.random_range(0..0x8);
                 return (base, exponent);
             };
 

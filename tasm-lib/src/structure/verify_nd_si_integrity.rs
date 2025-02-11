@@ -139,7 +139,7 @@ mod tests {
                 self.prepare_random_object(&randomness)
             };
 
-            let address: u32 = rng.gen_range(0..(1 << 30));
+            let address: u32 = rng.random_range(0..(1 << 30));
             let address = bfe!(address);
             self.initial_state(address, t)
         }

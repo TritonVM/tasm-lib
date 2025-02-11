@@ -255,20 +255,22 @@ mod tests {
             let (input_length, output_length) = match bench_case {
                 Some(BenchmarkCase::CommonCase) => (0, 0),
                 Some(BenchmarkCase::WorstCase) => (100, 100),
-                None => (rng.gen_range(0..1000), rng.gen_range(0..1000)),
+                None => (rng.random_range(0..1000), rng.random_range(0..1000)),
             };
 
-            let claim = Claim::new(rng.gen())
+            let claim = Claim::new(rng.random())
                 .with_input(random_elements(input_length))
                 .with_output(random_elements(output_length));
 
             let mut memory = HashMap::default();
 
-            let claim_pointer = rng.gen();
+            let claim_pointer = rng.random();
             encode_to_memory(&mut memory, claim_pointer, &claim);
 
             let stack = [self.init_stack_for_isolated_run(), vec![claim_pointer]].concat();
-            let sponge = Tip5 { state: rng.gen() };
+            let sponge = Tip5 {
+                state: rng.random(),
+            };
 
             ProcedureInitialState {
                 stack,

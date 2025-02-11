@@ -154,15 +154,15 @@ mod tests {
             let num_coefficients = match bench_case {
                 Some(BenchmarkCase::CommonCase) => 256,
                 Some(BenchmarkCase::WorstCase) => 512,
-                None => rng.gen_range(0..1000),
+                None => rng.random_range(0..1000),
             };
             let coefficients = (0..num_coefficients)
-                .map(|_| rng.gen::<XFieldElement>())
+                .map(|_| rng.random::<XFieldElement>())
                 .collect_vec();
 
-            let coefficients_pointer = bfe!(rng.gen_range(0..(1u64 << 35)));
+            let coefficients_pointer = bfe!(rng.random_range(0..(1u64 << 35)));
 
-            let indeterminate = rng.gen::<XFieldElement>();
+            let indeterminate = rng.random::<XFieldElement>();
 
             self.prepare_state(coefficients, coefficients_pointer, indeterminate)
         }

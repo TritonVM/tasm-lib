@@ -100,7 +100,7 @@ mod tests {
             match bench_case {
                 Some(BenchmarkCase::CommonCase) => ((1 << 16) - 1, 16),
                 Some(BenchmarkCase::WorstCase) => (u32::MAX, 31),
-                None => (rng.gen(), rng.gen_range(0..32)),
+                None => (rng.random(), rng.random_range(0..32)),
             }
         }
 

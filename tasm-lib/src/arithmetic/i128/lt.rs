@@ -97,7 +97,7 @@ mod tests {
         }
 
         fn pseudorandom_args(&self, seed: [u8; 32], _: Option<BenchmarkCase>) -> Self::Args {
-            StdRng::from_seed(seed).gen()
+            StdRng::from_seed(seed).random()
         }
 
         fn corner_case_args(&self) -> Vec<Self::Args> {
@@ -145,7 +145,7 @@ mod tests {
             stack_index_bad_word: usize,
             bad_word: BFieldElement,
         ) -> InitVmState {
-            let mut stack = Lt.set_up_test_stack(random());
+            let mut stack = Lt.set_up_test_stack(rand::random());
             let last_elem_index = stack.len() - 1;
             stack[last_elem_index - stack_index_bad_word] = bad_word;
 

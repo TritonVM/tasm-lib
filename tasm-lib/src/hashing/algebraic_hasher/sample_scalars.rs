@@ -138,11 +138,11 @@ mod tests {
             let num_scalars = match bench_case {
                 Some(BenchmarkCase::CommonCase) => 10,
                 Some(BenchmarkCase::WorstCase) => 100,
-                None => rng.gen_range(0..40),
+                None => rng.random_range(0..40),
             };
             let mut stack = empty_stack();
             stack.push(BFieldElement::new(num_scalars as u64));
-            let sponge = Tip5 { state: rng.gen() };
+            let sponge = Tip5 { state: rng.random() };
 
             ProcedureInitialState {
                 stack,

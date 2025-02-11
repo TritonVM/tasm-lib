@@ -114,10 +114,10 @@ mod tests {
             let exponent = match bench_case {
                 Some(BenchmarkCase::CommonCase) => 20,
                 Some(BenchmarkCase::WorstCase) => 31,
-                None => rng.gen_range(0..32),
+                None => rng.random_range(0..32),
             };
 
-            (exponent, rng.gen())
+            (exponent, rng.random())
         }
 
         fn corner_case_args(&self) -> Vec<Self::Args> {
@@ -135,7 +135,7 @@ mod tests {
 
     #[test]
     fn compare_to_generic_pow_u32() {
-        let base = random();
+        let base = rand::random();
         for log_2_exponent in 0..32 {
             let final_pow_pow_stack = test_rust_equivalence_given_complete_state(
                 &ShadowedClosure::new(ToThePowerOfPowerOf2),

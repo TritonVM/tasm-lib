@@ -179,22 +179,22 @@ mod tests {
         ) -> MemPreserverInitialState {
             let mut rng = StdRng::from_seed(seed);
 
-            let address = rng.gen::<BFieldElement>();
+            let address = rng.random::<BFieldElement>();
             let length = match bench_case {
                 Some(BenchmarkCase::CommonCase) => 102,
                 Some(BenchmarkCase::WorstCase) => 2002,
-                None => rng.gen_range(0..=29),
+                None => rng.random_range(0..=29),
             };
 
             let memory: HashMap<_, _> = (0..length)
-                .map(|i| (address + bfe!(i), rng.gen()))
+                .map(|i| (address + bfe!(i), rng.random()))
                 .collect();
 
             MemPreserverInitialState {
                 stack: [empty_stack(), bfe_vec![address, length]].concat(),
                 nondeterminism: NonDeterminism::default().with_ram(memory),
                 public_input: VecDeque::new(),
-                sponge_state: Some(Tip5 { state: rng.gen() }),
+                sponge_state: Some(Tip5 { state: rng.random() }),
             }
         }
 

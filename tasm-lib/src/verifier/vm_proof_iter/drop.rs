@@ -169,13 +169,13 @@ mod tests {
                     DequeueNextAs::pseudorandom_proof_stream(proof_item_variants, seed)
                 }
                 None => {
-                    let bigger_seed: Vec<u8> = (0..1_000_000).map(|_| rng.gen()).collect();
+                    let bigger_seed: Vec<u8> = (0..1_000_000).map(|_| rng.random()).collect();
                     let unstructured = Unstructured::new(bigger_seed.as_ref());
                     ProofStream::arbitrary_take_rest(unstructured).unwrap()
                 }
             };
 
-            let proof_ptr = bfe!(rng.gen_range(0..20u32));
+            let proof_ptr = bfe!(rng.random_range(0..20u32));
             let fake_proof = fake_proof_stream.clone().into();
 
             // Construct `VmProofIter` as we expect to see it after verifying proof

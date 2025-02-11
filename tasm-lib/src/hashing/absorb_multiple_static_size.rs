@@ -150,7 +150,7 @@ mod tests {
             let address = BFieldElement::new(rng.next_u64() % (1 << 20));
 
             let sequence = (0..self.size)
-                .map(|_| rng.gen::<BFieldElement>())
+                .map(|_| rng.random::<BFieldElement>())
                 .collect_vec();
 
             // write to memory
@@ -162,7 +162,9 @@ mod tests {
 
             let stack = [self.init_stack_for_isolated_run(), vec![address]].concat();
 
-            let vm_hasher_state = Tip5 { state: rng.gen() };
+            let vm_hasher_state = Tip5 {
+                state: rng.random(),
+            };
 
             ProcedureInitialState {
                 stack,

@@ -210,11 +210,11 @@ mod tests {
                 Some(BenchmarkCase::CommonCase) => (100, 50),
                 Some(BenchmarkCase::WorstCase) => (1000, 0),
                 None => {
-                    let list_length = rng.gen_range(1..1000);
-                    (list_length, rng.gen_range(0..list_length))
+                    let list_length = rng.random_range(1..1000);
+                    (list_length, rng.random_range(0..list_length))
                 }
             };
-            let list_pointer = rng.gen();
+            let list_pointer = rng.random();
 
             self.set_up_initial_state(list_length, at, list_pointer)
         }

@@ -125,7 +125,7 @@ mod tests {
             seed: [u8; 32],
             _bench_case: Option<BenchmarkCase>,
         ) -> Self::Args {
-            StdRng::from_seed(seed).gen()
+            StdRng::from_seed(seed).random()
         }
     }
 

@@ -95,7 +95,7 @@ mod tests {
             seed: [u8; 32],
             _: Option<BenchmarkCase>,
         ) -> FunctionInitialState {
-            self.prepare_state(StdRng::from_seed(seed).gen())
+            self.prepare_state(StdRng::from_seed(seed).random())
         }
 
         fn corner_case_initial_states(&self) -> Vec<FunctionInitialState> {

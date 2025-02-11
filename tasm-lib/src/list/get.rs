@@ -144,17 +144,17 @@ pub(crate) mod tests {
 
         pub fn random_len_idx_ptr(
             bench_case: Option<BenchmarkCase>,
-            rng: &mut impl Rng,
+            rng: &mut impl rand::Rng,
         ) -> (usize, usize, BFieldElement) {
             let (index, list_length) = match bench_case {
                 Some(BenchmarkCase::CommonCase) => (16, 32),
                 Some(BenchmarkCase::WorstCase) => (63, 64),
                 None => {
-                    let list_length = rng.gen_range(1..=100);
-                    (rng.gen_range(0..list_length), list_length)
+                    let list_length = rng.random_range(1..=100);
+                    (rng.random_range(0..list_length), list_length)
                 }
             };
-            let list_pointer = rng.gen();
+            let list_pointer = rng.random();
 
             (list_length, index, list_pointer)
         }

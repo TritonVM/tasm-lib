@@ -199,10 +199,12 @@ mod tests {
             _: Option<BenchmarkCase>,
         ) -> ProcedureInitialState {
             let mut rng = StdRng::from_seed(seed);
-            let program_digest: Digest = rng.gen();
+            let program_digest: Digest = rng.random();
             let challenge = program_digest.0.into_iter().rev().collect_vec();
             let stack = [self.init_stack_for_isolated_run(), challenge].concat();
-            let sponge = Tip5 { state: rng.gen() };
+            let sponge = Tip5 {
+                state: rng.random(),
+            };
 
             ProcedureInitialState {
                 stack,

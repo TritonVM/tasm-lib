@@ -193,13 +193,13 @@ mod tests {
             _bench_case: Option<BenchmarkCase>,
         ) -> FunctionInitialState {
             let mut rng = StdRng::from_seed(seed);
-            let proof_pointer = bfe!(rng.gen_range(0..(1 << 20)));
+            let proof_pointer = bfe!(rng.random_range(0..(1 << 20)));
 
             // put randomness on heap because stack might be too small
             let mut randomness = vec![0; 1_000_000];
             rng.fill_bytes(&mut randomness);
             let mut unstructured = Unstructured::new(&randomness);
-            let proof_items = (0..rng.gen_range(10..25))
+            let proof_items = (0..rng.random_range(10..25))
                 .map(|_| ProofItem::arbitrary(&mut unstructured).unwrap())
                 .collect();
 

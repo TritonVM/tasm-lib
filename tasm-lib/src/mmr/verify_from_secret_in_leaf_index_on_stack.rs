@@ -207,15 +207,15 @@ mod tests {
                 Some(BenchmarkCase::CommonCase) => (1u64 << 32, 1 << 31),
                 Some(BenchmarkCase::WorstCase) => (1u64 << 62, 1 << 61),
                 None => {
-                    let leaf_count = rng.gen_range(0..(1 << 62));
-                    let leaf_index = rng.gen_range(0..leaf_count);
+                    let leaf_count = rng.random_range(0..(1 << 62));
+                    let leaf_index = rng.random_range(0..leaf_count);
 
                     (leaf_count, leaf_index)
                 }
             };
 
-            let peaks_pointer: BFieldElement = rng.gen();
-            let valid_leaf: Digest = random();
+            let peaks_pointer: BFieldElement = rng.random();
+            let valid_leaf: Digest = rand::random();
             let (mmr, mps) = mmra_with_mps(leaf_count, vec![(leaf_index, valid_leaf)]);
             self.prepare_state(
                 &mmr,

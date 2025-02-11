@@ -152,7 +152,7 @@ mod tests {
         }
 
         let mut seed = [0u8; 32];
-        thread_rng().fill_bytes(&mut seed);
+        rand::rng().fill_bytes(&mut seed);
         let (mut dyn_output, num_squeezes) = dyn_output(seed);
         dyn_output.op_stack.stack.pop();
         dyn_output.op_stack.stack.pop();

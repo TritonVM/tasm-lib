@@ -167,10 +167,10 @@ pub mod tests {
             let exponent = match bench_case {
                 Some(BenchmarkCase::CommonCase) => 1 << 25,
                 Some(BenchmarkCase::WorstCase) => u32::MAX,
-                None => rng.gen(),
+                None => rng.random(),
             };
 
-            (exponent, rng.gen())
+            (exponent, rng.random())
         }
 
         fn corner_case_args(&self) -> Vec<Self::Args> {

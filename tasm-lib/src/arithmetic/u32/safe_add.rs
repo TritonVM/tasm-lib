@@ -88,8 +88,8 @@ mod tests {
         ) -> Self::Args {
             let Some(bench_case) = bench_case else {
                 let mut rng = StdRng::from_seed(seed);
-                let left = rng.gen();
-                let right = rng.gen_range(0..=u32::MAX - left);
+                let left = rng.random();
+                let right = rng.random_range(0..=u32::MAX - left);
 
                 return (right, left);
             };

@@ -125,7 +125,7 @@ pub(crate) mod tests {
             match bench_case {
                 Some(BenchmarkCase::CommonCase) => (0x100_ffff_ffff, 0x100_ffff_fffe),
                 Some(BenchmarkCase::WorstCase) => (u64::MAX - 1, u64::MAX),
-                None => StdRng::from_seed(seed).gen(),
+                None => StdRng::from_seed(seed).random(),
             }
         }
 

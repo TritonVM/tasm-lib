@@ -295,7 +295,7 @@ mod tests {
     use arbitrary::Arbitrary;
     use arbitrary::Unstructured;
     use num_traits::ConstZero;
-    use rand::distributions::Standard;
+    use rand::distr::StandardUniform;
     use triton_vm::proof_stream::ProofStream;
     use triton_vm::table::master_table::MasterMainTable;
     use triton_vm::table::master_table::MasterTable;
@@ -465,10 +465,10 @@ mod tests {
         };
 
         let mut seed: [u8; 32] = [0u8; 32];
-        thread_rng().fill_bytes(&mut seed);
+        rand::rng().fill_bytes(&mut seed);
         static_snippet.test_equivalence_with_host_machine_evaluation(seed);
 
-        thread_rng().fill_bytes(&mut seed);
+        rand::rng().fill_bytes(&mut seed);
         dynamic_snippet.test_equivalence_with_host_machine_evaluation(seed);
     }
 
@@ -490,19 +490,19 @@ mod tests {
 
         pub(crate) fn random_input_values(rng: &mut StdRng) -> AirConstraintSnippetInputs {
             let current_main_row: Vec<XFieldElement> = rng
-                .sample_iter(Standard)
+                .sample_iter(StandardUniform)
                 .take(MasterMainTable::NUM_COLUMNS)
                 .collect();
             let current_aux_row: Vec<XFieldElement> = rng
-                .sample_iter(Standard)
+                .sample_iter(StandardUniform)
                 .take(MasterAuxTable::NUM_COLUMNS)
                 .collect();
             let next_main_row: Vec<XFieldElement> = rng
-                .sample_iter(Standard)
+                .sample_iter(StandardUniform)
                 .take(MasterMainTable::NUM_COLUMNS)
                 .collect();
             let next_aux_row: Vec<XFieldElement> = rng
-                .sample_iter(Standard)
+                .sample_iter(StandardUniform)
                 .take(MasterAuxTable::NUM_COLUMNS)
                 .collect();
 

@@ -72,7 +72,7 @@ pub fn insert_random_list(
     list_length: usize,
     memory: &mut HashMap<BFieldElement, BFieldElement>,
 ) {
-    let list = element_type.random_list(&mut rand::thread_rng(), list_length);
+    let list = element_type.random_list(&mut rand::rng(), list_length);
     let indexed_list = list
         .into_iter()
         .enumerate()

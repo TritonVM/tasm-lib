@@ -175,13 +175,13 @@ mod tests {
                 Some(BenchmarkCase::WorstCase) => 1u64 << 24,
                 None => {
                     let mut rng = StdRng::from_seed(seed);
-                    1u64 << rng.gen_range(8..=32)
+                    1u64 << rng.random_range(8..=32)
                 }
             };
             println!("domain_length: {domain_length}");
 
             let domain_generator = BFieldElement::primitive_root_of_unity(domain_length).unwrap();
-            let ood_curr_row: XFieldElement = random();
+            let ood_curr_row: XFieldElement = rand::random();
 
             FunctionInitialState {
                 stack: [

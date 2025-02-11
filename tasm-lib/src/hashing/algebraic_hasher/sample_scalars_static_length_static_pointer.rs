@@ -109,7 +109,9 @@ pub(crate) mod tests {
         ) -> ProcedureInitialState {
             let mut rng = StdRng::from_seed(seed);
             let stack = self.init_stack_for_isolated_run();
-            let sponge = Tip5 { state: rng.gen() };
+            let sponge = Tip5 {
+                state: rng.random(),
+            };
 
             ProcedureInitialState {
                 stack,
@@ -133,7 +135,7 @@ pub(crate) mod tests {
     fn sample_scalars_static_length_pbt() {
         for num_elements_to_sample in 0..11 {
             for extra_capacity in 0..11 {
-                let scalars_pointer: BFieldElement = random();
+                let scalars_pointer: BFieldElement = rand::random();
                 if num_elements_to_sample + extra_capacity == 0 {
                     continue;
                 }

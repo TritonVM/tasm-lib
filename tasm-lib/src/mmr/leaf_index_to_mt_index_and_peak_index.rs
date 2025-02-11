@@ -184,8 +184,8 @@ pub(crate) mod tests {
         ) -> Self::Args {
             let Some(bench_case) = bench_case else {
                 let mut rng = StdRng::from_seed(seed);
-                let num_leafs = rng.gen_range(1..1 << 63);
-                let leaf_index = rng.gen_range(0..num_leafs);
+                let num_leafs = rng.random_range(1..1 << 63);
+                let leaf_index = rng.random_range(0..num_leafs);
                 return (num_leafs, leaf_index);
             };
 

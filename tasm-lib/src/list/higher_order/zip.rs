@@ -247,7 +247,7 @@ impl Function for Zip {
         _bench_case: Option<BenchmarkCase>,
     ) -> FunctionInitialState {
         let mut rng = StdRng::from_seed(seed);
-        let list_len = rng.gen_range(0..20);
+        let list_len = rng.random_range(0..20);
         let execution_state = self.generate_input_state(list_len, list_len);
         FunctionInitialState {
             stack: execution_state.stack,

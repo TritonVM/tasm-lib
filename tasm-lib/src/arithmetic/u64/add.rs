@@ -86,8 +86,8 @@ mod tests {
 
         fn pseudorandom_args(&self, seed: [u8; 32], _: Option<BenchmarkCase>) -> Self::Args {
             let mut rng = StdRng::from_seed(seed);
-            let left = rng.gen();
-            let right = rng.gen_range(0..=u64::MAX - left);
+            let left = rng.random();
+            let right = rng.random_range(0..=u64::MAX - left);
 
             (left, right)
         }

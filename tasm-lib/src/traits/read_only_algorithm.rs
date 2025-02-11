@@ -113,12 +113,14 @@ where
         }
 
         let num_states = 10;
-        let mut rng = StdRng::from_seed(random());
+        let mut rng = StdRng::from_seed(rand::random());
         for _ in 0..num_states {
             let ReadOnlyAlgorithmInitialState {
                 stack,
                 nondeterminism,
-            } = self.algorithm.pseudorandom_initial_state(rng.gen(), None);
+            } = self
+                .algorithm
+                .pseudorandom_initial_state(rng.random(), None);
 
             let stdin = vec![];
             test_rust_equivalence_given_complete_state(
@@ -147,7 +149,7 @@ where
                 nondeterminism,
             } = self
                 .algorithm
-                .pseudorandom_initial_state(rng.gen(), Some(bench_case));
+                .pseudorandom_initial_state(rng.random(), Some(bench_case));
             let program = self.algorithm.link_for_isolated_run();
             let benchmark = execute_bench(&program, &stack, vec![], nondeterminism, None);
             let benchmark = NamedBenchmarkResult {

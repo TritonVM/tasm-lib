@@ -156,7 +156,7 @@ mod tests {
                 Some(BenchmarkCase::WorstCase) => 2u32.pow(23),
                 None => {
                     let mut rng = StdRng::from_seed(seed);
-                    let mut padded_height = 2u32.pow(rng.gen_range(8..=25));
+                    let mut padded_height = 2u32.pow(rng.random_range(8..=25));
 
                     // Don't test parameters that result in too big FRI domains, i.e. larger
                     // than 2^32. Note that this also excludes 2^32 as domain length because

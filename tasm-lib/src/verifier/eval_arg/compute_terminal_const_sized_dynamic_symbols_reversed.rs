@@ -143,15 +143,15 @@ mod tests {
             _bench_case: Option<BenchmarkCase>,
         ) -> FunctionInitialState {
             let mut rng = StdRng::from_seed(seed);
-            let symbols_pointer = rng.gen();
-            let rand_initial = rng.gen();
-            let rand_challenge = rng.gen();
+            let symbols_pointer = rng.random();
+            let rand_initial = rng.random();
+            let rand_challenge = rng.random();
             self.prepare_state(symbols_pointer, rand_initial, rand_challenge)
         }
 
         fn corner_case_initial_states(&self) -> Vec<FunctionInitialState> {
             let mut rng = StdRng::from_seed([101u8; 32]);
-            let symbols_pointer = rng.gen();
+            let symbols_pointer = rng.random();
             vec![
                 self.prepare_state(
                     symbols_pointer,

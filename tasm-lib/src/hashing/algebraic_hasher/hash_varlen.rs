@@ -107,12 +107,12 @@ mod tests {
             let length = match bench_case {
                 Some(BenchmarkCase::CommonCase) => 25,
                 Some(BenchmarkCase::WorstCase) => 1000,
-                None => rng.gen_range(0..400),
+                None => rng.random_range(0..400),
             };
 
-            let address = rng.gen::<BFieldElement>();
+            let address = rng.random::<BFieldElement>();
             let ram: HashMap<_, _> = (0..length)
-                .map(|i| (address + bfe!(i), rng.gen()))
+                .map(|i| (address + bfe!(i), rng.random()))
                 .collect();
 
             MemPreserverInitialState {

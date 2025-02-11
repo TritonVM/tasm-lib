@@ -134,8 +134,8 @@ mod tests {
         ) -> Self::Args {
             let Some(bench_case) = bench_case else {
                 let mut rng = StdRng::from_seed(seed);
-                let subtrahend = rng.gen();
-                let minuend = rng.gen_range(subtrahend..=u128::MAX);
+                let subtrahend = rng.random();
+                let minuend = rng.random_range(subtrahend..=u128::MAX);
                 return (subtrahend, minuend);
             };
 

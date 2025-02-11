@@ -140,16 +140,16 @@ mod tests {
             let len = match bench_case {
                 Some(BenchmarkCase::CommonCase) => 17,
                 Some(BenchmarkCase::WorstCase) => 1000,
-                None => rng.gen_range(11..=200),
+                None => rng.random_range(11..=200),
             };
-            let read_source: BFieldElement = rng.gen();
-            let write_dest: BFieldElement = rng.gen();
+            let read_source: BFieldElement = rng.random();
+            let write_dest: BFieldElement = rng.random();
 
             let mut stack = self.init_stack_for_isolated_run();
             stack.extend(bfe_vec![read_source, write_dest, len]);
 
             let memory = (0..len)
-                .map(|i| (read_source + bfe!(i), rng.gen()))
+                .map(|i| (read_source + bfe!(i), rng.random()))
                 .collect();
 
             FunctionInitialState { stack, memory }

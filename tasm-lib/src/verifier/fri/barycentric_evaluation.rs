@@ -224,7 +224,6 @@ impl BasicSnippet for BarycentricEvaluation {
 mod tests {
     use twenty_first::math::other::random_elements;
     use twenty_first::math::polynomial::barycentric_evaluate;
-    use twenty_first::math::traits::Inverse;
     use twenty_first::math::traits::PrimitiveRootOfUnity;
 
     use super::*;
@@ -312,12 +311,12 @@ mod tests {
             let codeword_length = match bench_case {
                 Some(BenchmarkCase::CommonCase) => 256,
                 Some(BenchmarkCase::WorstCase) => 512,
-                None => 1 << rng.gen_range(0..=14),
+                None => 1 << rng.random_range(0..=14),
             };
 
-            let codeword_pointer = rng.gen_range(0..=(1u64 << 34));
+            let codeword_pointer = rng.random_range(0..=(1u64 << 34));
             let codeword_pointer = bfe!(codeword_pointer);
-            let indeterminate: XFieldElement = rng.gen();
+            let indeterminate: XFieldElement = rng.random();
             let codeword = random_elements(codeword_length);
 
             self.prepare_state(codeword, codeword_pointer, indeterminate)

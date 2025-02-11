@@ -83,8 +83,8 @@ mod tests {
             _: Option<BenchmarkCase>,
         ) -> AccessorInitialState {
             let mut rng = StdRng::from_seed(seed);
-            let list_ptr = rng.gen();
-            let list_len = rng.gen_range(0..=1 << 10);
+            let list_ptr = rng.random();
+            let list_len = rng.random_range(0..=1 << 10);
 
             let mut memory = HashMap::default();
             insert_random_list(&DataType::Digest, list_ptr, list_len, &mut memory);

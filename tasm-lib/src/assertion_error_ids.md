@@ -18,7 +18,8 @@ often.
 | Error IDs | Snippet                                                                                     |
 |----------:|:--------------------------------------------------------------------------------------------|
 |     0..10 | [`MerkleVerify`](hashing/merkle_verify.rs)                                                  |
-|    10..20 | [`MmrVerifyFromSecretInLeafIndexOnStack`](mmr/verify_from_secret_in_leaf_index_on_stack.rs) |
+|    10..11 | [`MmrVerifyFromSecretInLeafIndexOnStack`](mmr/verify_from_secret_in_leaf_index_on_stack.rs) |
+|    11..20 | [`BagPeaks`](mmr/bag_peaks.rs)                                                              |
 |    20..30 | [`MmrVerifyFromSecretInSecretLeafIndex`](mmr/verify_from_secret_in_secret_leaf_index.rs)    |
 |    30..40 | [`VerifyFriAuthenticationPaths`](verifier/fri/verify_fri_authentication_paths.rs)           |
 |    40..50 | [`VerifyTableRows`](verifier/master_table/verify_table_rows.rs)                             |

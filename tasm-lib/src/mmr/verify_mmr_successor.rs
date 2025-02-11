@@ -465,15 +465,17 @@ mod tests {
                 Some(BenchmarkCase::WorstCase) => u64::MAX >> 2,
                 None => rng.next_u64() >> 1,
             };
-            let old_peaks = (0..old_num_leafs.count_ones()).map(|_| rng.gen()).collect();
+            let old_peaks = (0..old_num_leafs.count_ones())
+                .map(|_| rng.random())
+                .collect();
             let old = MmrAccumulator::init(old_peaks, old_num_leafs);
 
             let num_new_leafs = match bench_case {
                 Some(BenchmarkCase::CommonCase) => 100,
                 Some(BenchmarkCase::WorstCase) => 1000,
-                None => 1 << rng.gen_range(0..5),
+                None => 1 << rng.random_range(0..5),
             };
-            let new_leafs = (0..num_new_leafs).map(|_| rng.gen()).collect_vec();
+            let new_leafs = (0..num_new_leafs).map(|_| rng.random()).collect_vec();
             let proof = MmrSuccessorProof::new_from_batch_append(&old, &new_leafs);
 
             let mut new = old.clone();
@@ -485,18 +487,20 @@ mod tests {
         }
 
         fn corner_case_initial_states(&self) -> Vec<ReadOnlyAlgorithmInitialState> {
-            let mut rng = thread_rng();
+            let mut rng = rand::rng();
             let mut initial_states = vec![];
 
             for (num_old_leafs, num_inserted_leafs) in [0_u64, 1, 2, 3, 4, 8]
                 .into_iter()
                 .cartesian_product([0, 1, 2, 3, 4, 8])
             {
-                let old_peaks = (0..num_old_leafs.count_ones()).map(|_| rng.gen()).collect();
+                let old_peaks = (0..num_old_leafs.count_ones())
+                    .map(|_| rng.random())
+                    .collect();
                 let old = MmrAccumulator::init(old_peaks, num_old_leafs);
 
                 let mut new = old.clone();
-                let new_leafs = (0..num_inserted_leafs).map(|_| rng.gen()).collect_vec();
+                let new_leafs = (0..num_inserted_leafs).map(|_| rng.random()).collect_vec();
                 for &leaf in &new_leafs {
                     new.append(leaf);
                 }
@@ -522,9 +526,9 @@ mod tests {
             .collect_vec();
         let mut rng = StdRng::from_seed(seed.try_into().unwrap());
 
-        let address_for_old = bfe!(rng.gen_range(0_u32..1 << 30));
+        let address_for_old = bfe!(rng.random_range(0_u32..1 << 30));
         let address_for_new =
-            address_for_old + bfe!(old.encode().len()) + bfe!(rng.gen_range(0_u32..1 << 28));
+            address_for_old + bfe!(old.encode().len()) + bfe!(rng.random_range(0_u32..1 << 28));
 
         let mut nondeterminism = NonDeterminism::default();
         VerifyMmrSuccessor::update_nondeterminism(&mut nondeterminism, proof);
@@ -551,10 +555,12 @@ mod tests {
         for (old_num_leafs, new_num_leafs) in
             [1_u64, 2, 3, 8].into_iter().cartesian_product([0, 1, 8])
         {
-            let old_peaks = (0..old_num_leafs.count_ones()).map(|_| rng.gen()).collect();
+            let old_peaks = (0..old_num_leafs.count_ones())
+                .map(|_| rng.random())
+                .collect();
             let old = MmrAccumulator::init(old_peaks, old_num_leafs);
 
-            let new_leafs = (0..new_num_leafs).map(|_| rng.gen()).collect_vec();
+            let new_leafs = (0..new_num_leafs).map(|_| rng.random()).collect_vec();
             let mut new_mmr = old.clone();
             for &leaf in &new_leafs {
                 new_mmr.append(leaf);
@@ -569,14 +575,14 @@ mod tests {
             initial_states.push(initial_state(&old, &wrong_new, &proof));
 
             let mut wrong_new_peaks = new.peaks();
-            wrong_new_peaks.push(rng.gen());
+            wrong_new_peaks.push(rng.random());
             let too_many_peaks_new = MmrAccumulator::init(wrong_new_peaks, new.num_leafs());
             initial_states.push(initial_state(&old, &too_many_peaks_new, &proof));
 
             for peak_idx in 0..old.peaks().len() {
                 let mut wrong_old_peaks = old.peaks();
                 let Digest(ref mut digest_to_disturb) = &mut wrong_old_peaks[peak_idx];
-                let digest_to_disturb_innards_idx = rng.gen_range(0..Digest::LEN);
+                let digest_to_disturb_innards_idx = rng.random_range(0..Digest::LEN);
                 digest_to_disturb[digest_to_disturb_innards_idx].increment();
 
                 let wrong_old = MmrAccumulator::init(wrong_old_peaks, old.num_leafs());
@@ -587,7 +593,7 @@ mod tests {
                 let mut wrong_proof = proof.clone();
                 let proof_paths = &mut wrong_proof.paths;
                 let Digest(ref mut digest_to_disturb) = &mut proof_paths[proof_path_idx];
-                let digest_to_disturb_innards_idx = rng.gen_range(0..Digest::LEN);
+                let digest_to_disturb_innards_idx = rng.random_range(0..Digest::LEN);
                 digest_to_disturb[digest_to_disturb_innards_idx].increment();
 
                 initial_states.push(initial_state(&old, &new, &wrong_proof));

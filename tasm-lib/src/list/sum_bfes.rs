@@ -180,11 +180,11 @@ mod tests {
             bench_case: Option<BenchmarkCase>,
         ) -> FunctionInitialState {
             let mut rng = StdRng::from_seed(seed);
-            let list_pointer = BFieldElement::new(rng.gen());
+            let list_pointer = BFieldElement::new(rng.random());
             let list_length = match bench_case {
                 Some(BenchmarkCase::CommonCase) => 104,
                 Some(BenchmarkCase::WorstCase) => 1004,
-                None => rng.gen_range(0..200),
+                None => rng.random_range(0..200),
             };
             self.prepare_state(list_pointer, list_length)
         }

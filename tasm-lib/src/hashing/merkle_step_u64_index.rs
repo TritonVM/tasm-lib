@@ -102,11 +102,11 @@ mod tests {
         fn set_up_initial_state(&self, leaf_index: u64) -> ReadOnlyAlgorithmInitialState {
             let mut stack = self.init_stack_for_isolated_run();
             push_encodable(&mut stack, &leaf_index);
-            push_encodable(&mut stack, &random::<Digest>());
+            push_encodable(&mut stack, &rand::random::<Digest>());
 
             ReadOnlyAlgorithmInitialState {
                 stack,
-                nondeterminism: NonDeterminism::default().with_digests(vec![random()]),
+                nondeterminism: NonDeterminism::default().with_digests(vec![rand::random()]),
             }
         }
     }
@@ -144,7 +144,7 @@ mod tests {
             let leaf_index = match bench_case {
                 Some(BenchmarkCase::CommonCase) => 1 << 33,
                 Some(BenchmarkCase::WorstCase) => 1 << 63,
-                None => StdRng::from_seed(seed).gen(),
+                None => StdRng::from_seed(seed).random(),
             };
 
             self.set_up_initial_state(leaf_index)

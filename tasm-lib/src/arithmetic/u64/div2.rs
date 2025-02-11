@@ -118,7 +118,7 @@ mod tests {
             match bench_case {
                 Some(BenchmarkCase::CommonCase) => 0x8000_0000,
                 Some(BenchmarkCase::WorstCase) => 0xf000_0001_f000_0000,
-                None => StdRng::from_seed(seed).gen(),
+                None => StdRng::from_seed(seed).random(),
             }
         }
     }

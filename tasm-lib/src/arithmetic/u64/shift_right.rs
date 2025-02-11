@@ -185,7 +185,7 @@ mod tests {
             match bench_case {
                 Some(BenchmarkCase::CommonCase) => (0x642, 15),
                 Some(BenchmarkCase::WorstCase) => (0x123, 33),
-                None => (rng.gen(), rng.gen_range(0..64)),
+                None => (rng.random(), rng.random_range(0..64)),
             }
         }
 

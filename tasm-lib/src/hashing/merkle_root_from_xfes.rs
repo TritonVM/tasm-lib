@@ -282,10 +282,10 @@ mod tests {
             let num_leafs = match bench_case {
                 Some(BenchmarkCase::CommonCase) => 1 << 9,
                 Some(BenchmarkCase::WorstCase) => 1 << 10,
-                None => 1 << rng.gen_range(1..=10),
+                None => 1 << rng.random_range(1..=10),
             };
-            let list_pointer = rng.gen();
-            let leafs = (0..num_leafs).map(|_| rng.gen()).collect_vec();
+            let list_pointer = rng.random();
+            let leafs = (0..num_leafs).map(|_| rng.random()).collect_vec();
 
             self.init_state(leafs, list_pointer)
         }

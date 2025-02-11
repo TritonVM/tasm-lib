@@ -191,14 +191,14 @@ mod tests {
             let tree_height = match maybe_bench_case {
                 Some(BenchmarkCase::CommonCase) => 6,
                 Some(BenchmarkCase::WorstCase) => 20,
-                None => rng.gen_range(1..20),
+                None => rng.random_range(1..20),
             };
 
             // sample unconstrained inputs directly
             let num_leaves = 1 << tree_height;
-            let leaf_index = rng.gen_range(0..num_leaves);
-            let path = (0..tree_height).map(|_| rng.gen()).collect_vec();
-            let leaf = rng.gen();
+            let leaf_index = rng.random_range(0..num_leaves);
+            let path = (0..tree_height).map(|_| rng.random()).collect_vec();
+            let leaf = rng.random();
 
             // walk up tree to calculate root
             let mut current_node = leaf;

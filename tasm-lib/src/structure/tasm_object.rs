@@ -289,17 +289,23 @@ mod tests {
         fn pseudorandom_object(seed: [u8; 32]) -> OuterStruct {
             let mut rng = StdRng::from_seed(seed);
             let a = (0..19)
-                .map(|_| if rng.gen() { Some(rng.gen()) } else { None })
+                .map(|_| {
+                    if rng.random() {
+                        Some(rng.random())
+                    } else {
+                        None
+                    }
+                })
                 .collect_vec();
-            let b0: XFieldElement = rng.gen();
-            let b1: u32 = rng.gen();
-            let b2: XFieldElement = rng.gen();
-            let b3: u32 = rng.gen();
-            let c: BFieldElement = rng.gen();
-            let digests_len_p = rng.gen_range(0..5);
-            let digests_p = (0..digests_len_p).map(|_| rng.gen()).collect_vec();
-            let digests_len_l = rng.gen_range(0..5);
-            let digests_l = (0..digests_len_l).map(|_| rng.gen()).collect_vec();
+            let b0: XFieldElement = rng.random();
+            let b1: u32 = rng.random();
+            let b2: XFieldElement = rng.random();
+            let b3: u32 = rng.random();
+            let c: BFieldElement = rng.random();
+            let digests_len_p = rng.random_range(0..5);
+            let digests_p = (0..digests_len_p).map(|_| rng.random()).collect_vec();
+            let digests_len_l = rng.random_range(0..5);
+            let digests_l = (0..digests_len_l).map(|_| rng.random()).collect_vec();
 
             OuterStruct {
                 o: InnerStruct(b0, b1),
@@ -311,11 +317,11 @@ mod tests {
             }
         }
 
-        let mut rng = thread_rng();
+        let mut rng = rand::rng();
         let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::new();
 
-        let object = pseudorandom_object(rng.gen());
-        let address = rng.gen();
+        let object = pseudorandom_object(rng.random());
+        let address = rng.random();
         encode_to_memory(&mut memory, address, &object);
         let object_again: OuterStruct = *OuterStruct::decode_from_memory(&memory, address).unwrap();
         assert_eq!(object, object_again);
@@ -342,10 +348,10 @@ mod tests {
             }
 
             let mut randomness = [0u8; 100000];
-            thread_rng().fill_bytes(&mut randomness);
+            rand::rng().fill_bytes(&mut randomness);
             let mut unstructured = Unstructured::new(&randomness);
             let random_object = NamedFields::arbitrary(&mut unstructured).unwrap();
-            let random_address: u64 = thread_rng().gen_range(0..(1 << 30));
+            let random_address: u64 = rand::rng().random_range(0..(1 << 30));
             let address = random_address.into();
             let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::new();
 
@@ -526,7 +532,7 @@ mod tests {
             }
 
             const START_OF_OBJ: BFieldElement = BFieldElement::new(800);
-            let random_object = prepare_random_object(random());
+            let random_object = prepare_random_object(rand::random());
             let third_to_last_field = field!(WithNamedFields::c);
             let code_using_field_getter = triton_asm!(
                 // _
@@ -560,7 +566,7 @@ mod tests {
         #[test]
         fn mess_with_size_indicators_field_and_size_getter_negative_test() {
             const START_OF_OBJ: BFieldElement = BFieldElement::ZERO;
-            let random_object = prepare_random_tuple_struct(random());
+            let random_object = prepare_random_tuple_struct(rand::random());
             let fourth_to_last_field = field_with_size!(TupleStruct::field_3);
             let code_using_field_and_size_getter = triton_asm!(
                 // _
@@ -596,7 +602,7 @@ mod tests {
         #[test]
         fn mess_with_size_indicators_field_getter_negative_test() {
             const START_OF_OBJ: BFieldElement = BFieldElement::ZERO;
-            let random_object = prepare_random_tuple_struct(random());
+            let random_object = prepare_random_tuple_struct(rand::random());
             let third_to_last_field = field!(TupleStruct::field_4);
             let code_using_field_getter = triton_asm!(
                 // _
@@ -630,7 +636,7 @@ mod tests {
         fn mess_with_size_indicators_size_indicator_validity_check_negative_test() {
             let mut library = Library::default();
             const OBJ_POINTER: BFieldElement = BFieldElement::new(422);
-            let random_object = prepare_random_tuple_struct(random());
+            let random_object = prepare_random_tuple_struct(rand::random());
             let assert_size_indicator_validity =
                 TupleStruct::compute_size_and_assert_valid_size_indicator(&mut library);
             let code_using_size_integrity_code = triton_asm!(
@@ -713,7 +719,7 @@ mod tests {
                 {&imports}
             );
 
-            let random_obj = random_struct(random());
+            let random_obj = random_struct(rand::random());
             let expected_stack_benign = [bfe!(random_obj.encode().len() as u64)];
 
             const SIZE_OF_SIZE_INDICATOR: usize = 1;
@@ -741,9 +747,9 @@ mod tests {
             }
             const OBJ_POINTER: BFieldElement = BFieldElement::new(422);
             let random_object = StaticallySizedStruct {
-                a: random(),
-                b: random(),
-                c: random(),
+                a: rand::random(),
+                b: rand::random(),
+                c: rand::random(),
             };
 
             let mut library = Library::default();
@@ -776,8 +782,8 @@ mod tests {
 
         #[test]
         fn load_and_decode_tuple_structs_from_memory() {
-            let random_object = prepare_random_tuple_struct(random());
-            let random_address: u64 = thread_rng().gen_range(0..(1 << 30));
+            let random_object = prepare_random_tuple_struct(rand::random());
+            let random_address: u64 = rand::rng().random_range(0..(1 << 30));
             let address = random_address.into();
 
             let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::new();
@@ -822,15 +828,16 @@ mod tests {
 
         #[test]
         fn test_fri_response() {
-            let mut rng = thread_rng();
+            let mut rng = rand::rng();
             let num_digests = 50;
             let num_leafs = 20;
 
             // generate object
-            let authentication_structure =
-                (0..num_digests).map(|_| rng.gen::<Digest>()).collect_vec();
+            let authentication_structure = (0..num_digests)
+                .map(|_| rng.random::<Digest>())
+                .collect_vec();
             let revealed_leafs = (0..num_leafs)
-                .map(|_| rng.gen::<XFieldElement>())
+                .map(|_| rng.random::<XFieldElement>())
                 .collect_vec();
             let fri_response = FriResponse {
                 auth_structure: authentication_structure,
@@ -875,7 +882,7 @@ mod tests {
         ) -> Vec<BFieldElement> {
             // initialize memory and stack
             let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::new();
-            let random_address: u64 = thread_rng().gen_range(0..(1 << 30));
+            let random_address: u64 = rand::rng().random_range(0..(1 << 30));
             let address = random_address.into();
 
             encode_to_memory(&mut memory, address, obj);
@@ -1241,9 +1248,9 @@ mod tests {
 
     #[test]
     fn test_option() {
-        let mut rng = thread_rng();
-        let n = rng.gen_range(0..5);
-        let v = (0..n).map(|_| rng.gen::<Digest>()).collect_vec();
+        let mut rng = rand::rng();
+        let n = rng.random_range(0..5);
+        let v = (0..n).map(|_| rng.random::<Digest>()).collect_vec();
         let mut ram: HashMap<BFieldElement, BFieldElement> = HashMap::new();
         let some_address = FIRST_NON_DETERMINISTICALLY_INITIALIZED_MEMORY_ADDRESS;
         let none_address = encode_to_memory(&mut ram, some_address, &Some(v.clone()));

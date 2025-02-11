@@ -270,7 +270,7 @@ mod tests {
         ]
         .concat();
 
-        let mut rng = thread_rng();
+        let mut rng = rand::rng();
         let mut seed = [0u8; 32];
         rng.fill_bytes(&mut seed);
         let mut rng = StdRng::from_seed(seed);
@@ -298,7 +298,7 @@ mod tests {
         ]
         .concat();
 
-        let mut rng = thread_rng();
+        let mut rng = rand::rng();
         let mut seed = [0u8; 32];
         rng.fill_bytes(&mut seed);
         let mut rng = StdRng::from_seed(seed);
@@ -387,11 +387,11 @@ mod tests {
                 Some(BenchmarkCase::CommonCase) => self.random_equal_multisets(90, &mut rng),
                 Some(BenchmarkCase::WorstCase) => self.random_equal_multisets(360, &mut rng),
                 None => {
-                    let length = rng.gen_range(0..50);
-                    let num_mutations = rng.gen_range(0..=length);
-                    let mutation_translation: u64 = rng.gen();
-                    let another_length = length + rng.gen_range(1..10);
-                    match rng.gen_range(0..=5) {
+                    let length = rng.random_range(0..50);
+                    let num_mutations = rng.random_range(0..=length);
+                    let mutation_translation: u64 = rng.random();
+                    let another_length = length + rng.random_range(1..10);
+                    match rng.random_range(0..=5) {
                         0 => self.random_equal_multisets(length, &mut rng),
                         1 => self.random_equal_lists(length, &mut rng),
                         2 => self.random_equal_multisets_flipped_pointers(length, &mut rng),
@@ -484,14 +484,14 @@ mod tests {
         ) -> (Vec<u64>, BFieldElement, BFieldElement) {
             let mut list_a: Vec<u64> = vec![0u64; length];
             for elem in list_a.iter_mut() {
-                *elem = rng.gen();
+                *elem = rng.random();
             }
 
-            let pointer_a: BFieldElement = rng.gen();
+            let pointer_a: BFieldElement = rng.random();
 
             // Avoid lists from overlapping in memory
             let list_size = length * U64_STACK_SIZE + LIST_METADATA_SIZE;
-            let pointer_b_offset: u32 = rng.gen_range(list_size as u32..u32::MAX);
+            let pointer_b_offset: u32 = rng.random_range(list_size as u32..u32::MAX);
             let pointer_b: BFieldElement =
                 BFieldElement::new(pointer_a.value() + pointer_b_offset as u64);
 
@@ -574,7 +574,7 @@ mod tests {
 
             let (a, pointer_a, pointer_b) = self.list_a_and_both_pointers(length_a, rng);
             let mut b = a.clone();
-            b.resize_with(length_b, || rng.gen());
+            b.resize_with(length_b, || rng.random());
 
             self.init_state(pointer_a, pointer_b, a, b)
         }

@@ -212,20 +212,20 @@ mod tests {
             let list_length = match bench_case {
                 Some(BenchmarkCase::CommonCase) => 100,
                 Some(BenchmarkCase::WorstCase) => 400,
-                None => rng.gen_range(1..400),
+                None => rng.random_range(1..400),
             };
             let haystack_elements = (0..list_length)
                 .map(|_| self.element_type.seeded_random_element(&mut rng))
                 .collect_vec();
 
-            let list_pointer: BFieldElement = rng.gen();
+            let list_pointer: BFieldElement = rng.random();
 
             let needle = match bench_case {
                 Some(BenchmarkCase::CommonCase) => haystack_elements[list_length / 2].clone(),
                 Some(BenchmarkCase::WorstCase) => haystack_elements[list_length / 2].clone(),
                 None => {
                     // An element is guaranteed to exist, as the initial length is never 0
-                    if rng.gen() {
+                    if rng.random() {
                         haystack_elements
                             .choose(&mut rng)
                             .as_ref()

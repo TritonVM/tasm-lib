@@ -78,7 +78,7 @@ impl<C: Closure> RustShadow for ShadowedClosure<C> {
 
     fn test(&self) {
         let num_states = 5;
-        let mut rng = thread_rng();
+        let mut rng = rand::rng();
 
         // First test corner-cases as they're easier to debug on failure
         for args in self.closure.corner_case_args() {
@@ -93,7 +93,7 @@ impl<C: Closure> RustShadow for ShadowedClosure<C> {
         }
 
         for _ in 0..num_states {
-            let seed: [u8; 32] = rng.gen();
+            let seed: [u8; 32] = rng.random();
             let args = self.closure.pseudorandom_args(seed, None);
             let stack = self.closure.set_up_test_stack(args);
 
@@ -119,7 +119,7 @@ impl<C: Closure> RustShadow for ShadowedClosure<C> {
         let mut benchmarks = Vec::with_capacity(2);
 
         for bench_case in [BenchmarkCase::CommonCase, BenchmarkCase::WorstCase] {
-            let args = self.closure.pseudorandom_args(rng.gen(), Some(bench_case));
+            let args = self.closure.pseudorandom_args(rng.random(), Some(bench_case));
             let stack = self.closure.set_up_test_stack(args);
             let program = self.closure.link_for_isolated_run();
             let benchmark =

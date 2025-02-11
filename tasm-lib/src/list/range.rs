@@ -144,8 +144,8 @@ mod tests {
                 Some(BenchmarkCase::WorstCase) => (0, 250),
                 None => {
                     let mut rng = StdRng::from_seed(seed);
-                    let supremum = rng.gen_range(0..=400);
-                    let minimum = rng.gen_range(0..=supremum);
+                    let supremum = rng.random_range(0..=400);
+                    let minimum = rng.random_range(0..=supremum);
                     (minimum, supremum)
                 }
             };

@@ -108,10 +108,10 @@ where
         }
 
         let num_states = 10;
-        let mut rng = StdRng::from_seed(random());
+        let mut rng = StdRng::from_seed(rand::random());
         for _ in 0..num_states {
             let AccessorInitialState { stack, memory } =
-                self.accessor.pseudorandom_initial_state(rng.gen(), None);
+                self.accessor.pseudorandom_initial_state(rng.random(), None);
 
             let stdin = vec![];
             let nd = NonDeterminism::default().with_ram(memory);
@@ -131,7 +131,7 @@ where
         for bench_case in [BenchmarkCase::CommonCase, BenchmarkCase::WorstCase] {
             let AccessorInitialState { stack, memory } = self
                 .accessor
-                .pseudorandom_initial_state(rng.gen(), Some(bench_case));
+                .pseudorandom_initial_state(rng.random(), Some(bench_case));
             let program = self.accessor.link_for_isolated_run();
             let nd = NonDeterminism::default().with_ram(memory);
             let benchmark = execute_bench(&program, &stack, vec![], nd, None);

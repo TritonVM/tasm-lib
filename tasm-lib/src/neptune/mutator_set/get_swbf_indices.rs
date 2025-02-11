@@ -288,7 +288,7 @@ mod tests {
                 Digest,
                 Digest,
                 u64,
-            ) = (rng.gen(), rng.gen(), rng.gen(), rng.gen());
+            ) = (rng.random(), rng.random(), rng.random(), rng.random());
             stack.push(BFieldElement::new(aocl_leaf_index >> 32));
             stack.push(BFieldElement::new(aocl_leaf_index & u32::MAX as u64));
             stack.push(receiver_preimage.values()[4]);

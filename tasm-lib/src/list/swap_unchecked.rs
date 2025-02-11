@@ -185,10 +185,10 @@ mod tests {
             _: Option<BenchmarkCase>,
         ) -> AlgorithmInitialState {
             let mut rng = StdRng::from_seed(seed);
-            let list_pointer = rng.gen();
-            let list_length = rng.gen_range(1..200);
-            let a = rng.gen_range(0..list_length);
-            let b = rng.gen_range(0..list_length);
+            let list_pointer = rng.random();
+            let list_length = rng.random_range(1..200);
+            let a = rng.random_range(0..list_length);
+            let b = rng.random_range(0..list_length);
             self.initial_state(list_pointer, list_length, a, b)
         }
 

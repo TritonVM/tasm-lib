@@ -1196,7 +1196,7 @@ mod tests {
         pub fn pseudorandom_fri_proof_stream(&self, seed: [u8; 32]) -> ProofStream {
             let max_degree = self.first_round_max_degree();
             let mut rng = StdRng::from_seed(seed);
-            let polynomial_coefficients = (0..=max_degree).map(|_| rng.gen()).collect_vec();
+            let polynomial_coefficients = (0..=max_degree).map(|_| rng.random()).collect_vec();
 
             let mut codeword = polynomial_coefficients;
             codeword.resize(self.domain_length as usize, XFieldElement::zero());

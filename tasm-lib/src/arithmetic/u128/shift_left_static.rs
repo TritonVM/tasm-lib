@@ -78,6 +78,7 @@ impl<const N: u8> BasicSnippet for ShiftLeftStatic<N> {
 pub(crate) mod tests {
     use super::*;
     use crate::test_prelude::*;
+    use rand::rngs::StdRng;
 
     impl<const N: u8> Closure for ShiftLeftStatic<N> {
         type Args = u128;
@@ -95,7 +96,7 @@ pub(crate) mod tests {
             match bench_case {
                 Some(BenchmarkCase::CommonCase) => 0x1282,
                 Some(BenchmarkCase::WorstCase) => 0x123456789abcdef,
-                None => StdRng::from_seed(seed).gen(),
+                None => StdRng::from_seed(seed).random(),
             }
         }
 

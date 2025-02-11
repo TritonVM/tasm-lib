@@ -199,13 +199,13 @@ mod tests {
                 Some(BenchmarkCase::CommonCase) => ((1 << 31) - 1, 1 << 31),
                 Some(BenchmarkCase::WorstCase) => ((1 << 62) - 1, 1 << 62),
                 None => {
-                    let leaf_count = rng.gen_range(1..=1 << 62);
-                    let leaf_index = rng.gen_range(0..leaf_count);
+                    let leaf_count = rng.random_range(1..=1 << 62);
+                    let leaf_index = rng.random_range(0..leaf_count);
                     (leaf_index, leaf_count)
                 }
             };
 
-            let leaf = rng.gen();
+            let leaf = rng.random();
             let (mmra, mps) = mmra_with_mps(leaf_count, vec![(leaf_index, leaf)]);
             let auth_path = mps[0].authentication_path.clone();
 
@@ -270,7 +270,7 @@ mod tests {
                     .collect_vec(),
             );
 
-            let bad_leaf: Digest = thread_rng().gen();
+            let bad_leaf: Digest = rand::rng().random();
             for (leaf_index, leaf_digest) in digests.into_iter().enumerate() {
                 let auth_path = mps[leaf_index].clone();
 
@@ -325,12 +325,12 @@ mod tests {
             let mut mmr = MmrAccumulator::init(fake_peaks, init_leaf_count);
 
             // Insert the 1st leaf
-            let second_to_last_leaf: Digest = thread_rng().gen();
+            let second_to_last_leaf: Digest = rand::rng().random();
             let second_to_last_leaf_index = init_leaf_count;
             let mut real_membership_proof_second_to_last = mmr.append(second_to_last_leaf);
 
             // Insert one more leaf and update the existing membership proof
-            let last_leaf: Digest = thread_rng().gen();
+            let last_leaf: Digest = rand::rng().random();
             let last_leaf_index = second_to_last_leaf_index + 1;
             MmrMembershipProof::update_from_append(
                 &mut real_membership_proof_second_to_last,
@@ -360,7 +360,7 @@ mod tests {
             );
 
             // Negative tests
-            let bad_leaf: Digest = thread_rng().gen();
+            let bad_leaf: Digest = rand::rng().random();
             prop_verify_from_memory(
                 &mmr,
                 bad_leaf,

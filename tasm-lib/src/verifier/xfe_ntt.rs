@@ -498,9 +498,9 @@ mod tests {
             let n = match bench_case {
                 Some(BenchmarkCase::CommonCase) => 256,
                 Some(BenchmarkCase::WorstCase) => 512,
-                None => 1 << rng.gen_range(1..=9),
+                None => 1 << rng.random_range(1..=9),
             };
-            let vector = (0..n).map(|_| rng.gen()).collect::<Vec<XFieldElement>>();
+            let vector = (0..n).map(|_| rng.random()).collect::<Vec<XFieldElement>>();
 
             let mut stack = empty_stack();
             let mut memory = HashMap::new();
@@ -518,10 +518,10 @@ mod tests {
     fn test() {
         let function = ShadowedFunction::new(XfeNtt);
         let num_states = 5;
-        let mut rng = thread_rng();
+        let mut rng = rand::rng();
 
         for _ in 0..num_states {
-            let seed: [u8; 32] = rng.gen();
+            let seed: [u8; 32] = rng.random();
             let FunctionInitialState { stack, memory } =
                 XfeNtt.pseudorandom_initial_state(seed, None);
             let vector_address = stack[stack.len() - 2];

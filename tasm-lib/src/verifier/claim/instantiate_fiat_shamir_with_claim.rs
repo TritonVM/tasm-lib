@@ -104,19 +104,21 @@ mod tests {
             let (input_length, output_length) = match bench_case {
                 Some(BenchmarkCase::CommonCase) => (0, 0),
                 Some(BenchmarkCase::WorstCase) => (100, 100),
-                None => (rng.gen_range(0..1000), rng.gen_range(0..1000)),
+                None => (rng.random_range(0..1000), rng.random_range(0..1000)),
             };
 
-            let claim = Claim::new(rng.gen())
+            let claim = Claim::new(rng.random())
                 .with_input(random_elements(input_length))
                 .with_output(random_elements(output_length));
 
             let mut memory = HashMap::default();
 
-            let claim_pointer = rng.gen();
+            let claim_pointer = rng.random();
             encode_to_memory(&mut memory, claim_pointer, &claim);
 
-            let sponge: Tip5 = Tip5 { state: rng.gen() };
+            let sponge: Tip5 = Tip5 {
+                state: rng.random(),
+            };
             ProcedureInitialState {
                 stack: [self.init_stack_for_isolated_run(), vec![claim_pointer]].concat(),
                 nondeterminism: NonDeterminism::default().with_ram(memory),
@@ -128,7 +130,7 @@ mod tests {
         fn corner_case_initial_states(&self) -> Vec<ProcedureInitialState> {
             let empty_everything = {
                 let minimal_claim = Claim::new(Digest::default());
-                let claim_pointer = thread_rng().gen();
+                let claim_pointer = rand::rng().random();
                 let mut memory = HashMap::default();
                 encode_to_memory(&mut memory, claim_pointer, &minimal_claim);
                 ProcedureInitialState {

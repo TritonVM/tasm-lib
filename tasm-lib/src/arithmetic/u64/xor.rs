@@ -89,7 +89,7 @@ mod tests {
             match bench_case {
                 Some(BenchmarkCase::CommonCase) => (0x7fff_ffff, 0x3ff),
                 Some(BenchmarkCase::WorstCase) => (0x8000_0000_8000_0000, 0x4000_0000_8000_000a),
-                None => StdRng::from_seed(seed).gen(),
+                None => StdRng::from_seed(seed).random(),
             }
         }
     }

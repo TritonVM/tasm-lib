@@ -203,10 +203,10 @@ mod tests {
             let (lhs, rhs) = match bench_case {
                 Some(BenchmarkCase::CommonCase) => (a_digest, another_digest),
                 Some(BenchmarkCase::WorstCase) => (a_digest, a_digest),
-                None => (rng.gen(), rng.gen()),
+                None => (rng.random(), rng.random()),
             };
-            let rhs_ptr: BFieldElement = rng.gen();
-            let lhs_ptr: BFieldElement = rng.gen();
+            let rhs_ptr: BFieldElement = rng.random();
+            let lhs_ptr: BFieldElement = rng.random();
 
             self.prepare_state(lhs_ptr, rhs_ptr, lhs, rhs)
         }
@@ -222,9 +222,9 @@ mod tests {
             let same_digest_values = self.prepare_state(lhs_ptr, rhs_ptr, a_digest, a_digest);
 
             let mut adjacent_digest_pairs = vec![];
-            let mut rng = thread_rng();
+            let mut rng = rand::rng();
             for i in 0..Digest::LEN {
-                let a: Digest = rng.gen();
+                let a: Digest = rng.random();
                 let mut b: Digest = a;
 
                 // `lhs == rhs`

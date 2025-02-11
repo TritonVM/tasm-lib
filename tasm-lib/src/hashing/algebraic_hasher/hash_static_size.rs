@@ -120,9 +120,9 @@ mod tests {
             _bench_case: Option<BenchmarkCase>,
         ) -> ProcedureInitialState {
             let mut rng = StdRng::from_seed(seed);
-            let memory_start: BFieldElement = rng.gen();
+            let memory_start: BFieldElement = rng.random();
             let memory: HashMap<BFieldElement, BFieldElement> = (0..self.size)
-                .map(|i| (memory_start + BFieldElement::new(i as u64), rng.gen()))
+                .map(|i| (memory_start + BFieldElement::new(i as u64), rng.random()))
                 .collect();
 
             let nondeterminism = NonDeterminism::default().with_ram(memory);

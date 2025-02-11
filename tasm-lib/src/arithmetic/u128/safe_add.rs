@@ -50,6 +50,7 @@ impl BasicSnippet for SafeAdd {
 mod tests {
     use super::*;
     use crate::test_prelude::*;
+    use rand::rngs::StdRng;
 
     impl SafeAdd {
         fn assert_expected_add_behavior(&self, lhs: u128, rhs: u128) {
@@ -80,8 +81,8 @@ mod tests {
 
         fn pseudorandom_args(&self, seed: [u8; 32], _: Option<BenchmarkCase>) -> Self::Args {
             let mut rng = StdRng::from_seed(seed);
-            let lhs = rng.gen();
-            let rhs = rng.gen_range(0..=u128::MAX - lhs);
+            let lhs = rng.random();
+            let rhs = rng.random_range(0..=u128::MAX - lhs);
 
             (lhs, rhs)
         }

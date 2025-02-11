@@ -272,22 +272,22 @@ impl DataType {
 
     pub fn random_elements(&self, count: usize) -> Vec<Vec<BFieldElement>> {
         (0..count)
-            .map(|_| self.seeded_random_element(&mut thread_rng()))
+            .map(|_| self.seeded_random_element(&mut rand::rng()))
             .collect()
     }
 
     pub fn seeded_random_element(&self, rng: &mut impl Rng) -> Vec<BFieldElement> {
         match self {
-            Self::Bool => rng.gen::<bool>().encode(),
-            Self::U32 => rng.gen::<u32>().encode(),
-            Self::U64 => rng.gen::<u64>().encode(),
-            Self::U128 => rng.gen::<u128>().encode(),
-            Self::I128 => rng.gen::<[u32; 4]>().encode(),
-            Self::Bfe => rng.gen::<BFieldElement>().encode(),
-            Self::Xfe => rng.gen::<XFieldElement>().encode(),
-            Self::Digest => rng.gen::<Digest>().encode(),
+            Self::Bool => rng.random::<bool>().encode(),
+            Self::U32 => rng.random::<u32>().encode(),
+            Self::U64 => rng.random::<u64>().encode(),
+            Self::U128 => rng.random::<u128>().encode(),
+            Self::I128 => rng.random::<[u32; 4]>().encode(),
+            Self::Bfe => rng.random::<BFieldElement>().encode(),
+            Self::Xfe => rng.random::<XFieldElement>().encode(),
+            Self::Digest => rng.random::<Digest>().encode(),
             Self::List(e) => {
-                let len = rng.gen_range(0..20);
+                let len = rng.random_range(0..20);
                 e.random_list(rng, len)
             }
             Self::Array(a) => Self::random_array(rng, a),
@@ -295,7 +295,7 @@ impl DataType {
                 .iter()
                 .flat_map(|ty| ty.seeded_random_element(rng))
                 .collect(),
-            Self::VoidPointer => vec![rng.gen()],
+            Self::VoidPointer => vec![rng.random()],
             Self::StructRef(_) => panic!("Random generation of structs is not supported"),
         }
     }
@@ -710,7 +710,7 @@ mod compare_literals {
                     _: Option<BenchmarkCase>
                 ) -> Self::Args {
                     // almost certainly different arguments, comparison gives `false`
-                    StdRng::from_seed(seed).gen()
+                    StdRng::from_seed(seed).random()
                 }
 
                 fn corner_case_args(&self) -> Vec<Self::Args> {

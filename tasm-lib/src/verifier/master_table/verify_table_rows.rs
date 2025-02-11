@@ -251,7 +251,7 @@ mod tests {
             for snippet in snippets {
                 let mut init_state = snippet.pseudorandom_initial_state(seed, None);
                 let num_digests = init_state.nondeterminism.digests.len();
-                init_state.nondeterminism.digests[rng.gen_range(0..num_digests)] = rng.gen();
+                init_state.nondeterminism.digests[rng.random_range(0..num_digests)] = rng.random();
 
                 test_assertion_failure(&ShadowedProcedure::new(snippet), init_state.into(), &[40]);
             }
@@ -371,16 +371,16 @@ mod tests {
             let merkle_tree_height = match bench_case {
                 Some(BenchmarkCase::CommonCase) => 17,
                 Some(BenchmarkCase::WorstCase) => 22,
-                None => rng.gen_range(2..7),
+                None => rng.random_range(2..7),
             };
             let num_leafs = 1 << merkle_tree_height;
             let num_combination_codeword_checks = 3;
             let mut memory = HashMap::default();
 
             let rows: Vec<Vec<BFieldElement>> =
-                vec![vec![rng.gen(); self.row_size()]; num_combination_codeword_checks];
+                vec![vec![rng.random(); self.row_size()]; num_combination_codeword_checks];
             let leaf_indices: Vec<usize> = (0..num_combination_codeword_checks)
-                .map(|_| rng.gen_range(0..num_leafs))
+                .map(|_| rng.random_range(0..num_leafs))
                 .collect_vec();
 
             // Construct Merkle tree with specified rows as preimages to the leafs at the specified
@@ -392,11 +392,11 @@ mod tests {
 
             let merkle_tree = MerkleTree::par_new(&leafs).unwrap();
             let merkle_root = merkle_tree.root();
-            let merkle_root_pointer: BFieldElement = rng.gen();
+            let merkle_root_pointer: BFieldElement = rng.random();
             encode_to_memory(&mut memory, merkle_root_pointer, &merkle_root);
 
             // Insert all rows into memory, as a list
-            let row_pointer: BFieldElement = rng.gen();
+            let row_pointer: BFieldElement = rng.random();
             memory.insert(row_pointer, bfe!(num_combination_codeword_checks as u64));
             let mut j: BFieldElement = bfe!(1);
             for row in rows {
@@ -409,9 +409,9 @@ mod tests {
             let mocked_fri_return_value: Vec<(u32, XFieldElement)> = leaf_indices
                 .iter()
                 .map(|x| *x as u32)
-                .zip((0..num_combination_codeword_checks).map(|_| rng.gen()))
+                .zip((0..num_combination_codeword_checks).map(|_| rng.random()))
                 .collect_vec();
-            let fri_return_value_pointer = rng.gen();
+            let fri_return_value_pointer = rng.random();
             list_insert(
                 fri_return_value_pointer,
                 mocked_fri_return_value,

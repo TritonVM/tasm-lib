@@ -130,6 +130,7 @@ impl BasicSnippet for ShiftLeft {
 mod tests {
     use super::*;
     use crate::test_prelude::*;
+    use rand::rngs::StdRng;
 
     impl Closure for ShiftLeft {
         type Args = <ShiftRight as Closure>::Args;
@@ -150,7 +151,7 @@ mod tests {
             match bench_case {
                 Some(BenchmarkCase::CommonCase) => (0x1282, 15),
                 Some(BenchmarkCase::WorstCase) => (0x123456789abcdef, 125),
-                None => (rng.gen(), rng.gen_range(0..128)),
+                None => (rng.random(), rng.random_range(0..128)),
             }
         }
 

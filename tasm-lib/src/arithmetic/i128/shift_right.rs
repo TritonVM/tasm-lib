@@ -276,7 +276,7 @@ mod tests {
 
         fn pseudorandom_args(&self, seed: [u8; 32], _: Option<BenchmarkCase>) -> Self::Args {
             let mut rng = StdRng::from_seed(seed);
-            (rng.gen(), rng.gen_range(0..128))
+            (rng.random(), rng.random_range(0..128))
         }
     }
 

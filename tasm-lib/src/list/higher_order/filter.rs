@@ -224,10 +224,10 @@ mod tests {
             _: Option<BenchmarkCase>,
         ) -> FunctionInitialState {
             let mut rng = StdRng::from_seed(seed);
-            let list_pointer: u64 = rng.gen_range(0..(1 << 20));
+            let list_pointer: u64 = rng.random_range(0..(1 << 20));
             let list_pointer = BFieldElement::new(list_pointer);
 
-            let log_2_list_length: usize = rng.gen_range(0..4);
+            let log_2_list_length: usize = rng.random_range(0..4);
             let list_length = 1 << log_2_list_length;
 
             let input_type = self.f.domain();
@@ -250,7 +250,7 @@ mod tests {
             for i in 0..list_length {
                 for j in 0..input_type_size {
                     let element_offset = (safety_offset + i * input_type_size + j) as u64;
-                    memory.insert(list_pointer + BFieldElement::new(element_offset), rng.gen());
+                    memory.insert(list_pointer + BFieldElement::new(element_offset), rng.random());
                 }
             }
 

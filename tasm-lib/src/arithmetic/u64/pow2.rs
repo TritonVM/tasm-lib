@@ -101,7 +101,7 @@ mod tests {
             bench_case: Option<BenchmarkCase>,
         ) -> Self::Args {
             let Some(bench_case) = bench_case else {
-                return StdRng::from_seed(seed).gen_range(0..64);
+                return StdRng::from_seed(seed).random_range(0..64);
             };
 
             match bench_case {

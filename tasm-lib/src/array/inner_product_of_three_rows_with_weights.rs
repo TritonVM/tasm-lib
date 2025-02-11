@@ -246,9 +246,9 @@ mod tests {
             _: Option<BenchmarkCase>,
         ) -> AccessorInitialState {
             let mut rng = StdRng::from_seed(seed);
-            let main_address = rng.gen();
-            let aux_address = rng.gen();
-            let weights_address = rng.gen();
+            let main_address = rng.random();
+            let aux_address = rng.random();
+            let weights_address = rng.random();
 
             let mut memory = HashMap::default();
             insert_random_array(

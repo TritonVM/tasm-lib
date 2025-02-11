@@ -102,7 +102,7 @@ mod tests {
             match bench_case {
                 Some(BenchmarkCase::CommonCase) => (1000 << 32) + 7, // no carry
                 Some(BenchmarkCase::WorstCase) => (1000 << 32) + u64::from(u32::MAX), // carry
-                None => StdRng::from_seed(seed).gen(),
+                None => StdRng::from_seed(seed).random(),
             }
         }
 

@@ -454,7 +454,7 @@ mod tests {
             let (numerator, denominator) = match bench_case {
                 Some(BenchmarkCase::CommonCase) => (u32::MAX.into(), 1 << 15),
                 Some(BenchmarkCase::WorstCase) => (u64::MAX, (1 << 32) + 45454545),
-                None => StdRng::from_seed(seed).gen(),
+                None => StdRng::from_seed(seed).random(),
             };
 
             self.set_up_initial_state(numerator, denominator)

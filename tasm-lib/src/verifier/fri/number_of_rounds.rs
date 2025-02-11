@@ -87,12 +87,12 @@ mod tests {
             bench_case: Option<BenchmarkCase>,
         ) -> FunctionInitialState {
             let mut rng = StdRng::from_seed(seed);
-            let rate_entropy = rng.gen_range(1..16);
+            let rate_entropy = rng.random_range(1..16);
             let num_colinearity_checks = f64::ceil(160.0 / (rate_entropy as f64)) as usize;
             let domain_length = match bench_case {
                 Some(BenchmarkCase::CommonCase) => 1 << 17,
                 Some(BenchmarkCase::WorstCase) => 1 << 22,
-                None => 1 << rng.gen_range(rate_entropy..=22),
+                None => 1 << rng.random_range(rate_entropy..=22),
             };
             let fri_verify = FriVerify {
                 expansion_factor: 1 << rate_entropy,
@@ -120,13 +120,13 @@ mod tests {
 
     #[test]
     fn shadow_agrees_with_canon() {
-        let mut rng = thread_rng();
+        let mut rng = rand::rng();
         let num_trials = 50;
         for _ in 0..num_trials {
-            let rate_entropy = rng.gen_range(1..16);
+            let rate_entropy = rng.random_range(1..16);
             let expansion_factor = 1 << rate_entropy;
             let num_colinearity_checks = f64::ceil(160.0 / (rate_entropy as f64)) as usize;
-            let domain_length = 1 << rng.gen_range(rate_entropy..=22);
+            let domain_length = 1 << rng.random_range(rate_entropy..=22);
             let domain_offset = BFieldElement::new(7);
             let fri_verify = FriVerify {
                 expansion_factor: 1 << rate_entropy,

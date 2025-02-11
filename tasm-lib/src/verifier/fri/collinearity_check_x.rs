@@ -100,7 +100,7 @@ mod tests {
                     BenchmarkCase::WorstCase => 20,
                 }
             } else {
-                rng.gen_range(0..10)
+                rng.random_range(0..10)
             };
             let fri_domain_length = if let Some(case) = bench_case {
                 match case {
@@ -108,11 +108,11 @@ mod tests {
                     BenchmarkCase::WorstCase => 1 << 25,
                 }
             } else {
-                1 << (rng.gen_range(0..5) + round)
+                1 << (rng.random_range(0..5) + round)
             };
-            let index = rng.gen_range(0..fri_domain_length);
+            let index = rng.random_range(0..fri_domain_length);
 
-            let fri_verify = FriVerify::new(rng.gen(), fri_domain_length, 4, 40);
+            let fri_verify = FriVerify::new(rng.random(), fri_domain_length, 4, 40);
 
             let mut memory = HashMap::<BFieldElement, BFieldElement>::new();
             let fri_verify_address = BFieldElement::zero();

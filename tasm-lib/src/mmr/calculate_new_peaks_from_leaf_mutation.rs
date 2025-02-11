@@ -207,16 +207,16 @@ mod tests {
                 Some(BenchmarkCase::CommonCase) => ((1 << 31) - 32, 1 << 31),
                 Some(BenchmarkCase::WorstCase) => ((1 << 62) - 63, 1 << 62),
                 None => {
-                    let num_leafs = rng.gen_range(1..=1 << 62);
-                    let leaf_index = rng.gen_range(0..num_leafs);
+                    let num_leafs = rng.random_range(1..=1 << 62);
+                    let leaf_index = rng.random_range(0..num_leafs);
                     (leaf_index, num_leafs)
                 }
             };
 
-            let leaf = rng.gen();
+            let leaf = rng.random();
             let (mut mmra, mps) = mmra_with_mps(num_leafs, vec![(leaf_index, leaf)]);
             let auth_path = mps[0].clone();
-            let new_leaf = rng.gen();
+            let new_leaf = rng.random();
 
             self.prepare_state_with_mmra(
                 &mut mmra,
@@ -251,7 +251,7 @@ mod tests {
 
     fn mmra_leaf_mutate_test_n_leafs(leaf_count: usize) {
         let init_leaf_digests: Vec<Digest> = random_elements(leaf_count);
-        let new_leaf: Digest = thread_rng().gen();
+        let new_leaf: Digest = rand::rng().random();
 
         let (mmra, mps) = mmra_with_mps(
             leaf_count as u64,
@@ -297,7 +297,7 @@ mod tests {
         for log_sizes in [15u64, 20, 25, 32, 35, 40, 45, 50, 55, 60, 62, 63] {
             println!("log_sizes = {log_sizes}");
             let init_peak_digests: Vec<Digest> = random_elements(log_sizes as usize);
-            let new_leaf: Digest = thread_rng().gen();
+            let new_leaf: Digest = rand::rng().random();
             let mut init_mmr =
                 MmrAccumulator::init(init_peak_digests.clone(), (1u64 << log_sizes) - 1);
 
@@ -319,13 +319,13 @@ mod tests {
         for log_size in [31, 63] {
             println!("log_sizes = {log_size}");
             let init_peak_digests: Vec<Digest> = random_elements(log_size as usize);
-            let new_leaf: Digest = thread_rng().gen();
+            let new_leaf: Digest = rand::rng().random();
             let before_insertion_mmr =
                 MmrAccumulator::init(init_peak_digests.clone(), (1u64 << log_size) - 1);
 
             // Insert a leaf such that a very long (log_size long) auth path is returned
             let mut init_mmr = before_insertion_mmr.clone();
-            let mp = init_mmr.append(thread_rng().gen());
+            let mp = init_mmr.append(rand::rng().random());
 
             let mut final_mmr = init_mmr.clone();
             let leaf_mutation =

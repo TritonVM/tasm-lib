@@ -56,7 +56,7 @@ mod tests {
             seed: [u8; 32],
             _: Option<BenchmarkCase>,
         ) -> ProcedureInitialState {
-            let bytes = StdRng::from_seed(seed).gen::<[u8; 400]>();
+            let bytes = StdRng::from_seed(seed).random::<[u8; 400]>();
             let mut unstructured = Unstructured::new(&bytes);
             let sponge = Tip5::arbitrary(&mut unstructured).unwrap();
 

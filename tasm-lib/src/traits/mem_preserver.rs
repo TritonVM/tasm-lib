@@ -119,7 +119,7 @@ where
         }
 
         let num_states = 10;
-        let mut rng = StdRng::from_seed(random());
+        let mut rng = StdRng::from_seed(rand::random());
         for _ in 0..num_states {
             let MemPreserverInitialState {
                 stack,
@@ -128,7 +128,7 @@ where
                 nondeterminism: non_determinism,
             } = self
                 .mem_preserver
-                .pseudorandom_initial_state(rng.gen(), None);
+                .pseudorandom_initial_state(rng.random(), None);
 
             let stdin: Vec<_> = public_input.into();
             test_rust_equivalence_given_complete_state(
@@ -159,7 +159,7 @@ where
                 nondeterminism: non_determinism,
             } = self
                 .mem_preserver
-                .pseudorandom_initial_state(rng.gen(), Some(bench_case));
+                .pseudorandom_initial_state(rng.random(), Some(bench_case));
             let program = self.mem_preserver.link_for_isolated_run();
             let benchmark = execute_bench(
                 &program,

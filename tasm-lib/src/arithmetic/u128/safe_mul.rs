@@ -194,6 +194,7 @@ impl BasicSnippet for SafeMul {
 mod tests {
     use super::*;
     use crate::test_prelude::*;
+    use rand::rngs::StdRng;
 
     impl SafeMul {
         fn test_assertion_failure(&self, left: u128, right: u128, error_ids: &[i128]) {
@@ -221,8 +222,8 @@ mod tests {
         ) -> Self::Args {
             let Some(bench_case) = bench_case else {
                 let mut rng = StdRng::from_seed(seed);
-                let left = rng.gen_range(1..=u128::MAX);
-                let right = rng.gen_range(0..=u128::MAX / left);
+                let left = rng.random_range(1..=u128::MAX);
+                let right = rng.random_range(0..=u128::MAX / left);
 
                 return (right, left);
             };

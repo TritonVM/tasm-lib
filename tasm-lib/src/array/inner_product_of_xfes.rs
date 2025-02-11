@@ -118,8 +118,8 @@ mod tests {
             _: Option<BenchmarkCase>,
         ) -> AccessorInitialState {
             let mut rng = StdRng::from_seed(seed);
-            let pointer_a = rng.gen();
-            let pointer_b_offset = rng.gen_range(self.length..usize::MAX - self.length);
+            let pointer_a = rng.random();
+            let pointer_b_offset = rng.random_range(self.length..usize::MAX - self.length);
             let pointer_b = pointer_a + bfe!(pointer_b_offset);
 
             let mut memory = HashMap::default();

@@ -89,6 +89,8 @@ impl BasicSnippet for Lt {
 
 #[cfg(test)]
 mod tests {
+    use rand::rngs::StdRng;
+
     use super::*;
     use crate::test_helpers::test_rust_equivalence_given_execution_state;
     use crate::test_prelude::*;
@@ -102,7 +104,7 @@ mod tests {
         }
 
         fn pseudorandom_args(&self, seed: [u8; 32], _: Option<BenchmarkCase>) -> Self::Args {
-            StdRng::from_seed(seed).gen()
+            StdRng::from_seed(seed).random()
         }
     }
 

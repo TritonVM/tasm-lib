@@ -136,7 +136,7 @@ mod tests {
         }
 
         fn pseudorandom_args(&self, seed: [u8; 32], _: Option<BenchmarkCase>) -> Self::Args {
-            StdRng::from_seed(seed).gen()
+            StdRng::from_seed(seed).random()
         }
     }
 

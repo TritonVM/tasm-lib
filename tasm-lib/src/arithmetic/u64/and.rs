@@ -90,7 +90,7 @@ pub(crate) mod tests {
             match bench_case {
                 Some(BenchmarkCase::CommonCase) => (u32::MAX.into(), 1 << 10),
                 Some(BenchmarkCase::WorstCase) => (u64::MAX, u64::MAX - 1),
-                None => StdRng::from_seed(seed).gen(),
+                None => StdRng::from_seed(seed).random(),
             }
         }
 

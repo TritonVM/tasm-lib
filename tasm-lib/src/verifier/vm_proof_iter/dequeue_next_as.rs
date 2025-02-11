@@ -531,12 +531,12 @@ mod tests {
         ) -> ProcedureInitialState {
             let mut rng = StdRng::from_seed(seed);
             let mut proof_stream = ProofStream::new();
-            proof_stream.enqueue(Self::pseudorandom_proof_item(self.proof_item, rng.gen()));
+            proof_stream.enqueue(Self::pseudorandom_proof_item(self.proof_item, rng.random()));
 
             let other_item_type = ProofItemVariant::iter().choose(&mut rng).unwrap();
-            proof_stream.enqueue(Self::pseudorandom_proof_item(other_item_type, rng.gen()));
+            proof_stream.enqueue(Self::pseudorandom_proof_item(other_item_type, rng.random()));
 
-            self.initial_state_from_proof_and_address(proof_stream.into(), rng.gen())
+            self.initial_state_from_proof_and_address(proof_stream.into(), rng.random())
         }
     }
 
@@ -576,7 +576,7 @@ mod tests {
 
             let mut proof_stream = ProofStream::new();
             for &proof_item in &proof_items_variants {
-                let item = DequeueNextAs::pseudorandom_proof_item(proof_item, rng.gen());
+                let item = DequeueNextAs::pseudorandom_proof_item(proof_item, rng.random());
                 proof_stream.enqueue(item);
             }
 
@@ -588,7 +588,7 @@ mod tests {
             seed: [u8; 32],
         ) -> ProofItem {
             let mut rng = StdRng::from_seed(seed);
-            let proof_stream_seed: [u8; 10000] = rng.gen();
+            let proof_stream_seed: [u8; 10000] = rng.random();
             let mut unstructured = Unstructured::new(&proof_stream_seed);
 
             use ProofItemVariant::*;
@@ -773,7 +773,7 @@ mod tests {
 
     fn dequeueing_is_equivalent_in_rust_and_tasm_prop(proof_item_variant: ProofItemVariant) {
         let mut proof_stream = ProofStream::new();
-        let proof_item = DequeueNextAs::pseudorandom_proof_item(proof_item_variant, random());
+        let proof_item = DequeueNextAs::pseudorandom_proof_item(proof_item_variant, rand::random());
         proof_stream.enqueue(proof_item);
 
         let dequeue_next_as = DequeueNextAs::new(proof_item_variant);
@@ -858,14 +858,14 @@ mod tests {
         ) -> ProcedureInitialState {
             let mut rng = StdRng::from_seed(seed);
             let proof_stream =
-                DequeueNextAs::pseudorandom_proof_stream(self.proof_items.clone(), rng.gen());
+                DequeueNextAs::pseudorandom_proof_stream(self.proof_items.clone(), rng.random());
 
             // We just use the state-initialization method from the `[DequeueNextAs]` snippet.
             // This is OK as long as we don't read the program hash which we don't do in this
             // snippet.
             let dummy_snippet_for_state_init = DequeueNextAs::new(ProofItemVariant::MerkleRoot);
             dummy_snippet_for_state_init
-                .initial_state_from_proof_and_address(proof_stream.into(), rng.gen())
+                .initial_state_from_proof_and_address(proof_stream.into(), rng.random())
         }
     }
 

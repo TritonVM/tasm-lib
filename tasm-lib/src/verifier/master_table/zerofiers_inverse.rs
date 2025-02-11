@@ -175,7 +175,6 @@ impl BasicSnippet for ZerofiersInverse {
 #[cfg(test)]
 mod tests {
     use num::One;
-    use twenty_first::math::traits::Inverse;
     use twenty_first::math::traits::ModPowU32;
     use twenty_first::math::traits::PrimitiveRootOfUnity;
 
@@ -233,8 +232,8 @@ mod tests {
             _bench_case: Option<BenchmarkCase>,
         ) -> FunctionInitialState {
             let mut rng = StdRng::from_seed(seed);
-            let ood_current_row: XFieldElement = rng.gen();
-            let log_2_padded_height: u32 = rng.gen_range(8..32);
+            let ood_current_row: XFieldElement = rng.random();
+            let log_2_padded_height: u32 = rng.random_range(8..32);
             let padded_height = 2u32.pow(log_2_padded_height);
             let trace_domain_generator =
                 BFieldElement::primitive_root_of_unity(padded_height as u64).unwrap();

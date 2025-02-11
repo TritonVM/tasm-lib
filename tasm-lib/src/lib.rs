@@ -333,7 +333,13 @@ pub mod test_prelude {
     pub use itertools::Itertools;
     pub use proptest::prelude::*;
     pub use proptest_arbitrary_interop::arb;
-    pub use rand::prelude::*;
+    pub use rand::prelude::IndexedMutRandom;
+    pub use rand::prelude::IndexedRandom;
+    pub use rand::prelude::IteratorRandom;
+    pub use rand::rngs::StdRng;
+    pub use rand::Rng;
+    pub use rand::RngCore;
+    pub use rand::SeedableRng;
     pub use test_strategy::proptest;
 
     pub use crate::memory::encode_to_memory;
