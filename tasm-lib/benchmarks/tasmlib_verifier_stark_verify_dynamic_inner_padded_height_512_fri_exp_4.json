@@ -4,7 +4,7 @@
     "benchmark_result": {
       "clock_cycle_count": 194401,
       "hash_table_height": 146521,
-      "u32_table_height": 34071,
+      "u32_table_height": 34278,
       "op_stack_table_height": 168988,
       "ram_table_height": 290321
     },

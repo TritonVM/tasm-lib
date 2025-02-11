@@ -2,22 +2,22 @@
   {
     "name": "tasmlib_list_higher_order_u32_zip_xfe_with_digest",
     "benchmark_result": {
-      "clock_cycle_count": 393,
+      "clock_cycle_count": 433,
       "hash_table_height": 96,
       "u32_table_height": 32,
-      "op_stack_table_height": 505,
-      "ram_table_height": 262
+      "op_stack_table_height": 561,
+      "ram_table_height": 294
     },
     "case": "CommonCase"
   },
   {
     "name": "tasmlib_list_higher_order_u32_zip_xfe_with_digest",
     "benchmark_result": {
-      "clock_cycle_count": 293,
+      "clock_cycle_count": 193,
       "hash_table_height": 96,
       "u32_table_height": 32,
-      "op_stack_table_height": 365,
-      "ram_table_height": 182
+      "op_stack_table_height": 225,
+      "ram_table_height": 102
     },
     "case": "WorstCase"
   }
