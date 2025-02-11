@@ -203,7 +203,9 @@ mod tests {
             stack.push(BFieldElement::new(upper_bound as u64));
 
             let public_input: Vec<BFieldElement> = vec![];
-            let state = Tip5 { state: rng.random() };
+            let state = Tip5 {
+                state: rng.random(),
+            };
 
             ProcedureInitialState {
                 stack,

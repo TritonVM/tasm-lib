@@ -1,3 +1,14 @@
+## [0.48.0](https://github.com/TritonVM/tasm-lib/compare/v0.47.0..v0.48.0) - 2025-02-11
+
+### ⚙️ Miscellaneous
+
+- Update upstream dependencies ([f6187596](https://github.com/TritonVM/tasm-lib/commit/f6187596))
+- Update benchmarks ([d0c7172e](https://github.com/TritonVM/tasm-lib/commit/d0c7172e))
+
+### ♻️ Refactor
+
+- *(`BagPeaks`)* Commit to leaf count ([101952a3](https://github.com/TritonVM/tasm-lib/commit/101952a3))
+
 ## [0.47.0](https://github.com/TritonVM/tasm-lib/compare/v0.46.0..v0.47.0) - 2025-02-10
 
 ### ♻️ Refactor

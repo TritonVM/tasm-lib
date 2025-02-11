@@ -250,7 +250,10 @@ mod tests {
             for i in 0..list_length {
                 for j in 0..input_type_size {
                     let element_offset = (safety_offset + i * input_type_size + j) as u64;
-                    memory.insert(list_pointer + BFieldElement::new(element_offset), rng.random());
+                    memory.insert(
+                        list_pointer + BFieldElement::new(element_offset),
+                        rng.random(),
+                    );
                 }
             }
 

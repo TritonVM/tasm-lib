@@ -194,7 +194,9 @@ mod tests {
                 stack: [empty_stack(), bfe_vec![address, length]].concat(),
                 nondeterminism: NonDeterminism::default().with_ram(memory),
                 public_input: VecDeque::new(),
-                sponge_state: Some(Tip5 { state: rng.random() }),
+                sponge_state: Some(Tip5 {
+                    state: rng.random(),
+                }),
             }
         }
 

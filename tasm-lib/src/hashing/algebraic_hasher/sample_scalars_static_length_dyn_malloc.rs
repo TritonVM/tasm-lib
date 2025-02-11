@@ -119,7 +119,9 @@ mod tests {
         ) -> ProcedureInitialState {
             let mut rng = StdRng::from_seed(seed);
             let stack = self.init_stack_for_isolated_run();
-            let sponge = Tip5 { state: rng.random() };
+            let sponge = Tip5 {
+                state: rng.random(),
+            };
 
             ProcedureInitialState {
                 stack,

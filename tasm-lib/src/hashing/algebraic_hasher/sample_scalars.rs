@@ -142,7 +142,9 @@ mod tests {
             };
             let mut stack = empty_stack();
             stack.push(BFieldElement::new(num_scalars as u64));
-            let sponge = Tip5 { state: rng.random() };
+            let sponge = Tip5 {
+                state: rng.random(),
+            };
 
             ProcedureInitialState {
                 stack,

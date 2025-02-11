@@ -3,7 +3,7 @@ members = ["tasm-lib", "tasm-object-derive"]
 resolver = "2"
 
 [workspace.package]
-version = "0.47.0"
+version = "0.48.0"
 edition = "2021"
 authors = ["Triton Software AG"]
 license = "Apache-2.0"
@@ -16,5 +16,5 @@ readme = "README.md"
 lto = "thin"
 
 [workspace.dependencies.tasm-object-derive]
-version = "0.47.0"
+version = "0.48.0"
 path = "tasm-object-derive"

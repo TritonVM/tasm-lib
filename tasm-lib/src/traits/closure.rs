@@ -119,7 +119,9 @@ impl<C: Closure> RustShadow for ShadowedClosure<C> {
         let mut benchmarks = Vec::with_capacity(2);
 
         for bench_case in [BenchmarkCase::CommonCase, BenchmarkCase::WorstCase] {
-            let args = self.closure.pseudorandom_args(rng.random(), Some(bench_case));
+            let args = self
+                .closure
+                .pseudorandom_args(rng.random(), Some(bench_case));
             let stack = self.closure.set_up_test_stack(args);
             let program = self.closure.link_for_isolated_run();
             let benchmark =
