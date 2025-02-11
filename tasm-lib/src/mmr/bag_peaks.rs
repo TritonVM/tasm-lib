@@ -8,7 +8,7 @@ use crate::prelude::*;
 use crate::traits::basic_snippet::Reviewer;
 use crate::traits::basic_snippet::SignOffFingerprint;
 
-/// [Bag peaks](bag_peaks) of an MMR into a single [`Digest`].
+/// Bag the peaks of an MMR into a single [`Digest`].
 ///
 /// # Behavior
 ///
@@ -26,7 +26,8 @@ use crate::traits::basic_snippet::SignOffFingerprint;
 ///
 /// # Postconditions
 ///
-/// - the output is a single [`Digest`] computed like in [`bag_peaks`]
+/// - the output is a single [`Digest`] computed like in `bag_peaks` from
+///   `twenty-first`
 /// - the output is properly [`BFieldCodec`] encoded
 ///
 /// # Crashes
