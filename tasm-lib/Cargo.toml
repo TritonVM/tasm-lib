@@ -17,7 +17,7 @@ repository.workspace = true
 readme.workspace = true
 
 [dev-dependencies]
-proptest = "1.5"
+proptest = "1.6"
 proptest-arbitrary-interop = "0.1"
 rayon = "1"
 test-strategy = "0.4"
