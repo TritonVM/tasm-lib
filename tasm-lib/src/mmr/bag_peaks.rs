@@ -8,7 +8,7 @@ use crate::prelude::*;
 use crate::traits::basic_snippet::Reviewer;
 use crate::traits::basic_snippet::SignOffFingerprint;
 
-/// Bag the peaks of an MMR into a single [`Digest`].
+/// [Bag the peaks][bag] of an MMR into a single [`Digest`].
 ///
 /// # Behavior
 ///
@@ -26,8 +26,7 @@ use crate::traits::basic_snippet::SignOffFingerprint;
 ///
 /// # Postconditions
 ///
-/// - the output is a single [`Digest`] computed like in `bag_peaks` from
-///   `twenty-first`
+/// - the output is a single [`Digest`] computed like in [`bag_peaks`][bag]
 /// - the output is properly [`BFieldCodec`] encoded
 ///
 /// # Crashes
@@ -35,6 +34,7 @@ use crate::traits::basic_snippet::SignOffFingerprint;
 ///  - if the MMR accumulator is inconsistent, *i.e.*, if the number of peaks
 ///    does not match the number of set bits in the leaf count
 ///
+/// [bag]: twenty_first::util_types::mmr::mmr_trait::Mmr::bag_peaks
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct BagPeaks;
 
