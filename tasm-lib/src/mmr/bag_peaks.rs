@@ -39,7 +39,7 @@ use crate::traits::basic_snippet::SignOffFingerprint;
 pub struct BagPeaks;
 
 impl BagPeaks {
-    const INCONSISTENT_PEAKS_NUM: usize = 11;
+    const INCONSISTENT_NUM_PEAKS_ERROR_ID: usize = 560;
 }
 
 impl BasicSnippet for BagPeaks {
@@ -85,7 +85,7 @@ impl BasicSnippet for BagPeaks {
             dup 1 eq
             // _ *peaks [leaf_count] pop_count (num_peaks==pop_count)
 
-            assert error_id {Self::INCONSISTENT_PEAKS_NUM}
+            assert error_id {Self::INCONSISTENT_NUM_PEAKS_ERROR_ID}
             hint num_peaks: u32 = stack[0]
             // _ *peaks [leaf_count] num_peaks
 
