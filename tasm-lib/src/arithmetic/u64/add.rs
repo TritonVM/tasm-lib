@@ -98,7 +98,7 @@ mod tests {
             corner_case_points
                 .iter()
                 .cartesian_product(&corner_case_points)
-                .filter(|(&l, &r)| l.checked_add(r).is_some())
+                .filter(|&(&l, &r)| l.checked_add(r).is_some())
                 .map(|(&l, &r)| (l, r))
                 .collect()
         }

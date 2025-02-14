@@ -384,8 +384,7 @@ mod tests {
         let mut initial_state = VerifyFriAuthenticationPaths.pseudorandom_initial_state(seed, None);
         let auth_paths = &mut initial_state.nondeterminism.digests;
         let digest_index = digest_index % auth_paths.len();
-        let auth_path_element = &mut auth_paths[digest_index];
-        let Digest(ref mut auth_path_element_innards) = auth_path_element;
+        let Digest(ref mut auth_path_element_innards) = auth_paths[digest_index];
         auth_path_element_innards[perturbation_index] += bfe!(perturbation);
 
         test_assertion_failure(

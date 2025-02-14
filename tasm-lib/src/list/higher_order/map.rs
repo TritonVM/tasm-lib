@@ -82,11 +82,12 @@ impl<const NUM_INPUT_LISTS: usize> ChainMap<NUM_INPUT_LISTS> {
     /// [len]: BFieldCodec::static_length
     /// [bfe]: DataType::Bfe
     pub fn new(f: InnerFunction) -> Self {
-        if let Some(input_len) = f.domain().static_length() {
+        let domain = f.domain();
+        if let Some(input_len) = domain.static_length() {
             // need instruction `place {input_type.stack_size()}`
             assert!(input_len < OpStackElement::COUNT);
         } else {
-            let DataType::Tuple(tuple) = f.domain() else {
+            let DataType::Tuple(tuple) = domain else {
                 panic!("{INNER_FN_INCORRECT_INPUT_DYN_LEN}");
             };
             let [_, DataType::Bfe] = tuple[..] else {

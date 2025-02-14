@@ -128,7 +128,7 @@ mod tests {
             edge_case_values
                 .iter()
                 .cartesian_product(&edge_case_values)
-                .filter(|(&subtrahend, &minuend)| minuend.checked_sub(subtrahend).is_some())
+                .filter(|&(&subtrahend, &minuend)| minuend.checked_sub(subtrahend).is_some())
                 .map(|(&subtrahend, &minuend)| (subtrahend, minuend))
                 .collect()
         }

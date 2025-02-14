@@ -581,7 +581,7 @@ mod tests {
 
             for peak_idx in 0..old.peaks().len() {
                 let mut wrong_old_peaks = old.peaks();
-                let Digest(ref mut digest_to_disturb) = &mut wrong_old_peaks[peak_idx];
+                let Digest(ref mut digest_to_disturb) = wrong_old_peaks[peak_idx];
                 let digest_to_disturb_innards_idx = rng.random_range(0..Digest::LEN);
                 digest_to_disturb[digest_to_disturb_innards_idx].increment();
 
@@ -592,7 +592,7 @@ mod tests {
             for proof_path_idx in 0..proof.paths.len() {
                 let mut wrong_proof = proof.clone();
                 let proof_paths = &mut wrong_proof.paths;
-                let Digest(ref mut digest_to_disturb) = &mut proof_paths[proof_path_idx];
+                let Digest(ref mut digest_to_disturb) = proof_paths[proof_path_idx];
                 let digest_to_disturb_innards_idx = rng.random_range(0..Digest::LEN);
                 digest_to_disturb[digest_to_disturb_innards_idx].increment();
 

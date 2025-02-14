@@ -18,3 +18,8 @@ lto = "thin"
 [workspace.dependencies.tasm-object-derive]
 version = "0.48.0"
 path = "tasm-object-derive"
+
+[workspace.lints.rust]
+edition-2024-expr-fragment-specifier = "allow"  # accept the new `expr` fragment specifier rules
+if-let-rescope = "allow"                        # accept the new `if-let` scope
+rust-2024-compatibility = "warn"

@@ -115,10 +115,10 @@ pub(crate) fn verify_memory_equivalence(
 
     let in_a_and_different_in_b = a_memory
         .iter()
-        .filter(|(k, &v)| b_memory.get(k).map(|&b| b != v).unwrap_or(true));
+        .filter(|&(k, v)| b_memory.get(k).map(|b| b != v).unwrap_or(true));
     let in_b_and_different_in_a = b_memory
         .iter()
-        .filter(|(k, &v)| a_memory.get(k).map(|&b| b != v).unwrap_or(true));
+        .filter(|&(k, v)| a_memory.get(k).map(|b| b != v).unwrap_or(true));
 
     let in_a_and_different_in_b = format_hash_map_iterator(in_a_and_different_in_b);
     let in_b_and_different_in_a = format_hash_map_iterator(in_b_and_different_in_a);
