@@ -119,11 +119,11 @@ pub(crate) mod tests {
     use triton_vm::error::OpStackError::FailedU32Conversion;
 
     use super::*;
+    use crate::U32_TO_USIZE_ERR;
     use crate::rust_shadowing_helper_functions::list::insert_random_list;
     use crate::rust_shadowing_helper_functions::list::list_get;
     use crate::test_helpers::negative_test;
     use crate::test_prelude::*;
-    use crate::U32_TO_USIZE_ERR;
 
     impl Get {
         fn set_up_initial_state(

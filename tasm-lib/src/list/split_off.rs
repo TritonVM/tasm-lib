@@ -148,6 +148,7 @@ mod tests {
     use proptest::strategy::Union;
 
     use super::*;
+    use crate::U32_TO_USIZE_ERR;
     use crate::list::LIST_METADATA_SIZE;
     use crate::rust_shadowing_helper_functions::dyn_malloc::dynamic_allocator;
     use crate::rust_shadowing_helper_functions::list::insert_random_list;
@@ -155,7 +156,6 @@ mod tests {
     use crate::rust_shadowing_helper_functions::list::load_list_unstructured;
     use crate::test_helpers::test_assertion_failure;
     use crate::test_prelude::*;
-    use crate::U32_TO_USIZE_ERR;
 
     impl SplitOff {
         fn set_up_initial_state(

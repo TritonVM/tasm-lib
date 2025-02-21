@@ -66,10 +66,10 @@ impl BasicSnippet for SetLength {
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
+    use crate::U32_TO_USIZE_ERR;
     use crate::empty_stack;
     use crate::rust_shadowing_helper_functions::list::list_set_length;
     use crate::test_prelude::*;
-    use crate::U32_TO_USIZE_ERR;
 
     impl Function for SetLength {
         fn rust_shadow(

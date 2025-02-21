@@ -333,15 +333,16 @@ pub mod test_prelude {
     pub use itertools::Itertools;
     pub use proptest::prelude::*;
     pub use proptest_arbitrary_interop::arb;
+    pub use rand::Rng;
+    pub use rand::RngCore;
+    pub use rand::SeedableRng;
     pub use rand::prelude::IndexedMutRandom;
     pub use rand::prelude::IndexedRandom;
     pub use rand::prelude::IteratorRandom;
     pub use rand::rngs::StdRng;
-    pub use rand::Rng;
-    pub use rand::RngCore;
-    pub use rand::SeedableRng;
     pub use test_strategy::proptest;
 
+    pub use crate::InitVmState;
     pub use crate::memory::encode_to_memory;
     pub(crate) use crate::pop_encodable;
     pub use crate::push_encodable;
@@ -369,5 +370,4 @@ pub mod test_prelude {
     pub use crate::traits::read_only_algorithm::ReadOnlyAlgorithmInitialState;
     pub use crate::traits::read_only_algorithm::ShadowedReadOnlyAlgorithm;
     pub use crate::traits::rust_shadow::RustShadow;
-    pub use crate::InitVmState;
 }

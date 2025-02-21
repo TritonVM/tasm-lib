@@ -1,5 +1,5 @@
-use anyhow::anyhow;
 use anyhow::Result;
+use anyhow::anyhow;
 use triton_vm::prelude::*;
 
 use crate::library::Library;
@@ -53,8 +53,8 @@ pub fn bench_and_profile_program<P: CompiledProgram>(
     public_input: &PublicInput,
     nondeterminism: &NonDeterminism,
 ) {
-    use std::fs::create_dir_all;
     use std::fs::File;
+    use std::fs::create_dir_all;
     use std::io::Write;
     use std::path::Path;
     use std::path::PathBuf;

@@ -8,8 +8,8 @@ use triton_vm::prelude::*;
 use triton_vm::proof_item::FriResponse;
 use triton_vm::proof_item::ProofItemVariant;
 use triton_vm::proof_stream::ProofStream;
-use twenty_first::math::polynomial::barycentric_evaluate;
 use twenty_first::math::polynomial::Polynomial;
+use twenty_first::math::polynomial::barycentric_evaluate;
 use twenty_first::math::traits::ModPowU32;
 use twenty_first::math::x_field_element::EXTENSION_DEGREE;
 use twenty_first::util_types::merkle_tree::MerkleTree;
@@ -1630,8 +1630,8 @@ mod tests {
 
 #[cfg(test)]
 mod bench {
-    use std::fs::create_dir_all;
     use std::fs::File;
+    use std::fs::create_dir_all;
     use std::io::Write;
     use std::path::Path;
     use std::path::PathBuf;

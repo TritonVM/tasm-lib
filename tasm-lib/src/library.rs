@@ -174,8 +174,8 @@ impl Library {
 
 #[cfg(test)]
 mod tests {
-    use triton_vm::prelude::triton_asm;
     use triton_vm::prelude::Program;
+    use triton_vm::prelude::triton_asm;
 
     use super::*;
     use crate::mmr::calculate_new_peaks_from_leaf_mutation::MmrCalculateNewPeaksFromLeafMutationMtIndices;

@@ -3,10 +3,10 @@ use triton_vm::challenges::Challenges;
 use triton_vm::prelude::*;
 use triton_vm::proof_item::ProofItemVariant;
 use triton_vm::proof_stream::ProofStream;
+use triton_vm::table::NUM_QUOTIENT_SEGMENTS;
 use triton_vm::table::master_table::MasterAuxTable;
 use triton_vm::table::master_table::MasterMainTable;
 use triton_vm::table::master_table::MasterTable;
-use triton_vm::table::NUM_QUOTIENT_SEGMENTS;
 use twenty_first::math::x_field_element::EXTENSION_DEGREE;
 use twenty_first::prelude::MerkleTreeInclusionProof;
 
@@ -1203,8 +1203,8 @@ pub mod tests {
     use super::*;
     use crate::execute_test;
     use crate::maybe_write_debuggable_vm_state_to_disk;
-    use crate::memory::encode_to_memory;
     use crate::memory::FIRST_NON_DETERMINISTICALLY_INITIALIZED_MEMORY_ADDRESS;
+    use crate::memory::encode_to_memory;
     use crate::test_helpers::maybe_write_tvm_output_to_disk;
     use crate::verifier::claim::shared::insert_claim_into_static_memory;
     use crate::verifier::master_table::air_constraint_evaluation::an_integral_but_profane_dynamic_memory_layout;
@@ -1606,9 +1606,9 @@ mod benches {
     use crate::generate_full_profile;
     use crate::linker::execute_bench;
     use crate::memory::encode_to_memory;
-    use crate::snippet_bencher::write_benchmarks;
     use crate::snippet_bencher::BenchmarkCase;
     use crate::snippet_bencher::NamedBenchmarkResult;
+    use crate::snippet_bencher::write_benchmarks;
     use crate::test_helpers::prepend_program_with_stack_setup;
     use crate::verifier::claim::shared::insert_claim_into_static_memory;
 

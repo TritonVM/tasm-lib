@@ -5,14 +5,14 @@ use itertools::Itertools;
 use triton_vm::isa::op_stack::NUM_OP_STACK_REGISTERS;
 use triton_vm::prelude::*;
 
+use crate::InitVmState;
+use crate::RustShadowOutputState;
 use crate::dyn_malloc::DYN_MALLOC_ADDRESS;
 use crate::execute_test;
 use crate::execute_with_terminal_state;
 use crate::prelude::Tip5;
 use crate::traits::basic_snippet::SignedOffSnippet;
 use crate::traits::rust_shadow::RustShadow;
-use crate::InitVmState;
-use crate::RustShadowOutputState;
 
 pub fn rust_final_state<T: RustShadow>(
     shadowed_snippet: &T,

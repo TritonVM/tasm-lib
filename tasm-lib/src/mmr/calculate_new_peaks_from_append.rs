@@ -117,8 +117,8 @@ mod tests {
     use twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
 
     use super::*;
-    use crate::memory::dyn_malloc::DYN_MALLOC_FIRST_ADDRESS;
     use crate::memory::FIRST_NON_DETERMINISTICALLY_INITIALIZED_MEMORY_ADDRESS;
+    use crate::memory::dyn_malloc::DYN_MALLOC_FIRST_ADDRESS;
     use crate::rust_shadowing_helper_functions::list::list_pop;
     use crate::rust_shadowing_helper_functions::list::list_push;
     use crate::test_prelude::*;

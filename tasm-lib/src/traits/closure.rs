@@ -6,9 +6,9 @@ use super::rust_shadow::RustShadow;
 use crate::linker::execute_bench;
 use crate::prelude::Tip5;
 use crate::push_encodable;
-use crate::snippet_bencher::write_benchmarks;
 use crate::snippet_bencher::BenchmarkCase;
 use crate::snippet_bencher::NamedBenchmarkResult;
+use crate::snippet_bencher::write_benchmarks;
 use crate::test_helpers::test_rust_equivalence_given_complete_state;
 
 /// A Closure is a piece of tasm code that modifies the top of the stack without access to

@@ -5,8 +5,8 @@ use triton_vm::prelude::*;
 use super::verify::FriSnippet;
 use super::verify::FriVerify;
 use crate::library::Library;
-use crate::memory::encode_to_memory;
 use crate::memory::FIRST_NON_DETERMINISTICALLY_INITIALIZED_MEMORY_ADDRESS;
+use crate::memory::encode_to_memory;
 use crate::traits::compiled_program::CompiledProgram;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]

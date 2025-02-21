@@ -6,12 +6,12 @@ use triton_vm::prelude::*;
 
 use super::basic_snippet::BasicSnippet;
 use super::rust_shadow::RustShadow;
+use crate::InitVmState;
 use crate::linker::execute_bench;
-use crate::snippet_bencher::write_benchmarks;
 use crate::snippet_bencher::BenchmarkCase;
 use crate::snippet_bencher::NamedBenchmarkResult;
+use crate::snippet_bencher::write_benchmarks;
 use crate::test_helpers::test_rust_equivalence_given_complete_state;
-use crate::InitVmState;
 
 /// A MemPreserver cannot modify memory
 ///

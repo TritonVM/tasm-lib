@@ -4,7 +4,9 @@ resolver = "2"
 
 [workspace.package]
 version = "0.48.0"
-edition = "2021"
+edition = "2024"
+rust-version = "1.85"
+
 authors = ["Triton Software AG"]
 license = "Apache-2.0"
 homepage = "https://triton-vm.org/"
@@ -20,6 +22,3 @@ version = "0.48.0"
 path = "tasm-object-derive"
 
 [workspace.lints.rust]
-edition-2024-expr-fragment-specifier = "allow"  # accept the new `expr` fragment specifier rules
-if-let-rescope = "allow"                        # accept the new `if-let` scope
-rust-2024-compatibility = "warn"

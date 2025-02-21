@@ -139,8 +139,8 @@ mod tests {
     use crate::twenty_first::math::other::random_elements;
     use crate::twenty_first::prelude::*;
     use crate::twenty_first::util_types::mmr;
-    use crate::twenty_first::util_types::mmr::mmr_accumulator::util::mmra_with_mps;
     use crate::twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
+    use crate::twenty_first::util_types::mmr::mmr_accumulator::util::mmra_with_mps;
     use crate::twenty_first::util_types::mmr::mmr_trait::LeafMutation;
 
     // These consts are an improvement to the previous situation.

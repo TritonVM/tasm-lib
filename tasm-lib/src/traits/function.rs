@@ -5,13 +5,13 @@ use triton_vm::prelude::*;
 
 use super::basic_snippet::BasicSnippet;
 use super::rust_shadow::RustShadow;
+use crate::InitVmState;
 use crate::linker::execute_bench;
 use crate::prelude::Tip5;
-use crate::snippet_bencher::write_benchmarks;
 use crate::snippet_bencher::BenchmarkCase;
 use crate::snippet_bencher::NamedBenchmarkResult;
+use crate::snippet_bencher::write_benchmarks;
 use crate::test_helpers::test_rust_equivalence_given_complete_state;
-use crate::InitVmState;
 
 /// A function can modify stack and extend memory.
 ///

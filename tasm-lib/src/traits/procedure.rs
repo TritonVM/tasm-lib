@@ -3,15 +3,15 @@ use std::collections::HashMap;
 use rand::prelude::*;
 use triton_vm::prelude::*;
 
+use crate::InitVmState;
 use crate::linker::execute_bench;
 use crate::prelude::Tip5;
-use crate::snippet_bencher::write_benchmarks;
 use crate::snippet_bencher::BenchmarkCase;
 use crate::snippet_bencher::NamedBenchmarkResult;
+use crate::snippet_bencher::write_benchmarks;
 use crate::test_helpers::test_rust_equivalence_given_complete_state;
 use crate::traits::basic_snippet::BasicSnippet;
 use crate::traits::rust_shadow::RustShadow;
-use crate::InitVmState;
 
 /// A trait that can modify all parts of the VM state.
 ///

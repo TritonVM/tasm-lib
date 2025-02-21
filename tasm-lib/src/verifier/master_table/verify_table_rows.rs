@@ -1,10 +1,10 @@
 use strum::Display;
 use strum::EnumIter;
 use triton_vm::prelude::*;
+use triton_vm::table::NUM_QUOTIENT_SEGMENTS;
 use triton_vm::table::master_table::MasterAuxTable;
 use triton_vm::table::master_table::MasterMainTable;
 use triton_vm::table::master_table::MasterTable;
-use triton_vm::table::NUM_QUOTIENT_SEGMENTS;
 use twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
 use crate::hashing::algebraic_hasher::hash_static_size::HashStaticSize;

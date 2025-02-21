@@ -598,8 +598,8 @@ mod tests {
     use proptest::prelude::*;
     use proptest::test_runner::TestCaseResult;
     use proptest_arbitrary_interop::arb;
-    use test_strategy::proptest;
     use test_strategy::Arbitrary;
+    use test_strategy::proptest;
 
     use super::*;
     use crate::memory::encode_to_memory;

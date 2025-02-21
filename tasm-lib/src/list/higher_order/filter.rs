@@ -2,11 +2,11 @@ use itertools::Itertools;
 use triton_vm::prelude::*;
 
 use super::inner_function::InnerFunction;
+use crate::list::LIST_METADATA_SIZE;
 use crate::list::get::Get;
 use crate::list::length::Length;
 use crate::list::new::New;
 use crate::list::set_length::SetLength;
-use crate::list::LIST_METADATA_SIZE;
 use crate::memory::memcpy::MemCpy;
 use crate::prelude::*;
 

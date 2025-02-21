@@ -5,14 +5,14 @@ use rand::prelude::*;
 use triton_vm::isa::op_stack::NUM_OP_STACK_REGISTERS;
 use triton_vm::prelude::*;
 
+use crate::InitVmState;
 use crate::empty_stack;
-use crate::list::new::New;
 use crate::list::LIST_METADATA_SIZE;
+use crate::list::new::New;
 use crate::prelude::*;
 use crate::rust_shadowing_helper_functions::list::untyped_insert_random_list;
 use crate::snippet_bencher::BenchmarkCase;
 use crate::traits::function::*;
-use crate::InitVmState;
 
 /// Zips two lists of equal length, returning a new list of pairs of elements.
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]

@@ -126,8 +126,8 @@ mod tests {
     use super::*;
     use crate::arithmetic;
     use crate::empty_stack;
-    use crate::list::higher_order::inner_function::RawCode;
     use crate::list::LIST_METADATA_SIZE;
+    use crate::list::higher_order::inner_function::RawCode;
     use crate::rust_shadowing_helper_functions;
     use crate::rust_shadowing_helper_functions::list::list_get;
     use crate::rust_shadowing_helper_functions::list::untyped_insert_random_list;
