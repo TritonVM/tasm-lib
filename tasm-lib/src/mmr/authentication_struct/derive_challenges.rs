@@ -50,8 +50,7 @@ impl BasicSnippet for DeriveChallenges {
                 // _ *auth_struct *indexed_leafs
 
                 read_mem 1
-                push 1
-                add
+                addi 1
                 // _ *auth_struct indexed_leafs_len *indexed_leafs
 
                 swap 1
@@ -59,23 +58,20 @@ impl BasicSnippet for DeriveChallenges {
 
                 push {indexed_leaf_element_size}
                 mul
-                push 1
-                add
+                addi 1
                 // _ *auth_struct *indexed_leafs indexed_leafs_size
 
                 call {absorb_multiple}
                 // _ *auth_struct
 
                 read_mem 1
-                push 1
-                add
+                addi 1
                 // _ auth_struct_len *auth_struct
 
                 swap 1
                 push {Digest::LEN}
                 mul
-                push 1
-                add
+                addi 1
                 // _ *auth_struct auth_struct_size
 
                 call {absorb_multiple}
@@ -96,6 +92,7 @@ impl BasicSnippet for DeriveChallenges {
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
+    use std::collections::VecDeque;
 
     use itertools::Itertools;
     use num::One;
@@ -110,9 +107,9 @@ mod tests {
     use crate::rust_shadowing_helper_functions::list::list_insert;
     use crate::rust_shadowing_helper_functions::list::load_list_with_copy_elements;
     use crate::snippet_bencher::BenchmarkCase;
-    use crate::traits::procedure::Procedure;
-    use crate::traits::procedure::ProcedureInitialState;
-    use crate::traits::procedure::ShadowedProcedure;
+    use crate::test_prelude::MemPreserver;
+    use crate::test_prelude::MemPreserverInitialState;
+    use crate::test_prelude::ShadowedMemPreserver;
     use crate::traits::rust_shadow::RustShadow;
 
     use super::*;
@@ -121,16 +118,17 @@ mod tests {
 
     #[test]
     fn test() {
-        ShadowedProcedure::new(DeriveChallenges).test();
+        ShadowedMemPreserver::new(DeriveChallenges).test();
     }
 
-    impl Procedure for DeriveChallenges {
+    impl MemPreserver for DeriveChallenges {
         fn rust_shadow(
             &self,
             stack: &mut Vec<BFieldElement>,
-            memory: &mut HashMap<BFieldElement, BFieldElement>,
-            _nondeterminism: &NonDeterminism,
-            _public_input: &[BFieldElement],
+            memory: &HashMap<BFieldElement, BFieldElement>,
+            _nd_tokens: VecDeque<BFieldElement>,
+            _nd_digests: VecDeque<Digest>,
+            _stdin: VecDeque<BFieldElement>,
             sponge: &mut Option<Tip5>,
         ) -> Vec<BFieldElement> {
             let indexed_leafs_pointer = stack.pop().unwrap();
@@ -169,7 +167,7 @@ mod tests {
             &self,
             seed: [u8; 32],
             bench_case: Option<BenchmarkCase>,
-        ) -> ProcedureInitialState {
+        ) -> MemPreserverInitialState {
             let mut rng: StdRng = SeedableRng::from_seed(seed);
 
             let (tree_height, num_revealed_leafs) = match bench_case {
@@ -223,11 +221,11 @@ mod tests {
             .concat();
 
             let nondeterminism = NonDeterminism::default().with_ram(memory);
-            ProcedureInitialState {
+            MemPreserverInitialState {
                 stack,
                 nondeterminism,
-                public_input: vec![],
-                sponge: Some(Tip5::init()),
+                public_input: vec![].into(),
+                sponge_state: Some(Tip5::init()),
             }
         }
     }
@@ -235,13 +233,13 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use crate::traits::procedure::ShadowedProcedure;
+    use crate::test_prelude::ShadowedMemPreserver;
     use crate::traits::rust_shadow::RustShadow;
 
     use super::*;
 
     #[test]
     fn bag_peaks_benchmark() {
-        ShadowedProcedure::new(DeriveChallenges).bench();
+        ShadowedMemPreserver::new(DeriveChallenges).bench();
     }
 }

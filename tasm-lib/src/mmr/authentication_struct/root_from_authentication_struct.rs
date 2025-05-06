@@ -1,5 +1,5 @@
-use triton_vm::prelude::*;
 use triton_vm::prelude::twenty_first::math::x_field_element::EXTENSION_DEGREE;
+use triton_vm::prelude::*;
 
 use crate::data_type::DataType;
 use crate::library::Library;
@@ -38,24 +38,16 @@ impl BasicSnippet for RootFromAuthenticationStruct {
     }
 
     fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
-        let alpha_challenge_pointer = library.kmalloc(EXTENSION_DEGREE as u32);
-        let alpha_challenge_pointer_write = alpha_challenge_pointer.write_address();
-        let alpha_challenge_pointer_read = alpha_challenge_pointer.read_address();
-        let beta_challenge_pointer = library.kmalloc(EXTENSION_DEGREE as u32);
-        let beta_challenge_pointer_write = beta_challenge_pointer.write_address();
-        let beta_challenge_pointer_read = beta_challenge_pointer.read_address();
-        let gamma_challenge_pointer = library.kmalloc(EXTENSION_DEGREE as u32);
-        let gamma_challenge_pointer_write = gamma_challenge_pointer.write_address();
-        let gamma_challenge_pointer_read = gamma_challenge_pointer.read_address();
-        let t_digest_pointer = library.kmalloc(Digest::LEN as u32);
-        let t_digest_pointer_write = t_digest_pointer.write_address();
-        let t_digest_pointer_read = t_digest_pointer.read_address();
-        let right_digest_pointer = library.kmalloc(Digest::LEN as u32);
-        let right_digest_pointer_write = right_digest_pointer.write_address();
-        let right_digest_pointer_read = right_digest_pointer.read_address();
-        let left_digest_pointer = library.kmalloc(Digest::LEN as u32);
-        let left_digest_pointer_write = left_digest_pointer.write_address();
-        let left_digest_pointer_read = left_digest_pointer.read_address();
+        let alpha_challenge_allocation = library.kmalloc(EXTENSION_DEGREE as u32);
+        let beta_challenge_allocation = library.kmalloc(EXTENSION_DEGREE as u32);
+        let beta_challenge_read_address = beta_challenge_allocation.read_address();
+        let gamma_challenge_allocation = library.kmalloc(EXTENSION_DEGREE as u32);
+        let gamma_challenge_read_address = gamma_challenge_allocation.read_address();
+        let t_digest_allocation = library.kmalloc(Digest::LEN as u32);
+        let t_digest_write_address = t_digest_allocation.write_address();
+        let t_digest_read_address = t_digest_allocation.read_address();
+        let right_digest_allocation = library.kmalloc(Digest::LEN as u32);
+        let left_digest_allocation = library.kmalloc(Digest::LEN as u32);
 
         let indexed_leaf_element_size = Self::indexed_leaf_element_type().stack_size();
         let derive_challenges = library.import(Box::new(DeriveChallenges));
@@ -68,17 +60,17 @@ impl BasicSnippet for RootFromAuthenticationStruct {
             hint gamma: XFieldElement = stack[6..9]
             // _ [gamma] [-beta] [alpha] <- rename
 
-            push {alpha_challenge_pointer_write}
+            push {alpha_challenge_allocation.write_address()}
             write_mem {EXTENSION_DEGREE}
             pop 1
             // _ [gamma] [-beta]
 
-            push {beta_challenge_pointer_write}
+            push {beta_challenge_allocation.write_address()}
             write_mem {EXTENSION_DEGREE}
             pop 1
             // _ [gamma]
 
-            push {gamma_challenge_pointer_write}
+            push {gamma_challenge_allocation.write_address()}
             write_mem {EXTENSION_DEGREE}
             pop 1
             // _
@@ -103,7 +95,7 @@ impl BasicSnippet for RootFromAuthenticationStruct {
             // _ [digest]
 
             push 1
-            push {alpha_challenge_pointer_read}
+            push {alpha_challenge_allocation.read_address()}
             read_mem {EXTENSION_DEGREE}
             pop 1
             // _ l4 l3 l2 l1 l0 1 [α; 3]
@@ -123,7 +115,7 @@ impl BasicSnippet for RootFromAuthenticationStruct {
                 // _ num_leafs *auth_struct *idx_leafs *idx_leafs[n]_lw [0; 2] [p; 3]
 
                 /* Read leaf-index, convert it to BFE, and multiply it with `gamma` challenge */
-                push {gamma_challenge_pointer_read}
+                push {gamma_challenge_read_address}
                 read_mem {EXTENSION_DEGREE}
                 pop 1
                 // _ num_leafs *auth_struct *idx_leafs *idx_leafs[n]_lw [0; 2] [p; 3] [gamma]
@@ -160,7 +152,7 @@ impl BasicSnippet for RootFromAuthenticationStruct {
                 // _ num_leafs *auth_struct *idx_leafs *idx_leafs[n-1]_lw [0; 2] [p; 3] [γ * node_idx; 3] [(l1 l0 1) * α + (l4 l3 l2)]
                 // _ num_leafs *auth_struct *idx_leafs *idx_leafs[n-1]_lw [0; 2] [p; 3] [γ * node_idx; 3] [leaf_as_xfe] <-- rename
 
-                push {beta_challenge_pointer_read}
+                push {beta_challenge_read_address}
                 read_mem {EXTENSION_DEGREE}
                 pop 1
                 // _ num_leafs *auth_struct *idx_leafs *idx_leafs[n-1]_lw [0; 2] [p; 3] [γ * node_idx; 3] [leaf_as_xfe] [-beta]
@@ -286,7 +278,7 @@ impl BasicSnippet for RootFromAuthenticationStruct {
                 // _ *auth_struct *auth_struct[n]_lw [node_index] [p]
 
                 /* Calculate `node_index * challenge` */
-                push {gamma_challenge_pointer_read}
+                push {gamma_challenge_read_address}
                 read_mem {EXTENSION_DEGREE}
                 pop 1
                 // _ *auth_struct *auth_struct[n]_lw [node_index] [p] [γ]
@@ -311,7 +303,7 @@ impl BasicSnippet for RootFromAuthenticationStruct {
                 {&digest_to_xfe}
                 // _ *auth_struct *auth_struct[n]_lw [node_index] [p] [node_index * γ] [auth_struct_xfe]
 
-                push {beta_challenge_pointer_read}
+                push {beta_challenge_read_address}
                 read_mem {EXTENSION_DEGREE}
                 pop 1
                 xx_add
@@ -334,7 +326,7 @@ impl BasicSnippet for RootFromAuthenticationStruct {
                 // _ [t]
 
                 {&dup_top_digest}
-                push {t_digest_pointer_write}
+                push {t_digest_write_address}
                 write_mem {Digest::LEN}
                 pop 1
                 // _ [t]
@@ -371,7 +363,7 @@ impl BasicSnippet for RootFromAuthenticationStruct {
                 // _ l_index_bfe [p] [right]
 
                 {&dup_top_digest}
-                push {right_digest_pointer_write}
+                push {right_digest_allocation.write_address()}
                 write_mem {Digest::LEN}
                 pop 1
                 // _ l_index_bfe [p] [right]
@@ -379,13 +371,13 @@ impl BasicSnippet for RootFromAuthenticationStruct {
                 {&digest_to_xfe}
                 // _ l_index_bfe [p] [right_xfe]
 
-                push {beta_challenge_pointer_read}
+                push {beta_challenge_read_address}
                 read_mem {EXTENSION_DEGREE}
                 pop 1
                 xx_add
                 // _ l_index_bfe [p] [right_xfe - β]
 
-                push {gamma_challenge_pointer_read}
+                push {gamma_challenge_read_address}
                 read_mem {EXTENSION_DEGREE}
                 pop 1
                 // _ l_index_bfe [p] [right_xfe - β] [γ]
@@ -407,7 +399,7 @@ impl BasicSnippet for RootFromAuthenticationStruct {
                 // _ l_index_bfe [p] [fact_right] [left]
 
                 {&dup_top_digest}
-                push {left_digest_pointer_write}
+                push {left_digest_allocation.write_address()}
                 write_mem {Digest::LEN}
                 pop 1
                 // _ l_index_bfe [p] [fact_right] [left]
@@ -415,13 +407,13 @@ impl BasicSnippet for RootFromAuthenticationStruct {
                 {&digest_to_xfe}
                 // _ l_index_bfe [p] [fact_right] [left_xfe]
 
-                push {beta_challenge_pointer_read}
+                push {beta_challenge_read_address}
                 read_mem {EXTENSION_DEGREE}
                 pop 1
                 xx_add
                 // _ l_index_bfe [p] [fact_right] [left_xfe - β]
 
-                push {gamma_challenge_pointer_read}
+                push {gamma_challenge_read_address}
                 read_mem {EXTENSION_DEGREE}
                 pop 1
                 // _ l_index_bfe [p] [fact_right] [left_xfe - β] [γ]
@@ -443,10 +435,10 @@ impl BasicSnippet for RootFromAuthenticationStruct {
                 // _ l_index_bfe [p * (fact_right*fact_left)^{-1}]
 
                 /* Calculate t = hash(left, right) */
-                push {right_digest_pointer_read}
+                push {right_digest_allocation.read_address()}
                 read_mem {Digest::LEN}
                 pop 1
-                push {left_digest_pointer_read}
+                push {left_digest_allocation.read_address()}
                 read_mem {Digest::LEN}
                 pop 1
                 hash
@@ -463,13 +455,13 @@ impl BasicSnippet for RootFromAuthenticationStruct {
                 {&digest_to_xfe}
                 // _ l_index_bfe [p * (fact_right*fact_left)^{-1}] [t_xfe]
 
-                push {beta_challenge_pointer_read}
+                push {beta_challenge_read_address}
                 read_mem {EXTENSION_DEGREE}
                 pop 1
                 xx_add
                 // _ l_index_bfe [p * (fact_right*fact_left)^{-1}] [t_xfe - β]
 
-                push {gamma_challenge_pointer_read}
+                push {gamma_challenge_read_address}
                 read_mem {EXTENSION_DEGREE}
                 pop 1
                 // _ l_index_bfe [p * (fact_right*fact_left)^{-1}] [t_xfe - β] [γ]
@@ -583,7 +575,7 @@ impl BasicSnippet for RootFromAuthenticationStruct {
                 // _ tree_num_leafs *indexed_leafs [p] [t; 5]
 
                 /* Write t value (in case we're not entering the loop) */
-                push {t_digest_pointer_write}
+                push {t_digest_write_address}
                 write_mem {Digest::LEN}
                 pop 1
                 // _ tree_num_leafs *indexed_leafs [p]
@@ -608,19 +600,19 @@ impl BasicSnippet for RootFromAuthenticationStruct {
                 // _ [p]
 
                 /* Assert that p == t_xfe - beta + gamma */
-                push {t_digest_pointer_read}
+                push {t_digest_read_address}
                 read_mem {Digest::LEN}
                 pop 1
                 {&digest_to_xfe}
                 // _ [p] [t_xfe]
 
-                push {beta_challenge_pointer_read}
+                push {beta_challenge_read_address}
                 read_mem {EXTENSION_DEGREE}
                 pop 1
                 xx_add
                 // _ [p] [t_xfe - β]
 
-                push {gamma_challenge_pointer_read}
+                push {gamma_challenge_read_address}
                 read_mem {EXTENSION_DEGREE}
                 pop 1
                 xx_add
@@ -633,7 +625,7 @@ impl BasicSnippet for RootFromAuthenticationStruct {
                 // _
 
                 /* Return `t` (digest) */
-                push {t_digest_pointer_read}
+                push {t_digest_read_address}
                 read_mem {Digest::LEN}
                 pop 1
                 // _ [t]
@@ -664,11 +656,10 @@ mod tests {
     use triton_vm::prelude::twenty_first::prelude::Sponge;
     use triton_vm::prelude::twenty_first::util_types::mmr::mmr_accumulator::util::mmra_with_mps;
 
+    use crate::memory::encode_to_memory;
     use crate::mmr::authentication_struct::shared::AuthStructIntegrityProof;
-    use crate::rust_shadowing_helper_functions::input::read_digest_from_input;
     use crate::rust_shadowing_helper_functions::list::list_insert;
     use crate::rust_shadowing_helper_functions::list::load_list_with_copy_elements;
-    use crate::rust_shadowing_helper_functions::memory::write_to_memory;
     use crate::snippet_bencher::BenchmarkCase;
     use crate::traits::procedure::Procedure;
     use crate::traits::procedure::ProcedureInitialState;
@@ -676,6 +667,19 @@ mod tests {
     use crate::traits::rust_shadow::RustShadow;
 
     use super::*;
+
+    /// Read and consume a digest from an input source, either public input or
+    /// secret input. Returns the digest.
+    pub(crate) fn read_digest_from_input(secret_in: &mut VecDeque<BFieldElement>) -> Digest {
+        let mut values = [BFieldElement::zero(); Digest::LEN];
+        let mut i = 0;
+        while i < Digest::LEN {
+            values[Digest::LEN - 1 - i] = secret_in.pop_front().unwrap();
+            i += 1;
+        }
+
+        Digest::new(values)
+    }
 
     const SIZE_OF_INDEXED_LEAFS_ELEMENT: usize = Digest::LEN + 2;
 
@@ -721,12 +725,12 @@ mod tests {
                 const LEFT_DIGEST_POINTER_WRITE: BFieldElement =
                     BFieldElement::new(BFieldElement::P - 25);
 
-                write_to_memory(ALPHA_POINTER_WRITE, alpha, memory);
-                write_to_memory(BETA_POINTER_WRITE, beta, memory);
-                write_to_memory(GAMMA_POINTER_WRITE, gamma, memory);
-                write_to_memory(T_DIGEST_POINTER_WRITE, t, memory);
-                write_to_memory(RIGHT_DIGEST_POINTER_WRITE, right, memory);
-                write_to_memory(LEFT_DIGEST_POINTER_WRITE, left, memory);
+                encode_to_memory(memory, ALPHA_POINTER_WRITE, &alpha);
+                encode_to_memory(memory, BETA_POINTER_WRITE, &beta);
+                encode_to_memory(memory, GAMMA_POINTER_WRITE, &gamma);
+                encode_to_memory(memory, T_DIGEST_POINTER_WRITE, &t);
+                encode_to_memory(memory, RIGHT_DIGEST_POINTER_WRITE, &right);
+                encode_to_memory(memory, LEFT_DIGEST_POINTER_WRITE, &left);
             }
 
             fn accumulate_indexed_leafs(
