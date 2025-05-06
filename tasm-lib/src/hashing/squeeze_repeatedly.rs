@@ -55,7 +55,7 @@ impl BasicSnippet for SqueezeRepeatedly {
 
 #[cfg(test)]
 mod tests {
-    use twenty_first::prelude::Sponge;
+    use triton_vm::prelude::twenty_first::prelude::Sponge;
 
     use super::*;
     use crate::empty_stack;

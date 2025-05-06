@@ -1,6 +1,6 @@
 use triton_vm::prelude::*;
-use twenty_first::math::tip5::RATE;
-use twenty_first::math::x_field_element::EXTENSION_DEGREE;
+use triton_vm::prelude::twenty_first::math::tip5::RATE;
+use triton_vm::prelude::twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
 use crate::hashing::algebraic_hasher::sample_scalars_static_length_dyn_malloc::SampleScalarsStaticLengthDynMalloc;
 use crate::hashing::squeeze_repeatedly_static_number::SqueezeRepeatedlyStaticNumber;
@@ -72,7 +72,7 @@ impl BasicSnippet for SampleScalarsStaticLengthStaticPointer {
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use twenty_first::util_types::sponge::Sponge;
+    use triton_vm::prelude::twenty_first::util_types::sponge::Sponge;
 
     use super::*;
     use crate::prelude::Tip5;

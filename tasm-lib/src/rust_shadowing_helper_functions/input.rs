@@ -2,7 +2,7 @@ use std::collections::VecDeque;
 
 use num::Zero;
 use triton_vm::prelude::*;
-use twenty_first::math::other::random_elements;
+use triton_vm::prelude::twenty_first::math::other::random_elements;
 
 use crate::Digest;
 

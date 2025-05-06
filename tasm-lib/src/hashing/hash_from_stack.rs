@@ -1,5 +1,5 @@
 use triton_vm::prelude::*;
-use twenty_first::prelude::*;
+use triton_vm::prelude::twenty_first::prelude::*;
 
 use crate::prelude::*;
 

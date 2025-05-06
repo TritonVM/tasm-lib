@@ -103,8 +103,8 @@ mod tests {
     use rand::SeedableRng;
     use rand::rngs::StdRng;
     use shared::AuthenticatedMerkleAuthStruct;
-    use twenty_first::prelude::Sponge;
-    use twenty_first::util_types::mmr::mmr_accumulator::util::mmra_with_mps;
+    use triton_vm::prelude::twenty_first::prelude::Sponge;
+    use triton_vm::prelude::twenty_first::util_types::mmr::mmr_accumulator::util::mmra_with_mps;
 
     use crate::mmr::authentication_struct::shared::AuthStructIntegrityProof;
     use crate::rust_shadowing_helper_functions::list::list_insert;

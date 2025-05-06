@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
+use triton_vm::prelude::twenty_first::math::x_field_element::EXTENSION_DEGREE;
 use triton_vm::prelude::*;
-use twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
 use crate::hashing::merkle_root::MerkleRoot;
 use crate::prelude::*;
@@ -209,8 +209,8 @@ impl BasicSnippet for MerkleRootFromXfes {
 
 #[cfg(test)]
 mod tests {
+    use ::twenty_first::prelude::MerkleTree;
     use proptest::collection::vec;
-    use twenty_first::util_types::merkle_tree::MerkleTree;
 
     use super::*;
     use crate::rust_shadowing_helper_functions::dyn_malloc::dynamic_allocator;
@@ -244,10 +244,21 @@ mod tests {
             let leafs_pointer = stack.pop().unwrap();
             let leafs = *Vec::<XFieldElement>::decode_from_memory(memory, leafs_pointer).unwrap();
             let leafs = leafs.into_iter().map(Digest::from).collect_vec();
-            let mt = MerkleTree::par_new(&leafs).unwrap();
+            let leafs_compatible = leafs
+                .iter()
+                .map(|d| {
+                    d.values()
+                        .map(|v| v.value())
+                        .map(::twenty_first::prelude::BFieldElement::from)
+                })
+                .map(::twenty_first::prelude::Digest)
+                .collect_vec();
+            let mt = MerkleTree::par_new(&leafs_compatible).unwrap();
 
             if leafs.len() == 1 {
-                stack.extend(mt.root().reversed().values());
+                let root = mt.root().reversed().values();
+                let root_compatible = root.map(|v| BFieldElement::new(v.value()));
+                stack.extend(root_compatible);
                 return;
             }
 
@@ -255,22 +266,31 @@ mod tests {
             let first_layer_pointer = dynamic_allocator(memory);
             list_new(first_layer_pointer, memory);
             for node_count in 0..(leafs.len() >> 1) {
-                let node_index = node_count + (1 << (mt.height() - 1));
+                let node_index = (node_count as u64) + (1 << (mt.height() - 1));
                 let node = mt.node(node_index).unwrap();
-                list_push(first_layer_pointer, node.values().to_vec(), memory)
+                let node_values = node.values().to_vec();
+                let node_values_compatible = node_values
+                    .into_iter()
+                    .map(|b| BFieldElement::new(b.value()))
+                    .collect_vec();
+                list_push(first_layer_pointer, node_values_compatible, memory)
             }
 
             let rest_of_tree_pointer = dynamic_allocator(memory);
             for layer in 2..=mt.height() {
                 for node_count in 0..(leafs.len() >> layer) {
-                    let node_index = node_count + (1 << (mt.height() - layer));
+                    let node_index = (node_count as u64) + (1 << (mt.height() - layer));
                     let node = mt.node(node_index).unwrap();
-                    let pointer = rest_of_tree_pointer + bfe!(node_index * Digest::LEN);
-                    encode_to_memory(memory, pointer, &node);
+                    let pointer = rest_of_tree_pointer + bfe!(node_index * (Digest::LEN as u64));
+                    let node_compatible =
+                        Digest(node.values().map(|b| BFieldElement::new(b.value())));
+                    encode_to_memory(memory, pointer, &node_compatible);
                 }
             }
 
-            stack.extend(mt.root().reversed().values());
+            let root = mt.root().reversed().values();
+            let root_compatible = root.map(|b| BFieldElement::new(b.value()));
+            stack.extend(root_compatible);
         }
 
         fn pseudorandom_initial_state(

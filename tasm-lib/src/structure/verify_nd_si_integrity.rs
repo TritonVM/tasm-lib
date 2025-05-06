@@ -77,7 +77,7 @@ mod tests {
     use arbitrary::Arbitrary;
     use arbitrary::Unstructured;
     use num_traits::ConstZero;
-    use twenty_first::util_types::mmr::mmr_successor_proof::MmrSuccessorProof;
+    use triton_vm::prelude::twenty_first::util_types::mmr::mmr_successor_proof::MmrSuccessorProof;
 
     use super::*;
     use crate::memory::encode_to_memory;

@@ -7,8 +7,8 @@ use triton_vm::table::NUM_QUOTIENT_SEGMENTS;
 use triton_vm::table::master_table::MasterAuxTable;
 use triton_vm::table::master_table::MasterMainTable;
 use triton_vm::table::master_table::MasterTable;
-use twenty_first::math::x_field_element::EXTENSION_DEGREE;
-use twenty_first::prelude::MerkleTreeInclusionProof;
+use triton_vm::prelude::twenty_first::math::x_field_element::EXTENSION_DEGREE;
+use triton_vm::prelude::twenty_first::prelude::MerkleTreeInclusionProof;
 
 use super::master_table::air_constraint_evaluation::AirConstraintEvaluation;
 use super::master_table::air_constraint_evaluation::MemoryLayout;

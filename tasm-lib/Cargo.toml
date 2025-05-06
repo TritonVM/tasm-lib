@@ -39,6 +39,9 @@ strum = { version = "0.27", features = ["derive"] }
 tasm-object-derive.workspace = true
 triton-vm = { version = "0.48.0", default-features = false }
 
+# revision  "8b372a513c5b0c91578b62c902219818f5d76d2d" is tip of tip of PR branch asz/merkle-tree-index-types on 2025-05-06
+twenty-first = { git = "https://github.com/Neptune-Crypto/twenty-first", rev = "8b372a513c5b0c91578b62c902219818f5d76d2d" }
+
 [dev-dependencies.cargo-husky]
 version = "1"
 default-features = false

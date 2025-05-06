@@ -1,6 +1,6 @@
 use num::Zero;
 use triton_vm::prelude::*;
-use twenty_first::math::x_field_element::EXTENSION_DEGREE;
+use triton_vm::prelude::twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
 use crate::data_type::ArrayType;
 use crate::memory::load_words_from_memory_pop_pointer;

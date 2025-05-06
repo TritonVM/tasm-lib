@@ -10,7 +10,7 @@ use triton_vm::table::auxiliary_table::Evaluable;
 use triton_vm::table::master_table::MasterAuxTable;
 use triton_vm::table::master_table::MasterMainTable;
 use triton_vm::table::master_table::MasterTable;
-use twenty_first::math::x_field_element::EXTENSION_DEGREE;
+use triton_vm::prelude::twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
 use crate::data_type::ArrayType;
 use crate::memory::dyn_malloc::DYN_MALLOC_ADDRESS;
@@ -299,7 +299,7 @@ mod tests {
     use triton_vm::proof_stream::ProofStream;
     use triton_vm::table::master_table::MasterMainTable;
     use triton_vm::table::master_table::MasterTable;
-    use twenty_first::math::x_field_element::EXTENSION_DEGREE;
+    use triton_vm::prelude::twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
     use super::*;
     use crate::execute_test;

@@ -462,8 +462,8 @@ impl BasicSnippet for XfeNtt {
 
 #[cfg(test)]
 mod tests {
-    use twenty_first::math::ntt::ntt;
-    use twenty_first::math::traits::PrimitiveRootOfUnity;
+    use triton_vm::prelude::twenty_first::math::ntt::ntt;
+    use triton_vm::prelude::twenty_first::math::traits::PrimitiveRootOfUnity;
 
     use super::*;
     use crate::empty_stack;

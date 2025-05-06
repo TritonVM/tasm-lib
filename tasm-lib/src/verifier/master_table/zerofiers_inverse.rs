@@ -1,7 +1,7 @@
 use strum::EnumCount;
 use triton_vm::prelude::*;
 use triton_vm::table::ConstraintType;
-use twenty_first::math::x_field_element::EXTENSION_DEGREE;
+use triton_vm::prelude::twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
 use crate::arithmetic::xfe::to_the_power_of_power_of_2::ToThePowerOfPowerOf2;
 use crate::prelude::*;
@@ -175,8 +175,8 @@ impl BasicSnippet for ZerofiersInverse {
 #[cfg(test)]
 mod tests {
     use num::One;
-    use twenty_first::math::traits::ModPowU32;
-    use twenty_first::math::traits::PrimitiveRootOfUnity;
+    use triton_vm::prelude::twenty_first::math::traits::ModPowU32;
+    use triton_vm::prelude::twenty_first::math::traits::PrimitiveRootOfUnity;
 
     use super::*;
     use crate::rust_shadowing_helper_functions::array::insert_as_array;

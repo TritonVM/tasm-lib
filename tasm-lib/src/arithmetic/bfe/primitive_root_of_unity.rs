@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
+use triton_vm::prelude::twenty_first::math::traits::PrimitiveRootOfUnity as PRU;
 use triton_vm::prelude::*;
-use twenty_first::math::traits::PrimitiveRootOfUnity as PRU;
 
 use crate::prelude::*;
 use crate::traits::basic_snippet::Reviewer;

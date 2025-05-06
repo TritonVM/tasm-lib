@@ -46,8 +46,8 @@ impl BasicSnippet for SampleScalarOne {
 
 #[cfg(test)]
 mod tests {
-    use twenty_first::math::x_field_element::EXTENSION_DEGREE;
-    use twenty_first::util_types::sponge::Sponge;
+    use triton_vm::prelude::twenty_first::math::x_field_element::EXTENSION_DEGREE;
+    use triton_vm::prelude::twenty_first::util_types::sponge::Sponge;
 
     use super::*;
     use crate::test_prelude::*;

@@ -69,8 +69,8 @@ impl BasicSnippet for InstantiateFiatShamirWithClaim {
 
 #[cfg(test)]
 mod tests {
-    use twenty_first::math::other::random_elements;
-    use twenty_first::prelude::Sponge;
+    use triton_vm::prelude::twenty_first::math::other::random_elements;
+    use triton_vm::prelude::twenty_first::prelude::Sponge;
 
     use super::*;
     use crate::rust_shadowing_helper_functions::claim::load_claim_from_memory;

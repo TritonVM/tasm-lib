@@ -1,5 +1,5 @@
 use triton_vm::prelude::*;
-use twenty_first::math::x_field_element::EXTENSION_DEGREE;
+use triton_vm::prelude::twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
 use crate::data_type::DataType;
 use crate::library::Library;
@@ -661,8 +661,8 @@ mod tests {
     use rand::SeedableRng;
     use rand::rngs::StdRng;
 
-    use twenty_first::prelude::Sponge;
-    use twenty_first::util_types::mmr::mmr_accumulator::util::mmra_with_mps;
+    use triton_vm::prelude::twenty_first::prelude::Sponge;
+    use triton_vm::prelude::twenty_first::util_types::mmr::mmr_accumulator::util::mmra_with_mps;
 
     use crate::mmr::authentication_struct::shared::AuthStructIntegrityProof;
     use crate::rust_shadowing_helper_functions::input::read_digest_from_input;

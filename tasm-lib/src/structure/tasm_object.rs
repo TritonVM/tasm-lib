@@ -330,7 +330,7 @@ mod tests {
     /// Test derivation of field getters and manual derivations of the `field!` macro
     mod derive_tests {
         use num_traits::ConstZero;
-        use twenty_first::math::x_field_element::EXTENSION_DEGREE;
+        use triton_vm::prelude::twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
         use super::*;
         use crate::maybe_write_debuggable_vm_state_to_disk;

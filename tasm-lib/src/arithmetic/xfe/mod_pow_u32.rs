@@ -142,7 +142,7 @@ impl BasicSnippet for XfeModPowU32 {
 
 #[cfg(test)]
 pub mod tests {
-    use twenty_first::math::traits::ModPowU32;
+    use triton_vm::prelude::twenty_first::math::traits::ModPowU32;
 
     use super::*;
     use crate::empty_stack;

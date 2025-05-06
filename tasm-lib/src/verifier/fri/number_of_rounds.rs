@@ -65,7 +65,7 @@ impl BasicSnippet for NumberOfRounds {
 mod tests {
     use triton_vm::arithmetic_domain::ArithmeticDomain;
     use triton_vm::fri::Fri;
-    use twenty_first::math::traits::PrimitiveRootOfUnity;
+    use triton_vm::prelude::twenty_first::math::traits::PrimitiveRootOfUnity;
 
     use super::*;
     use crate::memory::dyn_malloc::DYN_MALLOC_ADDRESS;

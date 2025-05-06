@@ -5,8 +5,8 @@ use triton_vm::proof_item::ProofItemVariant;
 use triton_vm::table::AuxiliaryRow;
 use triton_vm::table::MainRow;
 use triton_vm::table::QuotientSegments;
-use twenty_first::math::x_field_element::EXTENSION_DEGREE;
-use twenty_first::prelude::Polynomial;
+use triton_vm::prelude::twenty_first::math::x_field_element::EXTENSION_DEGREE;
+use triton_vm::prelude::twenty_first::prelude::Polynomial;
 
 use crate::hashing::sponge_hasher::pad_and_absorb_all::PadAndAbsorbAll;
 use crate::prelude::*;
@@ -378,7 +378,7 @@ mod tests {
     use triton_vm::proof_stream::ProofStream;
     use triton_vm::table::master_table::MasterMainTable;
     use triton_vm::table::master_table::MasterTable;
-    use twenty_first::prelude::*;
+    use triton_vm::prelude::twenty_first::prelude::*;
 
     use super::*;
     use crate::empty_stack;
