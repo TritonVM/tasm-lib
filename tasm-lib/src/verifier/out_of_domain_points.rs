@@ -1,5 +1,5 @@
-use triton_vm::prelude::*;
 use triton_vm::prelude::twenty_first::math::x_field_element::EXTENSION_DEGREE;
+use triton_vm::prelude::*;
 
 use crate::data_type::ArrayType;
 use crate::prelude::*;
@@ -124,9 +124,9 @@ impl BasicSnippet for OutOfDomainPoints {
 
 #[cfg(test)]
 mod tests {
-    use triton_vm::table::NUM_QUOTIENT_SEGMENTS;
     use triton_vm::prelude::twenty_first::math::traits::ModPowU32;
     use triton_vm::prelude::twenty_first::math::traits::PrimitiveRootOfUnity;
+    use triton_vm::table::NUM_QUOTIENT_SEGMENTS;
 
     use super::*;
     use crate::rust_shadowing_helper_functions::array::insert_as_array;

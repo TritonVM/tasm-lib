@@ -3,8 +3,8 @@ use triton_vm::air::challenge_id::ChallengeId;
 use triton_vm::air::cross_table_argument::CrossTableArg;
 use triton_vm::air::cross_table_argument::EvalArg;
 use triton_vm::challenges::Challenges;
-use triton_vm::prelude::*;
 use triton_vm::prelude::twenty_first::math::x_field_element::EXTENSION_DEGREE;
+use triton_vm::prelude::*;
 
 use crate::hashing::algebraic_hasher::sample_scalars_static_length_static_pointer::SampleScalarsStaticLengthStaticPointer;
 use crate::prelude::*;

@@ -1,12 +1,12 @@
 use triton_vm::fri::AuthenticationStructure;
+use triton_vm::prelude::twenty_first::math::x_field_element::EXTENSION_DEGREE;
+use triton_vm::prelude::twenty_first::prelude::Polynomial;
 use triton_vm::prelude::*;
 use triton_vm::proof_item::FriResponse;
 use triton_vm::proof_item::ProofItemVariant;
 use triton_vm::table::AuxiliaryRow;
 use triton_vm::table::MainRow;
 use triton_vm::table::QuotientSegments;
-use triton_vm::prelude::twenty_first::math::x_field_element::EXTENSION_DEGREE;
-use triton_vm::prelude::twenty_first::prelude::Polynomial;
 
 use crate::hashing::sponge_hasher::pad_and_absorb_all::PadAndAbsorbAll;
 use crate::prelude::*;
@@ -374,11 +374,11 @@ mod tests {
     use num_traits::One;
     use num_traits::Zero;
     use strum::IntoEnumIterator;
+    use triton_vm::prelude::twenty_first::prelude::*;
     use triton_vm::proof_item::ProofItem;
     use triton_vm::proof_stream::ProofStream;
     use triton_vm::table::master_table::MasterMainTable;
     use triton_vm::table::master_table::MasterTable;
-    use triton_vm::prelude::twenty_first::prelude::*;
 
     use super::*;
     use crate::empty_stack;

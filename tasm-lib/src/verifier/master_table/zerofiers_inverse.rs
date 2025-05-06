@@ -1,7 +1,7 @@
 use strum::EnumCount;
+use triton_vm::prelude::twenty_first::math::x_field_element::EXTENSION_DEGREE;
 use triton_vm::prelude::*;
 use triton_vm::table::ConstraintType;
-use triton_vm::prelude::twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
 use crate::arithmetic::xfe::to_the_power_of_power_of_2::ToThePowerOfPowerOf2;
 use crate::prelude::*;

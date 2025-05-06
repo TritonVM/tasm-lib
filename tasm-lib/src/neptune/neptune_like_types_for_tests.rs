@@ -1,7 +1,7 @@
 use arbitrary::Arbitrary;
-use triton_vm::prelude::*;
 use triton_vm::prelude::twenty_first::prelude::MmrMembershipProof;
 use triton_vm::prelude::twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
+use triton_vm::prelude::*;
 
 use crate::prelude::TasmObject;
 

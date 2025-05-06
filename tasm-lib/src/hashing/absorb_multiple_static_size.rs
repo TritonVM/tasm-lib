@@ -1,5 +1,5 @@
-use triton_vm::prelude::*;
 use triton_vm::prelude::twenty_first::math::tip5::RATE;
+use triton_vm::prelude::*;
 
 use crate::memory::load_words_from_memory_pop_pointer;
 use crate::prelude::*;

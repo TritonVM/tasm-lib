@@ -2,8 +2,8 @@ use std::collections::HashMap;
 
 use num::Zero;
 use num_traits::ConstOne;
-use triton_vm::prelude::*;
 use triton_vm::prelude::twenty_first::math::other::random_elements;
+use triton_vm::prelude::*;
 
 use crate::U32_TO_USIZE_ERR;
 use crate::USIZE_TO_U64_ERR;

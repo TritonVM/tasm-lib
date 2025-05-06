@@ -1,8 +1,8 @@
 use triton_vm::prelude::LabelledInstruction;
+use triton_vm::prelude::twenty_first::math::x_field_element::EXTENSION_DEGREE;
 use triton_vm::prelude::*;
 use triton_vm::table::ConstraintType;
 use triton_vm::table::master_table::MasterAuxTable;
-use triton_vm::prelude::twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
 use crate::prelude::*;
 use crate::verifier::master_table::air_constraint_evaluation::AirConstraintEvaluation;

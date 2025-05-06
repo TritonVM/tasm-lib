@@ -1,12 +1,12 @@
 use itertools::Itertools;
 use triton_vm::challenges::Challenges;
+use triton_vm::prelude::twenty_first::prelude::*;
 use triton_vm::prelude::*;
 use triton_vm::proof_stream::ProofStream;
 use triton_vm::table::NUM_QUOTIENT_SEGMENTS;
 use triton_vm::table::master_table::MasterAuxTable;
 use triton_vm::table::master_table::MasterMainTable;
 use triton_vm::table::master_table::MasterTable;
-use triton_vm::prelude::twenty_first::prelude::*;
 
 use crate::prelude::Digest;
 

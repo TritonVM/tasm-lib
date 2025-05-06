@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
-use triton_vm::prelude::*;
 use triton_vm::prelude::twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
 use triton_vm::prelude::twenty_first::util_types::mmr::mmr_successor_proof::MmrSuccessorProof;
+use triton_vm::prelude::*;
 
 use crate::arithmetic::u64 as u64_lib;
 use crate::hashing::merkle_step_mem_u64_index::MerkleStepMemU64Index;

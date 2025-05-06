@@ -48,8 +48,8 @@ impl BasicSnippet for PadAndAbsorbAll {
 mod tests {
     use arbitrary::Arbitrary;
     use arbitrary::Unstructured;
-    use triton_vm::prelude::*;
     use triton_vm::prelude::twenty_first::prelude::Sponge;
+    use triton_vm::prelude::*;
 
     use super::*;
     use crate::empty_stack;
