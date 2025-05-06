@@ -4,7 +4,13 @@ description = """
 Code snippets for Triton VM assembly with tests and statistics.
 """
 
-keywords = ["Triton-VM", "zero-knowledge", "STARK", "virtual-machine", "recursive"]
+keywords = [
+    "Triton-VM",
+    "zero-knowledge",
+    "STARK",
+    "virtual-machine",
+    "recursive",
+]
 categories = ["cryptography"]
 
 version.workspace = true

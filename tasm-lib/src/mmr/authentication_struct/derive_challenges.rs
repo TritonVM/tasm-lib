@@ -4,7 +4,7 @@ use crate::data_type::DataType;
 use crate::hashing::absorb_multiple::AbsorbMultiple;
 use crate::mmr::authentication_struct::shared;
 use crate::prelude::BasicSnippet;
-use crate::Library;
+use crate::prelude::Library;
 
 /// Derive and return the challenges that the authentication structure verification
 /// program uses.
@@ -99,9 +99,9 @@ mod tests {
 
     use itertools::Itertools;
     use num::One;
-    use rand::rngs::StdRng;
     use rand::Rng;
     use rand::SeedableRng;
+    use rand::rngs::StdRng;
     use shared::AuthenticatedMerkleAuthStruct;
     use twenty_first::prelude::Sponge;
     use twenty_first::util_types::mmr::mmr_accumulator::util::mmra_with_mps;
@@ -114,7 +114,6 @@ mod tests {
     use crate::traits::procedure::ProcedureInitialState;
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
-    use crate::VmHasher;
 
     use super::*;
 
@@ -132,7 +131,7 @@ mod tests {
             memory: &mut HashMap<BFieldElement, BFieldElement>,
             _nondeterminism: &NonDeterminism,
             _public_input: &[BFieldElement],
-            sponge: &mut Option<VmHasher>,
+            sponge: &mut Option<Tip5>,
         ) -> Vec<BFieldElement> {
             let indexed_leafs_pointer = stack.pop().unwrap();
             let auth_struct_pointer = stack.pop().unwrap();
@@ -176,17 +175,17 @@ mod tests {
             let (tree_height, num_revealed_leafs) = match bench_case {
                 Some(BenchmarkCase::CommonCase) => (32, 10),
                 Some(BenchmarkCase::WorstCase) => (62, 10),
-                None => (rng.gen_range(0..62), 10),
+                None => (rng.random_range(0..62), 10),
             };
 
             let leaf_count = 1 << tree_height;
             let revealed_leaf_indices = (0..num_revealed_leafs)
-                .map(|_| rng.gen_range(0..leaf_count))
+                .map(|_| rng.random_range(0..leaf_count))
                 .unique()
                 .collect_vec();
             let indexed_leafs = revealed_leaf_indices
                 .into_iter()
-                .map(|leaf_idx: u64| (leaf_idx, rng.gen()))
+                .map(|leaf_idx: u64| (leaf_idx, rng.random()))
                 .collect_vec();
             let (mmra, mps) = mmra_with_mps(leaf_count, indexed_leafs.clone());
             let indexed_mmr_mps = indexed_leafs
@@ -207,8 +206,8 @@ mod tests {
             } = &authenticity_witnesses[&0];
 
             let mut memory = HashMap::new();
-            let authentication_structure_ptr = rng.gen();
-            let indexed_leafs_ptr = rng.gen();
+            let authentication_structure_ptr = rng.random();
+            let indexed_leafs_ptr = rng.random();
 
             list_insert(
                 authentication_structure_ptr,

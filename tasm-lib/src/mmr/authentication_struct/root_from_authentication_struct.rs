@@ -1,6 +1,5 @@
 use triton_vm::prelude::*;
 use twenty_first::math::x_field_element::EXTENSION_DEGREE;
-use twenty_first::prelude::Inverse;
 
 use crate::data_type::DataType;
 use crate::library::Library;
@@ -39,21 +38,24 @@ impl BasicSnippet for RootFromAuthenticationStruct {
     }
 
     fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
-        let alpha_challenge_pointer_write = library.kmalloc(EXTENSION_DEGREE as u32);
-        let alpha_challenge_pointer_read =
-            alpha_challenge_pointer_write + bfe!(EXTENSION_DEGREE as u64 - 1);
-        let beta_challenge_pointer_write = library.kmalloc(EXTENSION_DEGREE as u32);
-        let beta_challenge_pointer_read =
-            beta_challenge_pointer_write + bfe!(EXTENSION_DEGREE as u64 - 1);
-        let gamma_challenge_pointer_write = library.kmalloc(EXTENSION_DEGREE as u32);
-        let gamma_challenge_pointer_read =
-            gamma_challenge_pointer_write + bfe!(EXTENSION_DEGREE as u64 - 1);
-        let t_digest_pointer_write = library.kmalloc(Digest::LEN as u32);
-        let t_digest_pointer_read = t_digest_pointer_write + bfe!(Digest::LEN as u64 - 1);
-        let right_digest_pointer_write = library.kmalloc(Digest::LEN as u32);
-        let right_digest_pointer_read = right_digest_pointer_write + bfe!(Digest::LEN as u64 - 1);
-        let left_digest_pointer_write = library.kmalloc(Digest::LEN as u32);
-        let left_digest_pointer_read = left_digest_pointer_write + bfe!(Digest::LEN as u64 - 1);
+        let alpha_challenge_pointer = library.kmalloc(EXTENSION_DEGREE as u32);
+        let alpha_challenge_pointer_write = alpha_challenge_pointer.write_address();
+        let alpha_challenge_pointer_read = alpha_challenge_pointer.read_address();
+        let beta_challenge_pointer = library.kmalloc(EXTENSION_DEGREE as u32);
+        let beta_challenge_pointer_write = beta_challenge_pointer.write_address();
+        let beta_challenge_pointer_read = beta_challenge_pointer.read_address();
+        let gamma_challenge_pointer = library.kmalloc(EXTENSION_DEGREE as u32);
+        let gamma_challenge_pointer_write = gamma_challenge_pointer.write_address();
+        let gamma_challenge_pointer_read = gamma_challenge_pointer.read_address();
+        let t_digest_pointer = library.kmalloc(Digest::LEN as u32);
+        let t_digest_pointer_write = t_digest_pointer.write_address();
+        let t_digest_pointer_read = t_digest_pointer.read_address();
+        let right_digest_pointer = library.kmalloc(Digest::LEN as u32);
+        let right_digest_pointer_write = right_digest_pointer.write_address();
+        let right_digest_pointer_read = right_digest_pointer.read_address();
+        let left_digest_pointer = library.kmalloc(Digest::LEN as u32);
+        let left_digest_pointer_write = left_digest_pointer.write_address();
+        let left_digest_pointer_read = left_digest_pointer.read_address();
 
         let indexed_leaf_element_size = Self::indexed_leaf_element_type().stack_size();
         let derive_challenges = library.import(Box::new(DeriveChallenges));
@@ -655,10 +657,10 @@ mod tests {
     use itertools::Itertools;
     use num::One;
     use num::Zero;
-    use rand::rngs::StdRng;
     use rand::Rng;
     use rand::SeedableRng;
-    use twenty_first::prelude::AlgebraicHasher;
+    use rand::rngs::StdRng;
+
     use twenty_first::prelude::Sponge;
     use twenty_first::util_types::mmr::mmr_accumulator::util::mmra_with_mps;
 
@@ -672,7 +674,6 @@ mod tests {
     use crate::traits::procedure::ProcedureInitialState;
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
-    use crate::VmHasher;
 
     use super::*;
 
@@ -690,7 +691,7 @@ mod tests {
             memory: &mut std::collections::HashMap<BFieldElement, BFieldElement>,
             nondeterminism: &NonDeterminism,
             _public_input: &[BFieldElement],
-            sponge: &mut Option<VmHasher>,
+            sponge: &mut Option<Tip5>,
         ) -> Vec<BFieldElement> {
             fn digest_to_xfe(digest: Digest, challenge: XFieldElement) -> XFieldElement {
                 let [l0, l1, l2, l3, l4] = digest.0;
@@ -882,14 +883,14 @@ mod tests {
             let num_accessible_chunk_indices = 1 << 8;
             let (tree_height, revealed_leaf_indices) = match bench_case {
                 None => {
-                    let tree_height = rng.gen_range(0..62);
+                    let tree_height = rng.random_range(0..62);
                     let num_leafs_in_merkle_tree = 1 << tree_height;
                     let num_revealed_leafs =
-                        rng.gen_range(1..=min(num_leafs_in_merkle_tree, num_chunks));
+                        rng.random_range(1..=min(num_leafs_in_merkle_tree, num_chunks));
 
                     let revealed_leaf_indices = (0..num_revealed_leafs)
                         .map(|_| {
-                            rng.gen_range(
+                            rng.random_range(
                                 0..min(num_accessible_chunk_indices, num_leafs_in_merkle_tree),
                             )
                         })
@@ -907,7 +908,9 @@ mod tests {
                     let tree_height = 32;
                     let midpoint = 1 << (tree_height - 1);
                     let revealed_leaf_indices = (0..num_chunks)
-                        .map(|_| rng.gen_range(midpoint..num_accessible_chunk_indices + midpoint))
+                        .map(|_| {
+                            rng.random_range(midpoint..num_accessible_chunk_indices + midpoint)
+                        })
                         .unique()
                         .collect_vec();
 
@@ -917,7 +920,9 @@ mod tests {
                     let tree_height = 62;
                     let midpoint = 1 << (tree_height - 1);
                     let revealed_leaf_indices = (0..num_chunks)
-                        .map(|_| rng.gen_range(midpoint..num_accessible_chunk_indices + midpoint))
+                        .map(|_| {
+                            rng.random_range(midpoint..num_accessible_chunk_indices + midpoint)
+                        })
                         .unique()
                         .collect_vec();
 
@@ -933,7 +938,7 @@ mod tests {
             assert!(!num_revealed_leafs.is_zero());
 
             let revealed_leafs: Vec<Digest> =
-                (0..num_revealed_leafs).map(|_| rng.gen()).collect_vec();
+                (0..num_revealed_leafs).map(|_| rng.random()).collect_vec();
             let indexed_leafs = revealed_leaf_indices
                 .into_iter()
                 .zip_eq(revealed_leafs)
@@ -952,8 +957,8 @@ mod tests {
             let mmr_authentication_struct = &mmr_authentication_struct[&0];
 
             let mut memory = HashMap::new();
-            let authentication_structure_ptr = rng.gen();
-            let indexed_leafs_ptr = rng.gen();
+            let authentication_structure_ptr = rng.random();
+            let indexed_leafs_ptr = rng.random();
 
             list_insert(
                 authentication_structure_ptr,
