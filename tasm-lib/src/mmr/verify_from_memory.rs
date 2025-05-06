@@ -133,8 +133,8 @@ impl BasicSnippet for MmrVerifyFromMemory {
 mod tests {
     use itertools::Itertools;
     use rand::prelude::*;
-    use twenty_first::math::other::random_elements;
-    use twenty_first::util_types::mmr::mmr_accumulator::util::mmra_with_mps;
+    use triton_vm::prelude::twenty_first::math::other::random_elements;
+    use triton_vm::prelude::twenty_first::util_types::mmr::mmr_accumulator::util::mmra_with_mps;
 
     use super::*;
     use crate::empty_stack;

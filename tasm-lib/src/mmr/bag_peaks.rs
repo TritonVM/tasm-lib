@@ -154,8 +154,8 @@ impl BasicSnippet for BagPeaks {
 mod tests {
     use std::collections::HashMap;
 
+    use triton_vm::prelude::twenty_first::math::other::random_elements;
     use triton_vm::twenty_first::prelude::Mmr;
-    use twenty_first::math::other::random_elements;
 
     use super::*;
     use crate::test_prelude::*;

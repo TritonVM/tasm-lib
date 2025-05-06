@@ -1,5 +1,5 @@
+use triton_vm::prelude::twenty_first::math::x_field_element::EXTENSION_DEGREE;
 use triton_vm::prelude::*;
-use twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
 use crate::arithmetic::bfe::primitive_root_of_unity::PrimitiveRootOfUnity;
 use crate::prelude::*;
@@ -222,9 +222,9 @@ impl BasicSnippet for BarycentricEvaluation {
 
 #[cfg(test)]
 mod tests {
-    use twenty_first::math::other::random_elements;
-    use twenty_first::math::polynomial::barycentric_evaluate;
-    use twenty_first::math::traits::PrimitiveRootOfUnity;
+    use triton_vm::prelude::twenty_first::math::other::random_elements;
+    use triton_vm::prelude::twenty_first::math::polynomial::barycentric_evaluate;
+    use triton_vm::prelude::twenty_first::math::traits::PrimitiveRootOfUnity;
 
     use super::*;
     use crate::library::STATIC_MEMORY_FIRST_ADDRESS;

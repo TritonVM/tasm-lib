@@ -227,7 +227,7 @@ impl BasicSnippet for MultisetEqualityDigests {
 #[cfg(test)]
 mod tests {
     use num::One;
-    use twenty_first::math::other::random_elements;
+    use triton_vm::prelude::twenty_first::math::other::random_elements;
 
     use super::*;
     use crate::empty_stack;

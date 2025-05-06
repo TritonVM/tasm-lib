@@ -115,7 +115,7 @@ impl BasicSnippet for CollinearYXfe {
 
 #[cfg(test)]
 mod tests {
-    use twenty_first::math::polynomial::Polynomial;
+    use triton_vm::prelude::twenty_first::math::polynomial::Polynomial;
 
     use super::*;
     use crate::test_prelude::*;

@@ -99,7 +99,7 @@ impl BasicSnippet for HornerEvaluationDynamicLength {
 #[cfg(test)]
 mod tests {
     use itertools::Itertools;
-    use twenty_first::math::polynomial::Polynomial;
+    use triton_vm::prelude::twenty_first::math::polynomial::Polynomial;
 
     use super::*;
     use crate::test_prelude::*;

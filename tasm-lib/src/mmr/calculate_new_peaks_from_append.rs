@@ -114,7 +114,7 @@ impl BasicSnippet for CalculateNewPeaksFromAppend {
 
 #[cfg(test)]
 mod tests {
-    use twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
+    use triton_vm::prelude::twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
 
     use super::*;
     use crate::memory::FIRST_NON_DETERMINISTICALLY_INITIALIZED_MEMORY_ADDRESS;

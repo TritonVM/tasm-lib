@@ -90,7 +90,7 @@ impl BasicSnippet for ToThePowerOfPowerOf2 {
 
 #[cfg(test)]
 mod tests {
-    use twenty_first::math::traits::ModPowU32;
+    use triton_vm::prelude::twenty_first::math::traits::ModPowU32;
 
     use super::*;
     use crate::arithmetic::xfe::mod_pow_u32::XfeModPowU32;

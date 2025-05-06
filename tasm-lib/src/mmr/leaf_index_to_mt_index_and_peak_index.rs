@@ -141,7 +141,7 @@ impl BasicSnippet for MmrLeafIndexToMtIndexAndPeakIndex {
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use twenty_first::util_types::mmr::shared_basic::leaf_index_to_mt_index_and_peak_index;
+    use triton_vm::prelude::twenty_first::util_types::mmr::shared_basic::leaf_index_to_mt_index_and_peak_index;
 
     use super::*;
     use crate::test_prelude::*;

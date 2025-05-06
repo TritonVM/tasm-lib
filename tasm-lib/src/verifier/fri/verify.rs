@@ -1,19 +1,19 @@
+use ::twenty_first::util_types::merkle_tree::MerkleTree;
+use ::twenty_first::util_types::merkle_tree::MerkleTreeInclusionProof;
 use anyhow::bail;
 use itertools::Itertools;
 use num::Zero;
 use triton_vm::arithmetic_domain::ArithmeticDomain;
 use triton_vm::error::FriValidationError;
 use triton_vm::fri::Fri;
+use triton_vm::prelude::twenty_first::math::polynomial::Polynomial;
+use triton_vm::prelude::twenty_first::math::polynomial::barycentric_evaluate;
+use triton_vm::prelude::twenty_first::math::traits::ModPowU32;
+use triton_vm::prelude::twenty_first::math::x_field_element::EXTENSION_DEGREE;
 use triton_vm::prelude::*;
 use triton_vm::proof_item::FriResponse;
 use triton_vm::proof_item::ProofItemVariant;
 use triton_vm::proof_stream::ProofStream;
-use twenty_first::math::polynomial::Polynomial;
-use twenty_first::math::polynomial::barycentric_evaluate;
-use twenty_first::math::traits::ModPowU32;
-use twenty_first::math::x_field_element::EXTENSION_DEGREE;
-use twenty_first::util_types::merkle_tree::MerkleTree;
-use twenty_first::util_types::merkle_tree::MerkleTreeInclusionProof;
 
 use crate::data_type::StructType;
 use crate::field;
@@ -928,7 +928,7 @@ impl FriVerify {
         let num_collinearity_check = self.num_collinearity_checks as usize;
         let mut a_indices = proof_stream.sample_indices(domain_length, num_collinearity_check);
 
-        let tree_height = self.domain_length.ilog2() as usize;
+        let tree_height = self.domain_length.ilog2();
         let fri_response = proof_stream
             .dequeue()
             .unwrap()
@@ -942,11 +942,25 @@ impl FriVerify {
 
         // Check if last codeword matches the given root
         let codeword_digests = Self::map_convert_xfe_to_digest(&last_codeword);
-        let mt: MerkleTree = MerkleTree::par_new(&codeword_digests).unwrap();
+        let codeword_digests_compatible = codeword_digests
+            .into_iter()
+            .map(|d| {
+                ::twenty_first::prelude::Digest(
+                    d.values()
+                        .map(|b| ::twenty_first::prelude::BFieldElement::new(b.value())),
+                )
+            })
+            .collect_vec();
+        let mt: MerkleTree = MerkleTree::par_new(&codeword_digests_compatible).unwrap();
         let last_codeword_merkle_root = mt.root();
 
         let last_root = roots.last().unwrap();
-        if *last_root != last_codeword_merkle_root {
+        let last_root_compatible = ::twenty_first::prelude::Digest(
+            last_root
+                .values()
+                .map(|b| ::twenty_first::prelude::BFieldElement::new(b.value())),
+        );
+        if last_root_compatible != last_codeword_merkle_root {
             bail!(FriValidationError::BadMerkleRootForLastCodeword);
         }
 
@@ -965,18 +979,53 @@ impl FriVerify {
         }
 
         // reduplicate authentication structures if necessary
+        let indexed_a_leafs_compatible = indexed_a_leaves
+            .iter()
+            .map(|(index, leaf)| {
+                (
+                    *index as u64,
+                    ::twenty_first::prelude::Digest(
+                        leaf.values()
+                            .map(|b| ::twenty_first::prelude::BFieldElement::new(b.value())),
+                    ),
+                )
+            })
+            .collect_vec();
+        let fri_response_auth_structure_compatible = fri_response
+            .auth_structure
+            .iter()
+            .map(|d| {
+                ::twenty_first::prelude::Digest(
+                    d.values()
+                        .map(|b| ::twenty_first::prelude::BFieldElement::new(b.value())),
+                )
+            })
+            .collect_vec();
         if num_nondeterministic_digests_read >= nondeterministic_digests.len() {
             let inclusion_proof = MerkleTreeInclusionProof {
                 tree_height,
-                indexed_leafs: indexed_a_leaves.clone(),
-                authentication_structure: fri_response.auth_structure,
+                indexed_leafs: indexed_a_leafs_compatible,
+                authentication_structure: fri_response_auth_structure_compatible,
             };
 
             // sanity check: the authentication structure was valid, right?
-            assert!(inclusion_proof.clone().verify(roots[0]));
+            let root_zero_compatible = ::twenty_first::prelude::Digest(
+                roots[0]
+                    .values()
+                    .map(|b| ::twenty_first::prelude::BFieldElement::new(b.value())),
+            );
+            assert!(inclusion_proof.clone().verify(root_zero_compatible));
             let reduplicated_authentication_paths = inclusion_proof.into_authentication_paths()?;
+            let reduplicated_authentication_paths_compatible = reduplicated_authentication_paths
+                .into_iter()
+                .map(|path| {
+                    path.into_iter()
+                        .map(|n| Digest(n.values().map(|b| BFieldElement::new(b.value()))))
+                        .collect_vec()
+                })
+                .collect_vec();
             nondeterministic_digests.extend(
-                reduplicated_authentication_paths
+                reduplicated_authentication_paths_compatible
                     .into_iter()
                     .rev()
                     .flatten(),
@@ -984,16 +1033,37 @@ impl FriVerify {
         }
 
         // verify authentication paths for A leafs
-        for indexed_leaf in indexed_a_leaves.iter().rev() {
+        for (index, leaf) in indexed_a_leaves.iter().rev() {
+            let indexed_leaf = (
+                *index as u64,
+                ::twenty_first::prelude::Digest(
+                    leaf.values()
+                        .map(|b| ::twenty_first::prelude::BFieldElement::new(b.value())),
+                ),
+            );
             let authentication_path = &nondeterministic_digests[num_nondeterministic_digests_read
-                ..(num_nondeterministic_digests_read + tree_height)];
-            num_nondeterministic_digests_read += tree_height;
+                ..(num_nondeterministic_digests_read + (tree_height as usize))];
+            let authentication_path_compatible = authentication_path
+                .iter()
+                .map(|d| {
+                    ::twenty_first::prelude::Digest(
+                        d.values()
+                            .map(|b| ::twenty_first::prelude::BFieldElement::new(b.value())),
+                    )
+                })
+                .collect_vec();
+            num_nondeterministic_digests_read += tree_height as usize;
             let inclusion_proof = MerkleTreeInclusionProof {
                 tree_height,
-                indexed_leafs: vec![*indexed_leaf],
-                authentication_structure: authentication_path.to_vec(),
+                indexed_leafs: vec![indexed_leaf],
+                authentication_structure: authentication_path_compatible,
             };
-            assert!(inclusion_proof.verify(roots[0]));
+            let root_zero_compatible = ::twenty_first::prelude::Digest(
+                roots[0]
+                    .values()
+                    .map(|b| ::twenty_first::prelude::BFieldElement::new(b.value())),
+            );
+            assert!(inclusion_proof.verify(root_zero_compatible));
         }
 
         // save indices and revealed leafs of first round's codeword for returning
@@ -1028,18 +1098,54 @@ impl FriVerify {
 
             // reduplicate authentication structures if necessary
             if num_nondeterministic_digests_read >= nondeterministic_digests.len() {
+                let indexed_b_leafs_compatible =
+                    indexed_b_leaves
+                        .iter()
+                        .map(|(index, leaf)| {
+                            (
+                                *index as u64,
+                                ::twenty_first::prelude::Digest(leaf.values().map(|b| {
+                                    ::twenty_first::prelude::BFieldElement::new(b.value())
+                                })),
+                            )
+                        })
+                        .collect_vec();
+                let fri_response_auth_structure_compatible = fri_response
+                    .auth_structure
+                    .iter()
+                    .map(|d| {
+                        ::twenty_first::prelude::Digest(
+                            d.values()
+                                .map(|b| ::twenty_first::prelude::BFieldElement::new(b.value())),
+                        )
+                    })
+                    .collect_vec();
                 let inclusion_proof = MerkleTreeInclusionProof {
                     tree_height: current_tree_height,
-                    indexed_leafs: indexed_b_leaves.clone(),
-                    authentication_structure: fri_response.auth_structure,
+                    indexed_leafs: indexed_b_leafs_compatible,
+                    authentication_structure: fri_response_auth_structure_compatible,
                 };
 
                 // sanity check: the auth structure was valid, right?
-                assert!(inclusion_proof.clone().verify(roots[r]));
+                let root_r_compatible = ::twenty_first::prelude::Digest(
+                    roots[r]
+                        .values()
+                        .map(|b| ::twenty_first::prelude::BFieldElement::new(b.value())),
+                );
+                assert!(inclusion_proof.clone().verify(root_r_compatible));
                 let reduplicated_authentication_paths =
                     inclusion_proof.into_authentication_paths()?;
-                nondeterministic_digests.extend(
+                let reduplicated_authentication_paths_compatible =
                     reduplicated_authentication_paths
+                        .into_iter()
+                        .map(|path| {
+                            path.into_iter()
+                                .map(|d| Digest(d.values().map(|b| BFieldElement::new(b.value()))))
+                                .collect_vec()
+                        })
+                        .collect_vec();
+                nondeterministic_digests.extend(
+                    reduplicated_authentication_paths_compatible
                         .into_iter()
                         .rev()
                         .flatten(),
@@ -1047,17 +1153,38 @@ impl FriVerify {
             }
 
             // verify authentication paths for B leafs
-            for indexed_leaf in indexed_b_leaves.iter().rev() {
+            for (index, leaf) in indexed_b_leaves.iter().rev() {
+                let indexed_leaf_compatible = (
+                    *index as u64,
+                    ::twenty_first::prelude::Digest(
+                        leaf.values()
+                            .map(|b| ::twenty_first::prelude::BFieldElement::new(b.value())),
+                    ),
+                );
                 let authentication_path = &nondeterministic_digests
                     [num_nondeterministic_digests_read
-                        ..(num_nondeterministic_digests_read + current_tree_height)];
-                num_nondeterministic_digests_read += current_tree_height;
+                        ..(num_nondeterministic_digests_read + (current_tree_height as usize))];
+                let authentication_path_compatible = authentication_path
+                    .iter()
+                    .map(|d| {
+                        ::twenty_first::prelude::Digest(
+                            d.values()
+                                .map(|b| ::twenty_first::prelude::BFieldElement::new(b.value())),
+                        )
+                    })
+                    .collect_vec();
+                num_nondeterministic_digests_read += current_tree_height as usize;
                 let inclusion_proof = MerkleTreeInclusionProof {
                     tree_height: current_tree_height,
-                    indexed_leafs: vec![*indexed_leaf],
-                    authentication_structure: authentication_path.to_vec(),
+                    indexed_leafs: vec![indexed_leaf_compatible],
+                    authentication_structure: authentication_path_compatible,
                 };
-                if !inclusion_proof.verify(roots[r]) {
+                let root_r_compatible = ::twenty_first::prelude::Digest(
+                    roots[r]
+                        .values()
+                        .map(|b| ::twenty_first::prelude::BFieldElement::new(b.value())),
+                );
+                if !inclusion_proof.verify(root_r_compatible) {
                     bail!(FriValidationError::BadMerkleAuthenticationPath);
                 }
             }
@@ -1150,9 +1277,9 @@ mod tests {
     use num_traits::Zero;
     use proptest::collection::vec;
     use rayon::prelude::*;
+    use triton_vm::prelude::twenty_first::math::ntt::ntt;
+    use triton_vm::prelude::twenty_first::util_types::sponge::Sponge;
     use triton_vm::proof_item::ProofItem;
-    use twenty_first::math::ntt::ntt;
-    use twenty_first::util_types::sponge::Sponge;
 
     use super::*;
     use crate::empty_stack;

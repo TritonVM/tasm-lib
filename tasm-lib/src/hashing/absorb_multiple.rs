@@ -146,7 +146,7 @@ impl BasicSnippet for AbsorbMultiple {
 mod tests {
     use std::collections::VecDeque;
 
-    use twenty_first::prelude::Sponge;
+    use triton_vm::prelude::twenty_first::prelude::Sponge;
 
     use super::*;
     use crate::empty_stack;

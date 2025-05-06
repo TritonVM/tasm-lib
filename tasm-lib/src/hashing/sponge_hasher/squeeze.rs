@@ -1,5 +1,5 @@
+use triton_vm::prelude::twenty_first::math::tip5::RATE;
 use triton_vm::prelude::*;
-use twenty_first::math::tip5::RATE;
 
 use crate::data_type::ArrayType;
 use crate::prelude::*;
@@ -66,7 +66,7 @@ impl BasicSnippet for Squeeze {
 mod tests {
     use arbitrary::Arbitrary;
     use arbitrary::Unstructured;
-    use twenty_first::prelude::Sponge;
+    use triton_vm::prelude::twenty_first::prelude::Sponge;
 
     use super::*;
     use crate::empty_stack;

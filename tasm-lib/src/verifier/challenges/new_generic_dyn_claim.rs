@@ -3,8 +3,8 @@ use triton_vm::air::challenge_id::ChallengeId;
 use triton_vm::air::cross_table_argument::CrossTableArg;
 use triton_vm::air::cross_table_argument::EvalArg;
 use triton_vm::challenges::Challenges;
+use triton_vm::prelude::twenty_first::math::x_field_element::EXTENSION_DEGREE;
 use triton_vm::prelude::*;
-use twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
 use crate::hashing::algebraic_hasher::sample_scalars_static_length_static_pointer::SampleScalarsStaticLengthStaticPointer;
 use crate::prelude::*;
@@ -215,7 +215,7 @@ impl BasicSnippet for NewGenericDynClaim {
 #[cfg(test)]
 mod tests {
     use triton_vm::challenges::Challenges;
-    use twenty_first::math::other::random_elements;
+    use triton_vm::prelude::twenty_first::math::other::random_elements;
 
     use super::*;
     use crate::rust_shadowing_helper_functions::array::insert_as_array;

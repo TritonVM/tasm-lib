@@ -205,8 +205,8 @@ impl BasicSnippet for MerkleRoot {
 
 #[cfg(test)]
 mod tests {
+    use ::twenty_first::util_types::merkle_tree::MerkleTree;
     use proptest::collection::vec;
-    use twenty_first::util_types::merkle_tree::MerkleTree;
 
     use super::*;
     use crate::rust_shadowing_helper_functions::dyn_malloc::dynamic_allocator;
@@ -234,19 +234,31 @@ mod tests {
             memory: &mut HashMap<BFieldElement, BFieldElement>,
         ) {
             let leafs_pointer = stack.pop().unwrap();
-            let leafs = *Vec::decode_from_memory(memory, leafs_pointer).unwrap();
-            let mt = MerkleTree::par_new(&leafs).unwrap();
+            let leafs = *Vec::<Digest>::decode_from_memory(memory, leafs_pointer).unwrap();
+            let leafs_compatible = leafs
+                .iter()
+                .map(|d| {
+                    d.values()
+                        .map(|b| ::twenty_first::prelude::BFieldElement::new(b.value()))
+                })
+                .map(::twenty_first::prelude::Digest)
+                .collect_vec();
+            let mt = MerkleTree::par_new(&leafs_compatible).unwrap();
 
             // mimic snippet: write internal nodes to memory, skipping (dummy) node 0
             let tree_pointer = dynamic_allocator(memory);
             let num_internal_nodes = leafs.len();
 
-            for (node_index, node) in (0..num_internal_nodes).zip(mt.nodes()).skip(1) {
-                let node_address = tree_pointer + bfe!(node_index * Digest::LEN);
-                encode_to_memory(memory, node_address, node);
+            for node_index in 1_u64..(num_internal_nodes as u64) {
+                let node = mt.node(node_index).unwrap();
+                let node_address = tree_pointer + bfe!(node_index * (Digest::LEN as u64));
+                let node_compatible = Digest(node.values().map(|b| BFieldElement::new(b.value())));
+                encode_to_memory(memory, node_address, &node_compatible);
             }
 
-            stack.extend(mt.root().reversed().values());
+            let root = mt.root().reversed().values();
+            let root_compatible = root.map(|b| BFieldElement::new(b.value()));
+            stack.extend(root_compatible);
         }
 
         fn pseudorandom_initial_state(

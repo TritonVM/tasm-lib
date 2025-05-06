@@ -1,10 +1,10 @@
 use itertools::Itertools;
 use num_traits::Zero;
+use triton_vm::prelude::twenty_first::error::BFieldCodecError;
+use triton_vm::prelude::twenty_first::error::PolynomialBFieldCodecError;
+use triton_vm::prelude::twenty_first::math::x_field_element::EXTENSION_DEGREE;
+use triton_vm::prelude::twenty_first::prelude::*;
 use triton_vm::prelude::*;
-use twenty_first::error::BFieldCodecError;
-use twenty_first::error::PolynomialBFieldCodecError;
-use twenty_first::math::x_field_element::EXTENSION_DEGREE;
-use twenty_first::prelude::*;
 
 use super::tasm_object::Result;
 use crate::prelude::*;

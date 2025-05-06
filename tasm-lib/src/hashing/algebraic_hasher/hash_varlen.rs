@@ -73,7 +73,7 @@ impl BasicSnippet for HashVarlen {
 mod tests {
     use std::collections::VecDeque;
 
-    use twenty_first::prelude::*;
+    use triton_vm::prelude::twenty_first::prelude::*;
 
     use super::*;
     use crate::empty_stack;

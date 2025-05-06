@@ -88,12 +88,12 @@ impl BasicSnippet for MmrVerifyFromSecretInLeafIndexOnStack {
 
 #[cfg(test)]
 mod tests {
-    use twenty_first::math::other::random_elements;
-    use twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
-    use twenty_first::util_types::mmr::mmr_accumulator::util::mmra_with_mps;
-    use twenty_first::util_types::mmr::mmr_membership_proof::MmrMembershipProof;
-    use twenty_first::util_types::mmr::mmr_trait::Mmr;
-    use twenty_first::util_types::mmr::shared_basic::leaf_index_to_mt_index_and_peak_index;
+    use triton_vm::prelude::twenty_first::math::other::random_elements;
+    use triton_vm::prelude::twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
+    use triton_vm::prelude::twenty_first::util_types::mmr::mmr_accumulator::util::mmra_with_mps;
+    use triton_vm::prelude::twenty_first::util_types::mmr::mmr_membership_proof::MmrMembershipProof;
+    use triton_vm::prelude::twenty_first::util_types::mmr::mmr_trait::Mmr;
+    use triton_vm::prelude::twenty_first::util_types::mmr::shared_basic::leaf_index_to_mt_index_and_peak_index;
 
     use super::*;
     use crate::rust_shadowing_helper_functions;

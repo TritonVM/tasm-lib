@@ -5,12 +5,12 @@ use triton_vm::constraints::static_air_constraint_evaluation_tasm;
 use triton_vm::memory_layout::DynamicTasmConstraintEvaluationMemoryLayout;
 use triton_vm::memory_layout::IntegralMemoryLayout;
 use triton_vm::memory_layout::StaticTasmConstraintEvaluationMemoryLayout;
+use triton_vm::prelude::twenty_first::math::x_field_element::EXTENSION_DEGREE;
 use triton_vm::prelude::*;
 use triton_vm::table::auxiliary_table::Evaluable;
 use triton_vm::table::master_table::MasterAuxTable;
 use triton_vm::table::master_table::MasterMainTable;
 use triton_vm::table::master_table::MasterTable;
-use twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
 use crate::data_type::ArrayType;
 use crate::memory::dyn_malloc::DYN_MALLOC_ADDRESS;
@@ -296,10 +296,10 @@ mod tests {
     use arbitrary::Unstructured;
     use num_traits::ConstZero;
     use rand::distr::StandardUniform;
+    use triton_vm::prelude::twenty_first::math::x_field_element::EXTENSION_DEGREE;
     use triton_vm::proof_stream::ProofStream;
     use triton_vm::table::master_table::MasterMainTable;
     use triton_vm::table::master_table::MasterTable;
-    use twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
     use super::*;
     use crate::execute_test;
