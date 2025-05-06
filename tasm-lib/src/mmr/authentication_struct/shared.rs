@@ -58,7 +58,10 @@ impl AuthStructIntegrityProof {
         let mut node_can_be_computed = HashSet::new();
 
         for &leaf_index in leaf_indices {
-            assert!(num_leafs > leaf_index, "Leaf index must be less than number of leafs. Got leaf_index = {leaf_index}; num_leafs = {num_leafs}");
+            assert!(
+                num_leafs > leaf_index,
+                "Leaf index must be less than number of leafs. Got leaf_index = {leaf_index}; num_leafs = {num_leafs}"
+            );
 
             let mut node_index = leaf_index + num_leafs;
             while node_index > ROOT_MT_INDEX {
@@ -311,7 +314,7 @@ impl AuthStructIntegrityProof {
     /// Return the authentication structure witness, authentication structure,
     /// and the (leaf-index, leaf-digest) pairs.
     pub fn new_from_merkle_tree(
-        tree: &MerkleTree<Tip5>,
+        tree: &MerkleTree,
         mut revealed_leaf_indices: Vec<u64>,
     ) -> AuthenticatedMerkleAuthStruct {
         revealed_leaf_indices.sort_unstable();
@@ -433,7 +436,7 @@ mod tests {
         let tree_height = 3u32;
         let num_leafs = 1u64 << tree_height;
         let leafs: Vec<Digest> = random_elements(num_leafs.try_into().unwrap());
-        let tree = MerkleTree::<Tip5>::new::<CpuParallel>(&leafs).unwrap();
+        let tree = MerkleTree::par_new(&leafs).unwrap();
 
         let authenticated_auth_struct =
             AuthStructIntegrityProof::new_from_merkle_tree(&tree, vec![0]);
@@ -536,7 +539,7 @@ mod tests {
     ) {
         let num_leafs = 1u64 << tree_height;
         let leafs: Vec<Digest> = random_elements(num_leafs.try_into().unwrap());
-        let tree = MerkleTree::<Tip5>::new::<CpuParallel>(&leafs).unwrap();
+        let tree = MerkleTree::par_new(&leafs).unwrap();
 
         let authenticated_auth_struct =
             AuthStructIntegrityProof::new_from_merkle_tree(&tree, revealed_leaf_indices);
@@ -560,7 +563,7 @@ mod tests {
         nd_sibling_indices: Vec<(u64, u64)>,
     ) {
         let leafs: Vec<Digest> = random_elements(1 << tree_height);
-        let tree = MerkleTree::<Tip5>::new::<CpuParallel>(&leafs).unwrap();
+        let tree = MerkleTree::par_new(&leafs).unwrap();
 
         let auth_struct = nd_auth_struct_indices
             .iter()
