@@ -6,7 +6,6 @@ use triton_vm::proof_stream::ProofStream;
 use triton_vm::table::NUM_QUOTIENT_SEGMENTS;
 use triton_vm::table::master_table::MasterAuxTable;
 use triton_vm::table::master_table::MasterMainTable;
-use triton_vm::table::master_table::MasterTable;
 use twenty_first::math::x_field_element::EXTENSION_DEGREE;
 use twenty_first::prelude::MerkleTreeInclusionProof;
 
@@ -123,7 +122,7 @@ impl StarkVerify {
         fn extract_paths<R: BFieldCodec>(
             indices: Vec<usize>,
             leaf_preimages: Vec<R>,
-            tree_height: usize,
+            tree_height: u32,
             authentication_structure: Vec<Digest>,
         ) -> Vec<Vec<Digest>> {
             let indexed_leafs = indices
@@ -221,7 +220,7 @@ impl StarkVerify {
         let fri_proof_stream = proof_stream.clone();
         let fri_verify_result = fri.verify(&mut proof_stream).unwrap();
         let indices = fri_verify_result.iter().map(|(i, _)| *i).collect_vec();
-        let tree_height = fri.domain.length.ilog2() as usize;
+        let tree_height = fri.domain.length.ilog2();
         let fri_digests =
             FriVerify::from(fri).extract_digests_required_for_proving(&fri_proof_stream);
 

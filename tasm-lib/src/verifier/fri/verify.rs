@@ -15,6 +15,7 @@ use twenty_first::math::x_field_element::EXTENSION_DEGREE;
 use twenty_first::util_types::merkle_tree::MerkleTree;
 use twenty_first::util_types::merkle_tree::MerkleTreeInclusionProof;
 
+use crate::U32_TO_USIZE_ERR;
 use crate::data_type::StructType;
 use crate::field;
 use crate::hashing::algebraic_hasher::sample_indices::SampleIndices;
@@ -928,7 +929,7 @@ impl FriVerify {
         let num_collinearity_check = self.num_collinearity_checks as usize;
         let mut a_indices = proof_stream.sample_indices(domain_length, num_collinearity_check);
 
-        let tree_height = self.domain_length.ilog2() as usize;
+        let tree_height = self.domain_length.ilog2();
         let fri_response = proof_stream
             .dequeue()
             .unwrap()
@@ -985,9 +986,11 @@ impl FriVerify {
 
         // verify authentication paths for A leafs
         for indexed_leaf in indexed_a_leaves.iter().rev() {
-            let authentication_path = &nondeterministic_digests[num_nondeterministic_digests_read
-                ..(num_nondeterministic_digests_read + tree_height)];
-            num_nondeterministic_digests_read += tree_height;
+            let auth_path_end = num_nondeterministic_digests_read
+                + usize::try_from(tree_height).expect(U32_TO_USIZE_ERR);
+            let authentication_path =
+                &nondeterministic_digests[num_nondeterministic_digests_read..auth_path_end];
+            num_nondeterministic_digests_read = auth_path_end;
             let inclusion_proof = MerkleTreeInclusionProof {
                 tree_height,
                 indexed_leafs: vec![*indexed_leaf],
@@ -1048,10 +1051,11 @@ impl FriVerify {
 
             // verify authentication paths for B leafs
             for indexed_leaf in indexed_b_leaves.iter().rev() {
-                let authentication_path = &nondeterministic_digests
-                    [num_nondeterministic_digests_read
-                        ..(num_nondeterministic_digests_read + current_tree_height)];
-                num_nondeterministic_digests_read += current_tree_height;
+                let auth_path_end = num_nondeterministic_digests_read
+                    + usize::try_from(current_tree_height).expect(U32_TO_USIZE_ERR);
+                let authentication_path =
+                    &nondeterministic_digests[num_nondeterministic_digests_read..auth_path_end];
+                num_nondeterministic_digests_read = auth_path_end;
                 let inclusion_proof = MerkleTreeInclusionProof {
                     tree_height: current_tree_height,
                     indexed_leafs: vec![*indexed_leaf],

@@ -241,9 +241,10 @@ mod tests {
             let tree_pointer = dynamic_allocator(memory);
             let num_internal_nodes = leafs.len();
 
-            for (node_index, node) in (0..num_internal_nodes).zip(mt.nodes()).skip(1) {
+            for node_index in 1..num_internal_nodes {
+                let node = mt.node(node_index).unwrap();
                 let node_address = tree_pointer + bfe!(node_index * Digest::LEN);
-                encode_to_memory(memory, node_address, node);
+                encode_to_memory(memory, node_address, &node);
             }
 
             stack.extend(mt.root().reversed().values());

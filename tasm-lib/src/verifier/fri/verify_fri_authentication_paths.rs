@@ -134,6 +134,7 @@ mod tests {
     use twenty_first::prelude::*;
 
     use super::*;
+    use crate::U32_TO_USIZE_ERR;
     use crate::rust_shadowing_helper_functions;
     use crate::test_prelude::*;
 
@@ -168,15 +169,17 @@ mod tests {
             let dom_len_minus_one = pop_encodable::<u32>(stack);
 
             let dom_len = dom_len_minus_one + 1;
-            let tree_height: usize = dom_len.ilog2().try_into().unwrap();
+            let tree_height = dom_len.ilog2();
 
             let mut auth_path_counter = 0;
             let mut idx_element_pointer = idx_last_elem;
             let mut leaf_pointer = leaf_last_element_pointer;
             while idx_element_pointer != idx_end_condition {
-                let authentication_path = nondeterminism.digests
-                    [auth_path_counter * tree_height..(auth_path_counter + 1) * tree_height]
-                    .to_vec();
+                let auth_path_len = usize::try_from(tree_height).expect(U32_TO_USIZE_ERR);
+                let auth_path_start = auth_path_counter * auth_path_len;
+                let auth_path_end = auth_path_start + auth_path_len;
+                let authentication_path =
+                    nondeterminism.digests[auth_path_start..auth_path_end].to_vec();
 
                 let leaf_index_a_round_0: u32 = memory
                     .get(&idx_element_pointer)

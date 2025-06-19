@@ -192,7 +192,6 @@ mod tests {
 mod benches {
     use triton_vm::table::master_table::MasterAuxTable;
     use triton_vm::table::master_table::MasterMainTable;
-    use triton_vm::table::master_table::MasterTable;
 
     use super::*;
     use crate::test_prelude::*;

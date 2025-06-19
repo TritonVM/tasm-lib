@@ -4,7 +4,6 @@ use triton_vm::prelude::*;
 use triton_vm::table::NUM_QUOTIENT_SEGMENTS;
 use triton_vm::table::master_table::MasterAuxTable;
 use triton_vm::table::master_table::MasterMainTable;
-use triton_vm::table::master_table::MasterTable;
 use twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
 use crate::hashing::algebraic_hasher::hash_static_size::HashStaticSize;
@@ -304,7 +303,7 @@ mod tests {
 
                 let leaf_digest = local_hash_varlen(row, sponge);
                 let merkle_tree_inclusion_proof = MerkleTreeInclusionProof {
-                    tree_height: merkle_tree_height as usize,
+                    tree_height: merkle_tree_height,
                     indexed_leafs: vec![(leaf_index as usize, leaf_digest)],
                     authentication_structure: authentication_path,
                 };

@@ -5,7 +5,6 @@ use triton_vm::proof_stream::ProofStream;
 use triton_vm::table::NUM_QUOTIENT_SEGMENTS;
 use triton_vm::table::master_table::MasterAuxTable;
 use triton_vm::table::master_table::MasterMainTable;
-use triton_vm::table::master_table::MasterTable;
 use twenty_first::prelude::*;
 
 use crate::prelude::Digest;
@@ -103,7 +102,7 @@ pub fn extract_fri_proof(
     let fri_proof_stream = proof_stream.clone();
     let fri_verify_result = fri.verify(&mut proof_stream).unwrap();
     let indices = fri_verify_result.iter().map(|(i, _)| *i).collect_vec();
-    let tree_height = fri.domain.length.ilog2() as usize;
+    let tree_height = fri.domain.length.ilog2();
 
     // main
     let main_table_rows = proof_stream
@@ -175,7 +174,7 @@ fn extract_paths<const N: usize, T: BFieldCodec>(
     indices: &[usize],
     rows: &[[T; N]],
     authentication_structure: &[Digest],
-    tree_height: usize,
+    tree_height: u32,
 ) -> Vec<Vec<Digest>> {
     let leafs = rows.iter().map(Tip5::hash).collect_vec();
     let inclusion_proof = MerkleTreeInclusionProof {

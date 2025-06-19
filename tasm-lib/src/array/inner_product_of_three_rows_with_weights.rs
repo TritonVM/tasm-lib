@@ -5,7 +5,6 @@ use strum::Display;
 use triton_vm::prelude::*;
 use triton_vm::table::master_table::MasterAuxTable;
 use triton_vm::table::master_table::MasterMainTable;
-use triton_vm::table::master_table::MasterTable;
 
 use crate::data_type::ArrayType;
 use crate::prelude::*;

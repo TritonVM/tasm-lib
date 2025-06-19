@@ -377,7 +377,6 @@ mod tests {
     use triton_vm::proof_item::ProofItem;
     use triton_vm::proof_stream::ProofStream;
     use triton_vm::table::master_table::MasterMainTable;
-    use triton_vm::table::master_table::MasterTable;
     use twenty_first::prelude::*;
 
     use super::*;
