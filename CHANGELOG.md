@@ -1,3 +1,10 @@
+## [0.49.0](https://github.com/TritonVM/tasm-lib/compare/v0.48.0..v0.49.0) - 2025-06-19
+
+### ⚙️ Miscellaneous
+
+- (!) Upgrade to rust edition 2024 ([1d2c50e2](https://github.com/TritonVM/tasm-lib/commit/1d2c50e2))
+- (!) Upgrade dependency “Triton VM” ([110eb0e4](https://github.com/TritonVM/tasm-lib/commit/110eb0e4))
+
 ## [0.48.0](https://github.com/TritonVM/tasm-lib/compare/v0.47.0..v0.48.0) - 2025-02-11
 
 ### ⚙️ Miscellaneous
