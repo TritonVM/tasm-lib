@@ -135,7 +135,7 @@ mod tests {
 
         for _ in 0..num_states {
             let seed: [u8; 32] = rng.random();
-            println!("testing {} common case with seed: {:x?}", entrypoint, seed);
+            println!("testing {entrypoint} common case with seed: {seed:x?}");
             let ProcedureInitialState {
                 stack,
                 nondeterminism,

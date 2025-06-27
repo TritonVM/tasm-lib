@@ -283,7 +283,7 @@ pub fn prove_and_verify(
         .with_fri_domain_len(fri.domain.length);
     println!("{report}");
 
-    println!("Done proving. Elapsed time: {:?}", measured_time);
+    println!("Done proving. Elapsed time: {measured_time:?}");
     println!(
         "Proof was generated from:
         table lengths:

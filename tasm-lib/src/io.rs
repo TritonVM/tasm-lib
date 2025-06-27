@@ -18,7 +18,7 @@ impl Display for InputSource {
             InputSource::SecretIn => "secin",
         };
 
-        write!(f, "{}", str)
+        write!(f, "{str}")
     }
 }
 

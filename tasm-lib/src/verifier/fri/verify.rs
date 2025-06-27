@@ -1715,7 +1715,7 @@ mod bench {
         let mut file = File::create(path).expect("open file for writing");
         write!(file, "{profile}").unwrap();
 
-        println!("{}", profile);
+        println!("{profile}");
 
         // Don't do this since entrypoint label of FRI snippet is not parameterized over its
         // variables, meaning all benchmarks are overwritten.

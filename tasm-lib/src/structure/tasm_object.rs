@@ -164,7 +164,7 @@ impl TasmStructFieldName for &str {
 
 impl TasmStructFieldName for i32 {
     fn tasm_struct_field_name(&self) -> String {
-        format!("field_{}", self)
+        format!("field_{self}")
     }
 }
 

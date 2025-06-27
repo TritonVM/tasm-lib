@@ -281,10 +281,10 @@ mod tests {
             let transition_zerofier_inv = except_last_row * consistency_zerofier_inv;
             let terminal_zerofier_inv = except_last_row.inverse(); // i.e., only last row
 
-            println!("initial zerofier inverse: {}", initial_zerofier_inv);
-            println!("consistency zerofier inverse: {}", consistency_zerofier_inv);
-            println!("transition zerofier inverse: {}", transition_zerofier_inv);
-            println!("terminal zerofier inverse: {}", terminal_zerofier_inv);
+            println!("initial zerofier inverse: {initial_zerofier_inv}");
+            println!("consistency zerofier inverse: {consistency_zerofier_inv}");
+            println!("transition zerofier inverse: {transition_zerofier_inv}");
+            println!("terminal zerofier inverse: {terminal_zerofier_inv}");
 
             let mut running_total_constraints = 0;
             let initial_quotients = air_evaluation_result[running_total_constraints

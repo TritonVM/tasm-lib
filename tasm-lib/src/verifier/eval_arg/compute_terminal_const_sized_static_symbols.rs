@@ -36,14 +36,15 @@ impl<const N: usize> BasicSnippet for ComputeTerminalConstSizedStaticSymbols<N> 
     }
 
     fn entrypoint(&self) -> String {
+        const IDENTIFIER: &str =
+            "tasmlib_verifier_eval_arg_compute_terminal_const_sized_static_symbols_symbol_count";
+
         // Prevent name-clashes by hashing all parameters and using this for entrypoint name
         let all_variables = [self.symbols.to_vec(), self.initial.coefficients.to_vec()].concat();
         let variables_as_digest = Tip5::hash_varlen(&all_variables);
         let first_word = variables_as_digest.encode()[0];
-        format!(
-            "tasmlib_verifier_eval_arg_compute_terminal_const_sized_static_symbols_symbol_count_{}_{}",
-            N, first_word
-        )
+
+        format!("{IDENTIFIER}_{N}_{first_word}")
     }
 
     fn code(&self, _library: &mut Library) -> Vec<LabelledInstruction> {

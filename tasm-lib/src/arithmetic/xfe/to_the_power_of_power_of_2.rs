@@ -45,7 +45,7 @@ impl BasicSnippet for ToThePowerOfPowerOf2 {
 
     fn code(&self, _: &mut Library) -> Vec<LabelledInstruction> {
         let entrypoint = self.entrypoint();
-        let loop_label = format!("{}_loop", entrypoint);
+        let loop_label = format!("{entrypoint}_loop");
 
         triton_asm!(
             {entrypoint}:

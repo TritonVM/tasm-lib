@@ -1346,9 +1346,8 @@ pub mod tests {
 
         println!(
             "TASM-verifier of factorial({FACTORIAL_ARGUMENT}):\n
-            clock cycle count: {}.\n
-            Inner padded height was: {}",
-            cycle_count, inner_padded_height,
+            clock cycle count: {cycle_count}.\n
+            Inner padded height was: {inner_padded_height}",
         );
     }
 
@@ -1649,7 +1648,7 @@ mod benches {
             &PublicInput::new(claim_for_proof.input),
             &nondeterminism,
         );
-        println!("{}", profile);
+        println!("{profile}");
     }
 
     #[test]
@@ -1788,6 +1787,6 @@ mod benches {
             &PublicInput::new(claim_for_proof.input),
             &non_determinism,
         );
-        println!("{}", profile);
+        println!("{profile}");
     }
 }
