@@ -203,8 +203,8 @@ impl BasicSnippet for VerifyTableRows {
 #[cfg(test)]
 mod tests {
     use twenty_first::math::other::random_elements;
-    use twenty_first::math::tip5::RATE;
     use twenty_first::prelude::*;
+    use twenty_first::tip5::RATE;
 
     use super::*;
     use crate::memory::encode_to_memory;

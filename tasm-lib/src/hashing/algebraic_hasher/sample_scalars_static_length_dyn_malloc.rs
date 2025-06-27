@@ -1,6 +1,6 @@
 use triton_vm::prelude::*;
-use twenty_first::math::tip5::RATE;
 use twenty_first::math::x_field_element::EXTENSION_DEGREE;
+use twenty_first::tip5::RATE;
 
 use crate::data_type::ArrayType;
 use crate::hashing::squeeze_repeatedly_static_number::SqueezeRepeatedlyStaticNumber;
