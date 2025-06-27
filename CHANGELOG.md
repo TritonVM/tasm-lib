@@ -1,3 +1,14 @@
+# Changelog
+
+All notable changes are documented in this file.
+Lines marked “(!)” indicate a breaking change.
+
+## [0.50.0](https://github.com/TritonVM/tasm-lib/compare/v0.49.0..v0.50.0) - 2025-06-27
+
+### ⚙️ Miscellaneous
+
+- (!) Upgrade dependency “Triton VM” ([30822945](https://github.com/TritonVM/tasm-lib/commit/30822945))
+
 ## [0.49.0](https://github.com/TritonVM/tasm-lib/compare/v0.48.0..v0.49.0) - 2025-06-19
 
 ### ⚙️ Miscellaneous
@@ -644,5 +655,3 @@ Note: (!) indicates a breaking change.
 - *(`MmrSuccessorProof`)* Make sizes and leaf numbers deterministic ([59344ba8](https://github.com/TritonVM/tasm-lib/commit/59344ba8))
 - Reduce size of STARK benchmark for recursion ([17f17b15](https://github.com/TritonVM/tasm-lib/commit/17f17b15))
 - *(Map)* Benchmark `Map` with dyn length items ([f848fd26](https://github.com/TritonVM/tasm-lib/commit/f848fd26))
-
-Note: (!) indicates a breaking change.
