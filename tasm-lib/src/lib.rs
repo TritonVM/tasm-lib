@@ -111,7 +111,7 @@ pub fn push_encodable<T: BFieldCodec>(stack: &mut Vec<BFieldElement>, value: &T)
 /// - the stack does not contain enough elements
 /// - the top of the stack does not correspond to a [`BFieldCodec`] encoded
 ///   element of type `T`
-pub(crate) fn pop_encodable<T: BFieldCodec>(stack: &mut Vec<BFieldElement>) -> T {
+pub fn pop_encodable<T: BFieldCodec>(stack: &mut Vec<BFieldElement>) -> T {
     let len = T::static_length().unwrap();
     let limbs = (0..len).map(|_| stack.pop().unwrap()).collect_vec();
     *T::decode(&limbs).unwrap()
