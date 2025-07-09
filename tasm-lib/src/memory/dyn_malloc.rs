@@ -16,7 +16,7 @@ use crate::traits::function::FunctionInitialState;
 /// See the [memory convention][super] for details.
 pub const DYN_MALLOC_ADDRESS: BFieldElement = BFieldElement::new(BFieldElement::MAX);
 
-/// The address of the first page that can be dynamically allocated.
+/// The index of the first page that can be dynamically allocated.
 pub const DYN_MALLOC_FIRST_PAGE: u64 = 1;
 
 /// The number of pages that can be dynamically allocated.
