@@ -110,7 +110,7 @@ mod tests {
             let leaf_index = pop_encodable::<u64>(stack);
             let ram_ptr = pop_encodable::<BFieldElement>(stack);
 
-            let stack_digest_is_left_sibling = leaf_index % 2 == 0;
+            let stack_digest_is_left_sibling = leaf_index.is_multiple_of(2);
             let sibling_digest = *Digest::decode_from_memory(memory, ram_ptr).unwrap();
             let (left_digest, right_digest) = if stack_digest_is_left_sibling {
                 (stack_digest, sibling_digest)

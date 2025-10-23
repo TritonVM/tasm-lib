@@ -170,7 +170,7 @@ mod tests {
             let mut node_index = leaf_index + num_leaves;
             while node_index != 1 {
                 let sibling = nd_digests.pop_front().unwrap();
-                let node_is_left_sibling = node_index % 2 == 0;
+                let node_is_left_sibling = node_index.is_multiple_of(2);
                 node_digest = if node_is_left_sibling {
                     Tip5::hash_pair(node_digest, sibling)
                 } else {

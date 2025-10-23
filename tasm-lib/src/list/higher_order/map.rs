@@ -369,7 +369,7 @@ impl<const NUM_INPUT_LISTS: usize> ChainMap<NUM_INPUT_LISTS> {
         }
     }
 
-    fn decompose_inner_fn(&self, library: &mut Library) -> DecomposedInnerFunction {
+    fn decompose_inner_fn(&self, library: &mut Library) -> DecomposedInnerFunction<'_> {
         let exec_or_call = match &self.f {
             InnerFunction::RawCode(code) => {
                 // Inlining saves two clock cycles per iteration. If the function cannot be
