@@ -85,6 +85,7 @@ mod tests {
     use rand::rngs::StdRng;
 
     use super::*;
+    use crate::arithmetic::u160::u128_to_u160;
     use crate::test_helpers::test_rust_equivalence_given_execution_state;
     use crate::test_prelude::*;
 
@@ -117,15 +118,6 @@ mod tests {
 
     #[test]
     fn lt_u160_edge_cases_test() {
-        let u128_to_u160 = |x: u128| {
-            [
-                (x & (u32::MAX as u128)) as u32,
-                ((x >> 32) & (u32::MAX as u128)) as u32,
-                ((x >> 64) & (u32::MAX as u128)) as u32,
-                ((x >> 96) & (u32::MAX as u128)) as u32,
-                0,
-            ]
-        };
         let mut boundary_points = [0, 1 << 32, 1 << 64, 1 << 96, u128::MAX]
             .into_iter()
             .flat_map(|p| [p.checked_sub(1), Some(p), p.checked_add(1)])
