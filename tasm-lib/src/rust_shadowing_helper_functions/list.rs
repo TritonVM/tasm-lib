@@ -45,8 +45,8 @@ pub fn load_list_with_copy_elements<const ELEMENT_SIZE: usize>(
     let mut ret = Vec::with_capacity(list_length);
     for i in 0..list_length {
         ret.push([BFieldElement::zero(); ELEMENT_SIZE]);
-        for j in 0..ELEMENT_SIZE {
-            ret[i][j] = memory[&element_pointer];
+        for item in ret[i].iter_mut() {
+            *item = memory[&element_pointer];
             element_pointer.increment();
         }
     }
