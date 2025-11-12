@@ -38,10 +38,14 @@ ctags:
 	rusty-tags vi
 
 format:
-	cargo fmt --all
+	cargo fmt --all -- --check
 
-lint:
+clippy:
 	cargo clippy --all-targets
+
+happy: format clippy
+	RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --workspace --document-private-items
+	cargo test --doc
 
 # Get a stack trace upon kernel panic (may slow down implementation)
 run: export RUST_BACKTRACE = 1
