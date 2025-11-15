@@ -66,3 +66,4 @@ often.
 |  550..560 | [`list::Range`](list/range.rs)                                                              |
 |  560..570 | [`BagPeaks`](mmr/bag_peaks.rs)                                                              |
 |  570..580 | [`u160::SafeAdd`](arithmetic/u160/safe_add.rs)                                              |
+|  580..590 | [`u160::SafeMul`](arithmetic/u160/safe_mul.rs)                                              |

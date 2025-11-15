@@ -1,6 +1,7 @@
 pub mod lt;
 pub mod overflowing_add;
 pub mod safe_add;
+pub mod safe_mul;
 
 /// Convert a `u128` to a u160 representation with the same value.
 #[cfg(test)]
