@@ -281,12 +281,21 @@ mod tests {
         }
     }
 
-    #[proptest(cases = 600)]
+    #[proptest(cases = 80)]
     fn arbitrary_overflow_crashes_vm(
         #[strategy(2_u8..128)] _log_upper_bound: u8,
         #[strategy(2_u128..(1 << #_log_upper_bound))] left: u128,
         #[strategy(u128::MAX / #left + 1..)] right: u128,
     ) {
+        SafeMul.test_assertion_failure(left, right, &[500, 501, 502, 503, 504, 505, 506]);
+    }
+
+    #[proptest(cases = 80)]
+    fn marginal_overflow_crashes_vm(
+        #[strategy(2_u8..128)] _log_upper_bound: u8,
+        #[strategy(2_u128..(1 << #_log_upper_bound))] left: u128,
+    ) {
+        let right = u128::MAX / left + 1;
         SafeMul.test_assertion_failure(left, right, &[500, 501, 502, 503, 504, 505, 506]);
     }
 
