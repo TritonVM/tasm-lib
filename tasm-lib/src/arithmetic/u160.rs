@@ -1,3 +1,4 @@
+pub mod div_mod;
 pub mod lt;
 pub mod overflowing_add;
 pub mod safe_add;
