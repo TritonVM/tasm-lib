@@ -2,13 +2,13 @@ use triton_vm::prelude::*;
 
 use crate::prelude::*;
 
-/// Mimics overflowing_add but works on u160 data types.
+/// Mimics overflowing_add but works on u192 data types.
 ///
 /// ### Behavior
 ///
 /// ```text
-/// BEFORE: _ [rhs: u160] [lhs: u160]
-/// AFTER:  _ [sum: u160] [is_overflow: bool]
+/// BEFORE: _ [rhs: u192] [lhs: u192]
+/// AFTER:  _ [sum: u192] [is_overflow: bool]
 /// ```
 ///
 /// ### Preconditions
@@ -22,48 +22,54 @@ use crate::prelude::*;
 pub struct OverflowingAdd;
 
 impl OverflowingAdd {
-    /// Generate code to perform an addition on `u160`s.
+    /// Generate code to perform an addition on `u192`s.
     ///
     /// ```text
-    /// BEFORE: _ rhs_4 rhs_3 rhs_2 rhs_1 rhs_0 lhs_4 lhs_3 lhs_2 lhs_1 lhs_0
-    /// AFTER:  _ sum_4 sum_3 sum_2 sum_1 sum_0 is_overflow
+    /// BEFORE: _ r5 r4 r3 r2 r1 r0 l5 l4 l3 l2 l1 l0
+    /// AFTER:  _ sum_5 sum_4 sum_3 sum_2 sum_1 sum_0 is_overflow
     /// ```
     pub(crate) fn addition_code() -> Vec<LabelledInstruction> {
         triton_asm!(
-            pick 5
-            // _ rhs_4 rhs_3 rhs_2 rhs_1 lhs_4 lhs_3 lhs_2 lhs_1 lhs_0 rhs_0
+            pick 6
+            // _ r5 r4 r3 r2 r1 l5 l4 l3 l2 l1 l0 r0
 
             add
             split
-            // _ rhs_4 rhs_3 rhs_2 rhs_1 lhs_4 lhs_3 lhs_2 lhs_1 (lhs_0 + rhs_0)_hi (lhs_0 + rhs_0)_lo
-            // _ rhs_4 rhs_3 rhs_2 rhs_1 lhs_4 lhs_3 lhs_2 lhs_1 carry_1 sum_0
+            // _ r5 r4 r3 r2 r1 l5 l4 l3 l2 l1 (l0 + r0)_hi (l0 + r0)_lo
+            // _ r5 r4 r3 r2 r1 l5 l4 l3 l2 l1 carry_1 sum_0
 
-            swap 6
+            swap 7
             add
             add
             split
-            // _ rhs_4 rhs_3 rhs_2 sum_0 lhs_4 lhs_3 lhs_2 carry_2 sum_1
+            // _ r5 r4 r3 r2 sum_0 l5 l4 l3 l2 carry_2 sum_1
 
-            swap 6
+            swap 7
             add
             add
             split
-            // _ rhs_4 rhs_3 sum_1 sum_0 lhs_4 lhs_3 carry_3 sum_2
+            // _ r5 r4 r3 sum_1 sum_0 l5 l4 l3 carry_3 sum_2
 
-            swap 6
+            swap 7
             add
             add
             split
-            // _ rhs_4 sum_2 sum_1 sum_0 lhs_4 carry_4 sum_3
+            // _ r5 r4 sum_2 sum_1 sum_0 l5 l4 carry_4 sum_3
 
-            swap 6
+            swap 7
             add
             add
             split
-            // _ sum_3 sum_2 sum_1 sum_0 is_overflow sum_4
+            // _ r5 sum_3 sum_2 sum_1 sum_0 l5 carry_5 sum_4
 
-            place 5
-            // _ sum_4 sum_3 sum_2 sum_1 sum_0 is_overflow
+            swap 7
+            add
+            add
+            split
+            // _ sum_4 sum_3 sum_2 sum_1 sum_0 (is_overflow: bool) sum_5
+
+            place 6
+            // _ sum_5 sum_4 sum_3 sum_2 sum_1 sum_0 is_overflow
 
             // _ [sum] overflow
         )
@@ -73,19 +79,19 @@ impl OverflowingAdd {
 impl BasicSnippet for OverflowingAdd {
     fn inputs(&self) -> Vec<(DataType, String)> {
         ["lhs", "rhs"]
-            .map(|s| (DataType::U160, s.to_owned()))
+            .map(|s| (DataType::U192, s.to_owned()))
             .to_vec()
     }
 
     fn outputs(&self) -> Vec<(DataType, String)> {
         vec![
-            (DataType::U160, "sum".to_owned()),
+            (DataType::U192, "sum".to_owned()),
             (DataType::Bool, "overflow".to_owned()),
         ]
     }
 
     fn entrypoint(&self) -> String {
-        "tasmlib_arithmetic_u160_overflowing_add".to_string()
+        "tasmlib_arithmetic_u192_overflowing_add".to_string()
     }
 
     fn code(&self, _: &mut Library) -> Vec<LabelledInstruction> {
@@ -99,12 +105,14 @@ pub(crate) mod tests {
     use rand::rngs::StdRng;
 
     use super::*;
-    use crate::arithmetic::u160::u128_to_u160;
-    use crate::arithmetic::u160::u128_to_u160_shl_32;
+    use crate::arithmetic::u192::U192;
+    use crate::arithmetic::u192::to_u192;
+    use crate::arithmetic::u192::u128_to_u192;
+    use crate::arithmetic::u192::u128_to_u192_shl64;
     use crate::test_prelude::*;
 
     impl OverflowingAdd {
-        fn assert_expected_add_behavior(&self, lhs: [u32; 5], rhs: [u32; 5]) {
+        fn assert_expected_add_behavior(&self, lhs: U192, rhs: U192) {
             let initial_stack = self.set_up_test_stack((rhs, lhs));
 
             let mut expected_stack = initial_stack.clone();
@@ -120,36 +128,41 @@ pub(crate) mod tests {
             );
         }
 
-        pub fn edge_case_points() -> Vec<[u32; 5]> {
+        pub fn edge_case_points() -> Vec<U192> {
             [0, 0x200000002fffffffffff908f8, 1 << 127, u128::MAX]
                 .into_iter()
                 .flat_map(|p| [p.checked_sub(1), Some(p), p.checked_add(1)])
                 .flatten()
-                .map(u128_to_u160)
-                .chain([[u32::MAX; 5], [0, 0, 0, 0, 1]])
+                .map(u128_to_u192)
+                .chain([
+                    [u32::MAX; 6],
+                    [0, 0, 0, 0, 0, 1],
+                    [0, 0, 0, 0, 0, 1 << 31],
+                    [0, 0, 0, 0, 1 << 31, 0],
+                ])
                 .collect()
         }
     }
 
     impl Closure for OverflowingAdd {
-        type Args = ([u32; 5], [u32; 5]);
+        type Args = (U192, U192);
 
         fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
-            let left: [u32; 5] = pop_encodable(stack);
+            let left: U192 = pop_encodable(stack);
             let left: BigUint = BigUint::new(left.to_vec());
-            let right: [u32; 5] = pop_encodable(stack);
+            let right: U192 = pop_encodable(stack);
             let right: BigUint = BigUint::new(right.to_vec());
             let sum = left + right;
             let mut sum = sum.to_u32_digits();
             assert!(
-                sum.len() <= 5 || sum.len() == 6 && *sum.last().unwrap() == 1,
+                sum.len() <= 6 || sum.len() == 7 && *sum.last().unwrap() == 1,
                 "Value must be bounded thusly"
             );
 
-            let is_overflow = sum.len() == 6;
+            let is_overflow = sum.len() == 7;
 
-            sum.resize(5, 0);
-            let sum: [u32; 5] = sum.to_vec().try_into().unwrap();
+            sum.resize(6, 0);
+            let sum: U192 = sum.to_vec().try_into().unwrap();
             push_encodable(stack, &sum);
             push_encodable(stack, &is_overflow);
         }
@@ -177,7 +190,7 @@ pub(crate) mod tests {
     #[test]
     fn unit_test() {
         let snippet = OverflowingAdd;
-        snippet.assert_expected_add_behavior(u128_to_u160(1u128 << 67), u128_to_u160(1u128 << 67))
+        snippet.assert_expected_add_behavior(u128_to_u192(1u128 << 67), u128_to_u192(1u128 << 67))
     }
 
     #[test]
@@ -187,16 +200,15 @@ pub(crate) mod tests {
             OverflowingAdd.assert_expected_add_behavior(b, a);
         };
 
-        test_overflowing_add([1, 0, 0, 0, 0], [u32::MAX; 5]);
-        test_overflowing_add(
-            [2, 0, 0, 0, 0],
-            [u32::MAX - 1, u32::MAX, u32::MAX, u32::MAX, u32::MAX],
-        );
-        test_overflowing_add([1 << 31, 0, 0, 0, 0], [1 << 31, 0, 0, 0, 0]);
-        test_overflowing_add([u32::MAX; 5], [u32::MAX; 5]);
+        let max = to_u192(u128::MAX, u64::MAX);
+        let max_minus_one = to_u192(u128::MAX, u64::MAX - 1);
+        test_overflowing_add(u128_to_u192(1), max);
+        test_overflowing_add(u128_to_u192(2), max_minus_one);
+        test_overflowing_add(u128_to_u192_shl64(1 << 127), u128_to_u192_shl64(1 << 127));
+        test_overflowing_add(max, max);
 
         for a in [31, 32, 33, 63, 64, 65, 95, 96, 97].map(|p| 1 << p) {
-            test_overflowing_add([u32::MAX; 5], u128_to_u160(a));
+            test_overflowing_add(max, u128_to_u192(a));
         }
 
         for i in 0..128 {
@@ -204,7 +216,7 @@ pub(crate) mod tests {
             let b = u128::MAX - a + 1;
             debug_assert_eq!((0, true), a.overflowing_add(b), "i = {i}; a = {a}, b = {b}");
 
-            test_overflowing_add(u128_to_u160(a), u128_to_u160_shl_32(b));
+            test_overflowing_add(u128_to_u192(a), u128_to_u192_shl64(b));
         }
     }
 }

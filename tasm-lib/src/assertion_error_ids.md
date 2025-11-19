@@ -68,3 +68,4 @@ often.
 |  570..580 | [`u160::SafeAdd`](arithmetic/u160/safe_add.rs)                                              |
 |  580..590 | [`u160::SafeMul`](arithmetic/u160/safe_mul.rs)                                              |
 |  590..600 | [`u160::DivMod`](arithmetic/u160/div_mod.rs)                                                |
+|  600..610 | [`u192::SafeAdd`](arithmetic/u192/safe_add.rs)                                              |

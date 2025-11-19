@@ -1,0 +1,24 @@
+[
+  {
+    "name": "tasmlib_arithmetic_u192_safe_add",
+    "benchmark_result": {
+      "clock_cycle_count": 30,
+      "hash_table_height": 24,
+      "u32_table_height": 194,
+      "op_stack_table_height": 20,
+      "ram_table_height": 0
+    },
+    "case": "CommonCase"
+  },
+  {
+    "name": "tasmlib_arithmetic_u192_safe_add",
+    "benchmark_result": {
+      "clock_cycle_count": 30,
+      "hash_table_height": 24,
+      "u32_table_height": 196,
+      "op_stack_table_height": 20,
+      "ram_table_height": 0
+    },
+    "case": "WorstCase"
+  }
+]

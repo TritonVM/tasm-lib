@@ -21,6 +21,7 @@ pub enum DataType {
     U64,
     U128,
     U160,
+    U192,
     I128,
     Bfe,
     Xfe,
@@ -59,6 +60,7 @@ impl DataType {
             Self::U64 => u64::static_length(),
             Self::U128 => u128::static_length(),
             Self::U160 => Some(5),
+            Self::U192 => Some(6),
             Self::I128 => i128::static_length(),
             Self::Bfe => BFieldElement::static_length(),
             Self::Xfe => XFieldElement::static_length(),
@@ -90,6 +92,7 @@ impl DataType {
             Self::U64 => "u64".to_string(),
             Self::U128 => "u128".to_string(),
             Self::U160 => "u160".to_string(),
+            Self::U192 => "u192".to_string(),
             Self::I128 => "i128".to_string(),
             Self::Bfe => "bfe".to_string(),
             Self::Xfe => "xfe".to_string(),
@@ -111,6 +114,7 @@ impl DataType {
             | Self::U64
             | Self::U128
             | Self::U160
+            | Self::U192
             | Self::I128
             | Self::Bfe
             | Self::Xfe
@@ -225,6 +229,7 @@ impl DataType {
             Self::U64 => "DataType::U64".to_owned(),
             Self::U128 => "DataType::U128".to_owned(),
             Self::U160 => "DataType::U160".to_owned(),
+            Self::U192 => "DataType::U192".to_owned(),
             Self::I128 => "DataType::I128".to_owned(),
             Self::Bfe => "DataType::BFE".to_owned(),
             Self::Xfe => "DataType::XFE".to_owned(),
@@ -259,6 +264,7 @@ impl DataType {
             Self::U64,
             Self::U128,
             Self::U160,
+            Self::U192,
             Self::Bfe,
             Self::Xfe,
             Self::Digest,
@@ -289,6 +295,7 @@ impl DataType {
             Self::U64 => rng.random::<u64>().encode(),
             Self::U128 => rng.random::<u128>().encode(),
             Self::U160 => rng.random::<[u32; 5]>().encode(),
+            Self::U192 => rng.random::<[u32; 6]>().encode(),
             Self::I128 => rng.random::<[u32; 4]>().encode(),
             Self::Bfe => rng.random::<BFieldElement>().encode(),
             Self::Xfe => rng.random::<XFieldElement>().encode(),
@@ -358,6 +365,7 @@ impl FromStr for DataType {
                 "u64" => Self::U64,
                 "u128" => Self::U128,
                 "u160" => Self::U160,
+                "u192" => Self::U192,
                 "i128" => Self::I128,
                 "bfe" => Self::Bfe,
                 "xfe" => Self::Xfe,
@@ -446,7 +454,8 @@ impl Literal {
             | DataType::Tuple(_)
             | DataType::VoidPointer
             | DataType::StructRef(_)
-            | DataType::U160 => unimplemented!(),
+            | DataType::U160
+            | DataType::U192 => unimplemented!(),
         }
     }
 }
