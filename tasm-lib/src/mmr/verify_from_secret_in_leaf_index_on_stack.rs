@@ -5,7 +5,7 @@ use crate::hashing::merkle_step_u64_index::MerkleStepU64Index;
 use crate::list::get::Get;
 use crate::prelude::*;
 
-/// Verify that a digest is a leaf in the MMR accumulator. Takes both authentication path from
+/// Verify that a digest is a leaf in the MMR accumulator. Takes the authentication path from
 /// secret-in. Crashes the VM if the authentication fails.
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct MmrVerifyFromSecretInLeafIndexOnStack;
