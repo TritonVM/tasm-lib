@@ -14,7 +14,7 @@ impl BasicSnippet for MmrVerifyFromSecretInSecretLeafIndex {
     fn inputs(&self) -> Vec<(DataType, String)> {
         vec![(
             DataType::Tuple(vec![
-                DataType::List(Box::new(DataType::Digest)), // *peaks
+                DataType::List(Box::new(DataType::Digest)), // peaks
                 DataType::U64,                              // leaf_count
                 DataType::Digest,                           // leaf
             ]),
@@ -40,7 +40,7 @@ impl BasicSnippet for MmrVerifyFromSecretInSecretLeafIndex {
         let merkle_step_u64_index = library.import(Box::new(MerkleStepU64Index));
         let list_get = library.import(Box::new(Get::new(DataType::Digest)));
 
-        // BEFORE: _ *peaks leaf_count_hi leaf_count_lo [digest (leaf_digest)]
+        // BEFORE: _ peaks leaf_count_hi leaf_count_lo [digest (leaf_digest)]
         // AFTER:  _ leaf_index_hi leaf_index_lo validation_result
         triton_asm!(
             {entrypoint}:
