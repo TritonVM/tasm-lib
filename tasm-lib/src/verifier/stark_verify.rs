@@ -313,15 +313,9 @@ impl BasicSnippet for StarkVerify {
         const NUM_OOD_ROWS_WO_QUOTIENT: u32 = 4;
 
         fn fri_snippet() -> FriSnippet {
-            #[cfg(not(test))]
-            {
-                FriSnippet {}
-            }
-            #[cfg(test)]
-            {
-                FriSnippet {
-                    test_instance: FriVerify::dummy(),
-                }
+            FriSnippet {
+                #[cfg(test)]
+                test_instance: FriVerify::dummy(),
             }
         }
 
