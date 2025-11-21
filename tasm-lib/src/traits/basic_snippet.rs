@@ -13,17 +13,91 @@ use triton_vm::prelude::*;
 use crate::prelude::*;
 use crate::push_encodable;
 
+/// A (basic) snippet represents a piece of code that can be run in
+/// [Triton VM](triton_vm).
+///
+/// Generally speaking, it’s not possible to run a snippet stand-alone. Rather,
+/// snippets are (generally) intended to be used in combination with other
+/// snippets. Together, they can make up a full Triton VM program.
+///
+/// ### Example
+///
+/// ```
+/// # use tasm_lib::prelude::*;
+/// # use tasm_lib::triton_vm::prelude::*;
+/// /// Checks whether some u32 is odd.
+/// struct IsOdd;
+///
+/// impl BasicSnippet for IsOdd {
+///     fn parameters(&self) -> Vec<(DataType, String)> {
+///         vec![(DataType::U32, "x".to_string())]
+///     }
+///
+///     fn return_values(&self) -> Vec<(DataType, String)> {
+///         vec![(DataType::Bool, "x % 2".to_string())]
+///     }
+///
+///     fn entrypoint(&self) -> String {
+///         "is_odd".to_string()
+///     }
+///
+///     fn code(&self, _: &mut Library) -> Vec<LabelledInstruction> {
+///         triton_asm!(
+///             // BEFORE: _ x
+///             // AFTER:  _ (x%2)
+///             {self.entrypoint()}:
+///                 push 2   // _ x 2
+///                 pick 1   // _ 2 x
+///                 div_mod  // _ (x//2) (x%2)
+///                 pick 1   // _ (x%2) (x//2)
+///                 pop 1    // _ (x%2)
+///                 return
+///         )
+///     }
+/// }
+/// ```
+///  
 /// ### Dyn-Compatibility
 ///
 /// This trait is [dyn-compatible] (previously known as “object safe”).
 ///
 /// [dyn-compatible]: https://doc.rust-lang.org/reference/items/traits.html#dyn-compatibility
 pub trait BasicSnippet {
+    /// The parameters expected by this snippet.
+    ///
+    /// The parameters are expected to be on top of Triton VM’s stack when
+    /// the snippet is called. If this is not the case, behavior of the snippet
+    /// is generally undefined.
     fn parameters(&self) -> Vec<(DataType, String)>;
+
+    /// The (types of the) values this snippet computes.
+    ///
+    /// The return values are at the top of the stack when the snippet returns.
     fn return_values(&self) -> Vec<(DataType, String)>;
+
+    /// The name of the snippet as a possible target for Triton VM’s
+    /// instruction `call`.
     fn entrypoint(&self) -> String;
+
+    /// The Triton Assembly that defines this snippet.
+    ///
+    /// Snippet authors are responsible for the following:
+    /// 1. Only use the pre-conditions
+    ///     - listed explicitly in the snippet’s documentation, and
+    ///     - implied by [`parameters`](Self::parameters).
+    /// 1. Uphold all post-conditions
+    ///     - listed explicitly in the snippet’s documentation, and
+    ///     - implied by [`return_values`](Self::return_values).
     fn code(&self, library: &mut Library) -> Vec<LabelledInstruction>;
 
+    /// Adds “type hints” to the [code](Self::code).
+    ///
+    /// This method should not be overwritten by implementors of the trait.
+    ///
+    /// Note that type hints do not change the behavior of Triton VM in any
+    /// way. They are only useful in debuggers, like the
+    /// [Triton TUI](https://crates.io/crates/triton-tui).
+    #[doc(hidden)]
     fn annotated_code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
         fn generate_hints_for_input_values(inputs: Vec<(DataType, String)>) -> Vec<String> {
             let mut input_hints = vec![];
@@ -94,6 +168,7 @@ pub trait BasicSnippet {
         code
     }
 
+    #[doc(hidden)]
     fn link_for_isolated_run(&self) -> Vec<LabelledInstruction> {
         let mut library = Library::empty();
         let entrypoint = self.entrypoint();
@@ -114,6 +189,7 @@ pub trait BasicSnippet {
     }
 
     /// Initial stack on program start, when the snippet runs in isolation.
+    #[doc(hidden)]
     fn init_stack_for_isolated_run(&self) -> Vec<BFieldElement> {
         let code = self.link_for_isolated_run();
         let program = Program::new(&code);
@@ -125,6 +201,7 @@ pub trait BasicSnippet {
         stack
     }
 
+    /// The size difference of the stack as a result of executing this snippet.
     fn stack_diff(&self) -> isize {
         let io_size = |io: Vec<(DataType, _)>| -> isize {
             let size = io.into_iter().map(|(ty, _)| ty.stack_size()).sum::<usize>();
@@ -246,7 +323,7 @@ pub trait BasicSnippet {
 ///
 /// [dyn-compatible]: https://doc.rust-lang.org/reference/items/traits.html#object-safety
 //
-// Because `$[final]` trait methods are in pre-RFC phase [0], and trait
+// Because `#[final]` trait methods are in pre-RFC phase [0], and trait
 // sealing [1] would be clumsy, use this workaround.
 //
 // [0]: https://internals.rust-lang.org/t/pre-rfc-final-trait-methods/18407
