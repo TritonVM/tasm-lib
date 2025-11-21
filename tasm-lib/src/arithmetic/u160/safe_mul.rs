@@ -35,13 +35,13 @@ impl SafeMul {
 }
 
 impl BasicSnippet for SafeMul {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         ["right", "left"]
             .map(|side| (DataType::U160, side.to_string()))
             .to_vec()
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![(DataType::U160, "product".to_string())]
     }
 

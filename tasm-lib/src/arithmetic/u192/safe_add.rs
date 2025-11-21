@@ -27,14 +27,14 @@ impl SafeAdd {
 }
 
 impl BasicSnippet for SafeAdd {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         vec![
             (DataType::U192, "l".to_owned()),
             (DataType::U192, "r".to_owned()),
         ]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![(DataType::U192, "sum".to_owned())]
     }
 

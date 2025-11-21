@@ -42,7 +42,7 @@ impl HornerEvaluation {
 }
 
 impl BasicSnippet for HornerEvaluation {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         let coefficients_ty = DataType::Array(Box::new(ArrayType {
             element_type: DataType::Xfe,
             length: self.num_coefficients,
@@ -54,7 +54,7 @@ impl BasicSnippet for HornerEvaluation {
         ]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![(DataType::Xfe, "evaluation".to_string())]
     }
 

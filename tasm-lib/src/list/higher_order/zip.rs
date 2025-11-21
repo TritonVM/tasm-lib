@@ -31,7 +31,7 @@ impl Zip {
 }
 
 impl BasicSnippet for Zip {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         let list = |data_type| DataType::List(Box::new(data_type));
 
         let left_list = (list(self.left_type.clone()), "*left_list".to_string());
@@ -39,7 +39,7 @@ impl BasicSnippet for Zip {
         vec![left_list, right_list]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         let list = |data_type| DataType::List(Box::new(data_type));
 
         let tuple_type = DataType::Tuple(vec![self.left_type.clone(), self.right_type.clone()]);

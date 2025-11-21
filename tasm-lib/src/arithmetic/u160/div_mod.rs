@@ -17,14 +17,14 @@ impl DivMod {
 }
 
 impl BasicSnippet for DivMod {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         vec![
             (DataType::U160, "numerator".to_owned()),
             (DataType::U160, "denominator".to_owned()),
         ]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![
             (DataType::U160, "quotient".to_owned()),
             (DataType::U160, "remainder".to_owned()),

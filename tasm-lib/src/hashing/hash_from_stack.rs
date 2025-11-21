@@ -25,10 +25,10 @@ impl HashFromStack {
 }
 
 impl BasicSnippet for HashFromStack {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         vec![(self.ty.clone(), "preimage".to_string())]
     }
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![(DataType::Digest, "digest".to_string())]
     }
 

@@ -13,7 +13,7 @@ const MAX_CODEWORD_LENGTH: u32 = 1 << 15;
 pub struct BarycentricEvaluation;
 
 impl BasicSnippet for BarycentricEvaluation {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         vec![
             (
                 DataType::List(Box::new(DataType::Xfe)),
@@ -23,7 +23,7 @@ impl BasicSnippet for BarycentricEvaluation {
         ]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![(DataType::Xfe, "evaluation_result".to_owned())]
     }
 

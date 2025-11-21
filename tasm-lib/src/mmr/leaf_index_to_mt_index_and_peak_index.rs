@@ -41,13 +41,13 @@ impl MmrLeafIndexToMtIndexAndPeakIndex {
 }
 
 impl BasicSnippet for MmrLeafIndexToMtIndexAndPeakIndex {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         ["num_leafs", "leaf_index"]
             .map(|s| (DataType::U64, s.to_string()))
             .to_vec()
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![
             (DataType::U64, "mt_index".to_string()),
             (DataType::U32, "peak_index".to_string()),

@@ -25,11 +25,11 @@ impl New {
 }
 
 impl BasicSnippet for New {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         vec![(DataType::VoidPointer, "*proof".to_string())]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![(
             DataType::StructRef(vm_proof_iter_type()),
             "vm_proof_iter".to_owned(),

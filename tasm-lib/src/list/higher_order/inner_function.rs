@@ -139,7 +139,7 @@ impl InnerFunction {
             InnerFunction::RawCode(raw) => raw.input_type.clone(),
             InnerFunction::NoFunctionBody(f) => f.input_type.clone(),
             InnerFunction::BasicSnippet(bs) => {
-                let [(ref input, _)] = bs.inputs()[..] else {
+                let [(ref input, _)] = bs.parameters()[..] else {
                     panic!("{MORE_THAN_ONE_INPUT_OR_OUTPUT_TYPE_IN_INNER_FUNCTION}");
                 };
                 input.clone()
@@ -152,7 +152,7 @@ impl InnerFunction {
             InnerFunction::RawCode(rc) => rc.output_type.clone(),
             InnerFunction::NoFunctionBody(lnat) => lnat.output_type.clone(),
             InnerFunction::BasicSnippet(bs) => {
-                let [(ref output, _)] = bs.outputs()[..] else {
+                let [(ref output, _)] = bs.return_values()[..] else {
                     panic!("{MORE_THAN_ONE_INPUT_OR_OUTPUT_TYPE_IN_INNER_FUNCTION}");
                 };
                 output.clone()

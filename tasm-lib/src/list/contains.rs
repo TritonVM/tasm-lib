@@ -48,7 +48,7 @@ impl Contains {
 }
 
 impl BasicSnippet for Contains {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         let element_type = self.element_type.clone();
         let list_type = DataType::List(Box::new(element_type.clone()));
 
@@ -58,7 +58,7 @@ impl BasicSnippet for Contains {
         ]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![(DataType::Bool, "match_found".to_owned())]
     }
 

@@ -28,11 +28,11 @@ use crate::traits::basic_snippet::SignOffFingerprint;
 pub struct Length;
 
 impl BasicSnippet for Length {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         vec![(DataType::VoidPointer, "*list".to_string())]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![(DataType::Bfe, "list_length".to_string())]
     }
 

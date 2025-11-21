@@ -107,7 +107,7 @@ impl<const NUM_INPUT_LISTS: usize> ChainMap<NUM_INPUT_LISTS> {
 }
 
 impl<const NUM_INPUT_LISTS: usize> BasicSnippet for ChainMap<NUM_INPUT_LISTS> {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         let list_type = DataType::List(Box::new(self.f.domain()));
 
         (0..NUM_INPUT_LISTS)
@@ -115,7 +115,7 @@ impl<const NUM_INPUT_LISTS: usize> BasicSnippet for ChainMap<NUM_INPUT_LISTS> {
             .collect_vec()
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         let list_type = DataType::List(Box::new(self.f.range()));
         vec![(list_type, "*output_list".to_string())]
     }
@@ -378,7 +378,11 @@ impl<const NUM_INPUT_LISTS: usize> ChainMap<NUM_INPUT_LISTS> {
                     .unwrap_or(triton_asm!(call {code.entrypoint()}))
             }
             InnerFunction::BasicSnippet(snippet) => {
-                assert_eq!(1, snippet.inputs().len(), "{INNER_FN_INCORRECT_NUM_INPUTS}");
+                assert_eq!(
+                    1,
+                    snippet.parameters().len(),
+                    "{INNER_FN_INCORRECT_NUM_INPUTS}"
+                );
                 let labelled_instructions = snippet.annotated_code(library);
                 let label = library.explicit_import(&snippet.entrypoint(), &labelled_instructions);
                 triton_asm!(call { label })
@@ -541,11 +545,11 @@ mod tests {
     pub(crate) struct TestHashXFieldElement;
 
     impl BasicSnippet for TestHashXFieldElement {
-        fn inputs(&self) -> Vec<(DataType, String)> {
+        fn parameters(&self) -> Vec<(DataType, String)> {
             vec![(DataType::Xfe, "element".to_string())]
         }
 
-        fn outputs(&self) -> Vec<(DataType, String)> {
+        fn return_values(&self) -> Vec<(DataType, String)> {
             vec![(DataType::Digest, "digest".to_string())]
         }
 

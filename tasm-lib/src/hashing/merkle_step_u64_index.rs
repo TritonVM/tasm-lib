@@ -53,14 +53,14 @@ impl MerkleStepU64Index {
 }
 
 impl BasicSnippet for MerkleStepU64Index {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         vec![
             (DataType::U64, "merkle tree node index".to_owned()),
             (DataType::Digest, "node".to_owned()),
         ]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![
             (DataType::U64, "merkle tree parent node index".to_owned()),
             (DataType::Digest, "parent node".to_owned()),

@@ -24,11 +24,11 @@ use crate::traits::basic_snippet::{Reviewer, SignOffFingerprint};
 pub struct IsU32;
 
 impl BasicSnippet for IsU32 {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         vec![(DataType::U32, "value".to_string())]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![(DataType::Bool, "value < 2^32".to_string())]
     }
 

@@ -16,7 +16,7 @@ impl SwapUnchecked {
 }
 
 impl BasicSnippet for SwapUnchecked {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         let self_type = DataType::List(Box::new(self.element_type.to_owned()));
 
         vec![
@@ -26,7 +26,7 @@ impl BasicSnippet for SwapUnchecked {
         ]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![]
     }
 

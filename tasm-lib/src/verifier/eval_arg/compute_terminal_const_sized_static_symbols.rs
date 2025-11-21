@@ -27,11 +27,11 @@ pub struct ComputeTerminalConstSizedStaticSymbols<const N: usize> {
 //     })
 // }
 impl<const N: usize> BasicSnippet for ComputeTerminalConstSizedStaticSymbols<N> {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         vec![(DataType::Xfe, "challenge".to_owned())]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![(DataType::Xfe, "terminal".to_owned())]
     }
 

@@ -16,11 +16,11 @@ pub struct ReadInput {
 }
 
 impl BasicSnippet for ReadInput {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         vec![]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![(self.data_type.clone(), "read_value".to_string())]
     }
 

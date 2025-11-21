@@ -6,14 +6,14 @@ use crate::prelude::*;
 pub struct ComputeTerminalFromDigestInitialIsOne;
 
 impl BasicSnippet for ComputeTerminalFromDigestInitialIsOne {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         vec![
             (DataType::Xfe, "challenge".to_owned()),
             (DataType::Digest, "digest".to_owned()),
         ]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![(DataType::Xfe, "terminal".to_owned())]
     }
 

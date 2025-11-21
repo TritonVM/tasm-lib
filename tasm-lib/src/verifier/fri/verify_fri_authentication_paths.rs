@@ -21,7 +21,7 @@ use crate::prelude::*;
 pub struct VerifyFriAuthenticationPaths;
 
 impl BasicSnippet for VerifyFriAuthenticationPaths {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         vec![
             (DataType::U32, "dom_len_minus_one".to_owned()),
             (DataType::U32, "xor_bitflag".to_owned()),
@@ -41,7 +41,7 @@ impl BasicSnippet for VerifyFriAuthenticationPaths {
         ]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![]
     }
 

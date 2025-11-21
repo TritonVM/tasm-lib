@@ -26,14 +26,14 @@ use crate::traits::basic_snippet::SignOffFingerprint;
 pub struct AbsorbMultiple;
 
 impl BasicSnippet for AbsorbMultiple {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         vec![
             (DataType::VoidPointer, "*sequence".to_string()),
             (DataType::U32, "len".to_string()),
         ]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![]
     }
 

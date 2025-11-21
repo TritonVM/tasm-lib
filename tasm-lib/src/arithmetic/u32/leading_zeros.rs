@@ -6,11 +6,11 @@ use crate::prelude::*;
 pub struct LeadingZeros;
 
 impl BasicSnippet for LeadingZeros {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         vec![(DataType::U32, "arg".to_string())]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![(DataType::U32, "leading_zeros(arg)".to_string())]
     }
 

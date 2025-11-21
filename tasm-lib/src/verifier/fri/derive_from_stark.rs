@@ -69,11 +69,11 @@ impl DeriveFriFromStark {
 }
 
 impl BasicSnippet for DeriveFriFromStark {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         vec![(DataType::U32, "padded_height".to_owned())]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![(
             DataType::StructRef(fri_verify_type()),
             "*fri_verify".to_owned(),

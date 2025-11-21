@@ -36,7 +36,7 @@ impl ZerofiersInverse {
 }
 
 impl BasicSnippet for ZerofiersInverse {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         vec![
             (
                 DataType::Xfe,
@@ -47,7 +47,7 @@ impl BasicSnippet for ZerofiersInverse {
         ]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![]
     }
 

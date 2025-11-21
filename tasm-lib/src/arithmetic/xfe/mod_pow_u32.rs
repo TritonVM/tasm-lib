@@ -6,14 +6,14 @@ use crate::prelude::*;
 pub struct XfeModPowU32;
 
 impl BasicSnippet for XfeModPowU32 {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         vec![
             (DataType::U32, "exponent".to_owned()),
             (DataType::Xfe, "base".to_owned()),
         ]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![(DataType::Xfe, "result".to_owned())]
     }
 

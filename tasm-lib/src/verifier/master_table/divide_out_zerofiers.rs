@@ -13,7 +13,7 @@ use crate::verifier::master_table::zerofiers_inverse::ZerofiersInverse;
 pub struct DivideOutZerofiers;
 
 impl BasicSnippet for DivideOutZerofiers {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         vec![
             (DataType::VoidPointer, "*air_evaluation_result".to_string()),
             (DataType::Xfe, "out_of_domain_point_curr_row".to_owned()),
@@ -22,7 +22,7 @@ impl BasicSnippet for DivideOutZerofiers {
         ]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![(
             AirConstraintEvaluation::output_type(),
             "*quotient_summands".to_owned(),

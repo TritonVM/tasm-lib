@@ -36,12 +36,12 @@ impl ShiftLeft {
 }
 
 impl BasicSnippet for ShiftLeft {
-    fn inputs(&self) -> Vec<(DataType, String)> {
-        ShiftRight.inputs()
+    fn parameters(&self) -> Vec<(DataType, String)> {
+        ShiftRight.parameters()
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
-        ShiftRight.outputs()
+    fn return_values(&self) -> Vec<(DataType, String)> {
+        ShiftRight.return_values()
     }
 
     fn entrypoint(&self) -> String {

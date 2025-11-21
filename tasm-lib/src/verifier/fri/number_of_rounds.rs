@@ -8,11 +8,11 @@ use crate::verifier::fri::verify::FriVerify;
 pub struct NumberOfRounds;
 
 impl BasicSnippet for NumberOfRounds {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         vec![(DataType::VoidPointer, "*fri".to_string())]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![(DataType::U32, "num_rounds".to_string())]
     }
 

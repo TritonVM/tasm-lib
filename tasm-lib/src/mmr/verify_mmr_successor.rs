@@ -50,13 +50,13 @@ impl VerifyMmrSuccessor {
 }
 
 impl BasicSnippet for VerifyMmrSuccessor {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         ["*old_mmr", "*new_mmr"]
             .map(|ptr_name| (DataType::VoidPointer, ptr_name.to_string()))
             .to_vec()
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![]
     }
 

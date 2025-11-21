@@ -27,11 +27,11 @@ use crate::prelude::*;
 pub struct ShiftRightStatic<const N: u8>;
 
 impl<const N: u8> BasicSnippet for ShiftRightStatic<N> {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         vec![(DataType::U128, "value".to_string())]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![(DataType::U128, "shifted_value".to_string())]
     }
 

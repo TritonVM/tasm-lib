@@ -6,13 +6,13 @@ use crate::prelude::*;
 pub struct CollinearYXfe;
 
 impl BasicSnippet for CollinearYXfe {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         ["p_2_x", "p_1_y", "p_1_x", "p_0_y", "p_0_x"]
             .map(|s| (DataType::Xfe, s.to_string()))
             .to_vec()
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![(DataType::Xfe, "p_2_y".to_owned())]
     }
 

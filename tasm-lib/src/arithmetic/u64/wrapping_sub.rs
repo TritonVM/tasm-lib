@@ -31,11 +31,11 @@ use crate::traits::basic_snippet::SignOffFingerprint;
 pub struct WrappingSub;
 
 impl BasicSnippet for WrappingSub {
-    fn inputs(&self) -> Vec<(DataType, String)> {
-        OverflowingSub.inputs()
+    fn parameters(&self) -> Vec<(DataType, String)> {
+        OverflowingSub.parameters()
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![(DataType::U64, "wrapped_difference".to_string())]
     }
 

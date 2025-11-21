@@ -10,14 +10,14 @@ pub struct MultisetEqualityU64s;
 const U64_STACK_SIZE: usize = 2;
 
 impl BasicSnippet for MultisetEqualityU64s {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         vec![
             (DataType::List(Box::new(DataType::U64)), "list_a".to_owned()),
             (DataType::List(Box::new(DataType::U64)), "list_b".to_owned()),
         ]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![(DataType::Bool, "multisets_are_equal".to_owned())]
     }
 

@@ -28,13 +28,13 @@ use crate::traits::basic_snippet::SignOffFingerprint;
 pub struct Lt;
 
 impl BasicSnippet for Lt {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         ["rhs", "lhs"]
             .map(|s| (DataType::U64, s.to_owned()))
             .to_vec()
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![(DataType::Bool, "lhs < rhs".to_owned())]
     }
 

@@ -34,12 +34,12 @@ use crate::traits::basic_snippet::SignOffFingerprint;
 pub struct LtPreserveArgs;
 
 impl BasicSnippet for LtPreserveArgs {
-    fn inputs(&self) -> Vec<(DataType, String)> {
-        Lt.inputs()
+    fn parameters(&self) -> Vec<(DataType, String)> {
+        Lt.parameters()
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
-        [self.inputs(), Lt.outputs()].concat()
+    fn return_values(&self) -> Vec<(DataType, String)> {
+        [self.parameters(), Lt.return_values()].concat()
     }
 
     fn entrypoint(&self) -> String {

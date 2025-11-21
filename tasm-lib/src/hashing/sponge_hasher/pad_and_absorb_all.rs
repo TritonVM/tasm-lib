@@ -7,11 +7,11 @@ use crate::prelude::*;
 pub struct PadAndAbsorbAll;
 
 impl BasicSnippet for PadAndAbsorbAll {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         vec![(DataType::List(Box::new(DataType::Bfe)), "input".to_string())]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![]
     }
 

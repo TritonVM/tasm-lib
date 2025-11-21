@@ -11,7 +11,7 @@ use crate::prelude::*;
 pub struct MmrVerifyFromSecretInSecretLeafIndex;
 
 impl BasicSnippet for MmrVerifyFromSecretInSecretLeafIndex {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         vec![(
             DataType::Tuple(vec![
                 DataType::List(Box::new(DataType::Digest)), // *peaks
@@ -22,7 +22,7 @@ impl BasicSnippet for MmrVerifyFromSecretInSecretLeafIndex {
         )]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![]
     }
 

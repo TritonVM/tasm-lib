@@ -27,13 +27,13 @@ use crate::prelude::*;
 pub struct Lt;
 
 impl BasicSnippet for Lt {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         ["rhs", "lhs"]
             .map(|s| (DataType::I128, s.to_string()))
             .to_vec()
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![(DataType::Bool, "result".to_string())]
     }
 

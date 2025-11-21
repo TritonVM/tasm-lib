@@ -34,13 +34,13 @@ impl Sub {
 }
 
 impl BasicSnippet for Sub {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         ["subtrahend", "minuend"]
             .map(|s| (DataType::U128, s.to_string()))
             .to_vec()
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![(DataType::U128, "difference".to_string())]
     }
 

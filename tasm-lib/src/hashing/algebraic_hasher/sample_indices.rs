@@ -11,14 +11,14 @@ use crate::prelude::*;
 pub struct SampleIndices;
 
 impl BasicSnippet for SampleIndices {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         vec![
             (DataType::U32, "number".to_string()),
             (DataType::U32, "upper_bound".to_string()),
         ]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![(
             DataType::List(Box::new(DataType::U32)),
             "*indices".to_string(),

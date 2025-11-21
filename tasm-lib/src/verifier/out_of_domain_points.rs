@@ -38,14 +38,14 @@ impl OutOfDomainPoints {
 }
 
 impl BasicSnippet for OutOfDomainPoints {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         vec![
             (DataType::Bfe, "trace_domain_generator".to_owned()),
             (DataType::Xfe, "out_of_domain_curr_row".to_owned()),
         ]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![(
             DataType::Array(Box::new(ArrayType {
                 element_type: DataType::Xfe,

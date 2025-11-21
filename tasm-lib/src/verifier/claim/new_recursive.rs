@@ -17,11 +17,11 @@ pub struct NewRecursive {
 }
 
 impl BasicSnippet for NewRecursive {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         vec![]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![(DataType::StructRef(claim_type()), "*claim".to_owned())]
     }
 

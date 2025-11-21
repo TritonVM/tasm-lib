@@ -9,7 +9,7 @@ use crate::verifier::fri::verify::FriVerify;
 pub struct GetCollinearityCheckX;
 
 impl BasicSnippet for GetCollinearityCheckX {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         vec![
             (DataType::VoidPointer, "*fri_verify".to_string()),
             (DataType::U32, "index".to_string()),
@@ -17,7 +17,7 @@ impl BasicSnippet for GetCollinearityCheckX {
         ]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![(DataType::Xfe, "evaluation_argument".to_string())]
     }
 

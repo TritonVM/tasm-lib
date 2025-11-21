@@ -6,14 +6,14 @@ use crate::prelude::*;
 pub struct XfeNtt;
 
 impl BasicSnippet for XfeNtt {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         vec![
             (DataType::List(Box::new(DataType::Xfe)), "x".to_owned()),
             (DataType::Bfe, "omega".to_owned()),
         ]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![(DataType::Tuple(vec![]), "result".to_owned())]
     }
 

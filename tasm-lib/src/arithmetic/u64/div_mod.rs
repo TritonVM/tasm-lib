@@ -19,13 +19,13 @@ impl DivMod {
 }
 
 impl BasicSnippet for DivMod {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         ["numerator", "denominator"]
             .map(|name| (DataType::U64, name.to_string()))
             .to_vec()
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         ["quotient", "remainder"]
             .map(|name| (DataType::U64, name.to_string()))
             .to_vec()

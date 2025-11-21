@@ -8,12 +8,12 @@ use crate::verifier::claim::shared::claim_type;
 pub struct InstantiateFiatShamirWithClaim;
 
 impl BasicSnippet for InstantiateFiatShamirWithClaim {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         let claim_type = claim_type();
         vec![(DataType::StructRef(claim_type), "*claim".to_owned())]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![]
     }
 

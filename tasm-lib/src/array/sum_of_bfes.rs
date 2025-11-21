@@ -11,7 +11,7 @@ pub struct SumOfBfes {
 }
 
 impl BasicSnippet for SumOfBfes {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         vec![(
             DataType::Array(Box::new(ArrayType {
                 element_type: DataType::Bfe,
@@ -21,7 +21,7 @@ impl BasicSnippet for SumOfBfes {
         )]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![(DataType::Bfe, "sum".to_owned())]
     }
 

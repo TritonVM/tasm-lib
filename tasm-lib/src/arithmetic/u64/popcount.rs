@@ -29,11 +29,11 @@ use crate::traits::basic_snippet::SignOffFingerprint;
 pub struct PopCount;
 
 impl BasicSnippet for PopCount {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         vec![(DataType::U64, "x".to_string())]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![(DataType::U32, "pop_count(x)".to_string())]
     }
 

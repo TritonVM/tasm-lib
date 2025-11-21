@@ -55,13 +55,13 @@ impl OverflowingAdd {
 }
 
 impl BasicSnippet for OverflowingAdd {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         ["lhs", "rhs"]
             .map(|s| (DataType::U64, s.to_string()))
             .to_vec()
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![
             (DataType::U64, "wrapped_sum".to_string()),
             (DataType::Bool, "overflow".to_string()),

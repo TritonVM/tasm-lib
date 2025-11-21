@@ -11,11 +11,11 @@ use crate::prelude::*;
 pub struct SampleScalars;
 
 impl BasicSnippet for SampleScalars {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         vec![(DataType::U32, "num_scalars".to_string())]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![(
             DataType::List(Box::new(DataType::Xfe)),
             "*scalars".to_string(),

@@ -11,7 +11,7 @@ use crate::prelude::*;
 pub struct HornerEvaluationDynamicLength;
 
 impl BasicSnippet for HornerEvaluationDynamicLength {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         vec![
             (
                 DataType::List(Box::new(DataType::Xfe)),
@@ -21,7 +21,7 @@ impl BasicSnippet for HornerEvaluationDynamicLength {
         ]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![(DataType::Xfe, "value".to_string())]
     }
 

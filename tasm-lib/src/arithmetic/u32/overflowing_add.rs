@@ -6,14 +6,14 @@ use crate::prelude::*;
 pub struct OverflowingAdd;
 
 impl BasicSnippet for OverflowingAdd {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         vec![
             (DataType::U32, "lhs".to_owned()),
             (DataType::U32, "rhs".to_owned()),
         ]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![
             (DataType::U32, "wrapped_sum".to_owned()),
             (DataType::Bool, "is_overflow".to_owned()),

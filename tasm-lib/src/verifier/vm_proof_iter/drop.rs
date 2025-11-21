@@ -11,14 +11,14 @@ use crate::verifier::vm_proof_iter::shared::vm_proof_iter_type;
 pub struct Drop;
 
 impl BasicSnippet for Drop {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         vec![(
             DataType::StructRef(vm_proof_iter_type()),
             "vm_proof_iter".to_owned(),
         )]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![]
     }
 

@@ -35,11 +35,11 @@ impl Sub {
 }
 
 impl BasicSnippet for Sub {
-    fn inputs(&self) -> Vec<(DataType, String)> {
-        OverflowingSub.inputs()
+    fn parameters(&self) -> Vec<(DataType, String)> {
+        OverflowingSub.parameters()
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![(DataType::U64, "difference".to_string())]
     }
 

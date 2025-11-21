@@ -7,14 +7,14 @@ use crate::prelude::*;
 pub struct SafePow;
 
 impl BasicSnippet for SafePow {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         vec![
             (DataType::U32, "base".to_owned()),
             (DataType::U32, "exponent".to_owned()),
         ]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![(DataType::U32, "result".to_owned())]
     }
 

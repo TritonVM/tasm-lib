@@ -9,7 +9,7 @@ use crate::prelude::*;
 struct SumOfXfes;
 
 impl BasicSnippet for SumOfXfes {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         vec![(
             // For naming the input argument, I just follow what `Rust` calls this argument in
             // its `sum` method.
@@ -18,7 +18,7 @@ impl BasicSnippet for SumOfXfes {
         )]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![(DataType::Xfe, "sum".to_owned())]
     }
 

@@ -16,14 +16,14 @@ use crate::prelude::*;
 pub struct MultisetEqualityDigests;
 
 impl BasicSnippet for MultisetEqualityDigests {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         vec![
             (DataType::List(Box::new(DataType::Digest)), "a".to_owned()),
             (DataType::List(Box::new(DataType::Digest)), "b".to_owned()),
         ]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![(DataType::Bool, "equal_multisets".to_owned())]
     }
 

@@ -53,7 +53,7 @@ impl Push {
 }
 
 impl BasicSnippet for Push {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         let list_type = DataType::List(Box::new(self.element_type.clone()));
         let element_type = self.element_type.clone();
 
@@ -63,7 +63,7 @@ impl BasicSnippet for Push {
         ]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![]
     }
 

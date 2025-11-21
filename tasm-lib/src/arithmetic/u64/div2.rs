@@ -26,11 +26,11 @@ use crate::traits::basic_snippet::SignOffFingerprint;
 pub struct Div2;
 
 impl BasicSnippet for Div2 {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         vec![(DataType::U64, "arg".to_string())]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![(DataType::U64, "(arg/2)".to_string())]
     }
 

@@ -52,12 +52,12 @@ impl Pop {
 }
 
 impl BasicSnippet for Pop {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         let list_type = DataType::List(Box::new(self.element_type.clone()));
         vec![(list_type, "*list".to_string())]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![(self.element_type.clone(), "element".to_string())]
     }
 

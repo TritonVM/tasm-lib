@@ -14,11 +14,11 @@ pub struct WriteToStdout {
 }
 
 impl BasicSnippet for WriteToStdout {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         vec![(self.data_type.clone(), "value".to_string())]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![]
     }
 

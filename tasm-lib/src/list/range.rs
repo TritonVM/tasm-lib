@@ -34,13 +34,13 @@ impl Range {
 }
 
 impl BasicSnippet for Range {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         ["minimum", "supremum"]
             .map(|s| (DataType::U32, s.to_string()))
             .to_vec()
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         let list_type = DataType::List(Box::new(DataType::U32));
         vec![(list_type, "*list".to_string())]
     }

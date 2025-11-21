@@ -28,11 +28,11 @@ use crate::traits::basic_snippet::SignOffFingerprint;
 pub struct Log2Floor;
 
 impl BasicSnippet for Log2Floor {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         vec![(DataType::U64, "x".to_string())]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![(DataType::U32, "log_2_floor(x)".to_string())]
     }
 

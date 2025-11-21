@@ -11,7 +11,7 @@ use crate::prelude::*;
 pub struct CalculateNewPeaksFromAppend;
 
 impl BasicSnippet for CalculateNewPeaksFromAppend {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         let list_type = DataType::List(Box::new(DataType::Digest));
 
         vec![
@@ -21,7 +21,7 @@ impl BasicSnippet for CalculateNewPeaksFromAppend {
         ]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         let list_type = DataType::List(Box::new(DataType::Digest));
 
         vec![

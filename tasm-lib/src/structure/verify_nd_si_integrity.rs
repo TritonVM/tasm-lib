@@ -23,11 +23,11 @@ impl<T: TasmObject + Clone + Debug> Default for VerifyNdSiIntegrity<T> {
 }
 
 impl<T: TasmObject + Clone + Debug> BasicSnippet for VerifyNdSiIntegrity<T> {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         vec![(DataType::VoidPointer, "*struct".to_owned())]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![(DataType::U32, "struct size".to_owned())]
     }
 

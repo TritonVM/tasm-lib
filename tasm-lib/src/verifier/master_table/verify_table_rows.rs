@@ -40,7 +40,7 @@ impl VerifyTableRows {
 }
 
 impl BasicSnippet for VerifyTableRows {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         vec![
             (DataType::U32, "num_combination_codeword_checks".to_owned()),
             (DataType::U32, "merkle_tree_height".to_owned()),
@@ -54,7 +54,7 @@ impl BasicSnippet for VerifyTableRows {
         ]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![]
     }
 

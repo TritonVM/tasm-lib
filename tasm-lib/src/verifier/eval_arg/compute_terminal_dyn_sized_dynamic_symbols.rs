@@ -7,7 +7,7 @@ use crate::prelude::*;
 pub struct ComputeTerminalDynSizedDynamicSymbols;
 
 impl BasicSnippet for ComputeTerminalDynSizedDynamicSymbols {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         vec![
             (DataType::Xfe, "challenge".to_owned()),
             (DataType::Xfe, "initial".to_owned()),
@@ -18,7 +18,7 @@ impl BasicSnippet for ComputeTerminalDynSizedDynamicSymbols {
         ]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![(DataType::Xfe, "terminal".to_owned())]
     }
 

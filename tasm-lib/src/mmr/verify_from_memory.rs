@@ -38,7 +38,7 @@ use crate::traits::basic_snippet::SignOffFingerprint;
 pub struct MmrVerifyFromMemory;
 
 impl BasicSnippet for MmrVerifyFromMemory {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         let list_type = DataType::List(Box::new(DataType::Digest));
 
         vec![
@@ -50,7 +50,7 @@ impl BasicSnippet for MmrVerifyFromMemory {
         ]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![(DataType::Bool, "validation_result".to_string())]
     }
 

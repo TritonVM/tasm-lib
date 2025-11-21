@@ -29,11 +29,11 @@ pub struct SampleScalarsStaticLengthStaticPointer {
 }
 
 impl BasicSnippet for SampleScalarsStaticLengthStaticPointer {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         vec![]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![]
     }
 

@@ -24,11 +24,11 @@ use crate::prelude::*;
 pub struct MulTwoU64sToU128;
 
 impl BasicSnippet for MulTwoU64sToU128 {
-    fn inputs(&self) -> Vec<(DataType, String)> {
-        SafeMul.inputs()
+    fn parameters(&self) -> Vec<(DataType, String)> {
+        SafeMul.parameters()
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![(DataType::U128, "product".to_string())]
     }
 

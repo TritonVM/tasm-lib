@@ -37,14 +37,14 @@ impl MerkleRoot {
 }
 
 impl BasicSnippet for MerkleRoot {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         vec![(
             DataType::List(Box::new(DataType::Digest)),
             "*leafs".to_string(),
         )]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![(DataType::Digest, "root".to_string())]
     }
 

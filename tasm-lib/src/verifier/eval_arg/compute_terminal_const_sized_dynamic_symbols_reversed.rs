@@ -10,7 +10,7 @@ use crate::prelude::*;
 pub struct ComputeTerminalConstSizedDynamicSymbolsReversed<const N: usize>;
 
 impl<const N: usize> BasicSnippet for ComputeTerminalConstSizedDynamicSymbolsReversed<N> {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         vec![
             (DataType::Xfe, "challenge".to_owned()),
             (DataType::Xfe, "initial".to_owned()),
@@ -24,7 +24,7 @@ impl<const N: usize> BasicSnippet for ComputeTerminalConstSizedDynamicSymbolsRev
         ]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![(DataType::Xfe, "terminal".to_owned())]
     }
 

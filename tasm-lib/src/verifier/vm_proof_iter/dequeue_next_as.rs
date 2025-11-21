@@ -303,11 +303,11 @@ impl DequeueNextAs {
 }
 
 impl BasicSnippet for DequeueNextAs {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         vec![(DataType::VoidPointer, "*proof_item_iter".to_string())]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         let payload_pointer_str = format!("*{}_payload", self.item_name());
         vec![(DataType::VoidPointer, payload_pointer_str)]
     }
@@ -803,11 +803,11 @@ mod tests {
     }
 
     impl BasicSnippet for TestHelperDequeueMultipleAs {
-        fn inputs(&self) -> Vec<(DataType, String)> {
+        fn parameters(&self) -> Vec<(DataType, String)> {
             vec![(DataType::VoidPointer, "*proof_item_iter".to_string())]
         }
 
-        fn outputs(&self) -> Vec<(DataType, String)> {
+        fn return_values(&self) -> Vec<(DataType, String)> {
             vec![(DataType::VoidPointer, "*proof_item_iter".to_string())]
         }
 

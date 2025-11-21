@@ -19,13 +19,13 @@ impl All {
 }
 
 impl BasicSnippet for All {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         let element_type = self.f.domain();
         let list_type = DataType::List(Box::new(element_type));
         vec![(list_type, "*input_list".to_string())]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![(DataType::Bool, "all_true".to_string())]
     }
 
@@ -357,11 +357,11 @@ mod tests {
     pub(super) struct TestHashXFieldElementLsb;
 
     impl BasicSnippet for TestHashXFieldElementLsb {
-        fn inputs(&self) -> Vec<(DataType, String)> {
+        fn parameters(&self) -> Vec<(DataType, String)> {
             vec![(DataType::Xfe, "element".to_string())]
         }
 
-        fn outputs(&self) -> Vec<(DataType, String)> {
+        fn return_values(&self) -> Vec<(DataType, String)> {
             vec![(DataType::Bool, "bool".to_string())]
         }
 

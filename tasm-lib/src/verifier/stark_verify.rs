@@ -291,7 +291,7 @@ impl StarkVerify {
 }
 
 impl BasicSnippet for StarkVerify {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         let claim_type = DataType::StructRef(claim_type());
         vec![
             (claim_type, "claim".to_string()),
@@ -299,7 +299,7 @@ impl BasicSnippet for StarkVerify {
         ]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![]
     }
 

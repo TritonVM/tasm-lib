@@ -48,7 +48,7 @@ impl Set {
 }
 
 impl BasicSnippet for Set {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         let element_type = self.element_type.clone();
         let list_type = DataType::List(Box::new(element_type.clone()));
         let index_type = DataType::U32;
@@ -60,7 +60,7 @@ impl BasicSnippet for Set {
         ]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![]
     }
 

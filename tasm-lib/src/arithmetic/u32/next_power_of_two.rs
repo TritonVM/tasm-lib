@@ -35,11 +35,11 @@ impl NextPowerOfTwo {
 }
 
 impl BasicSnippet for NextPowerOfTwo {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         vec![(DataType::U32, "self".to_owned())]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![(DataType::U32, "next_power_of_two".to_owned())]
     }
 

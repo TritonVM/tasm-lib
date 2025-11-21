@@ -12,7 +12,7 @@ use crate::prelude::*;
 pub struct MmrCalculateNewPeaksFromLeafMutationMtIndices;
 
 impl BasicSnippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         let list_type = DataType::List(Box::new(DataType::Digest));
         vec![
             (list_type.clone(), "*auth_path".to_string()),
@@ -23,7 +23,7 @@ impl BasicSnippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
         ]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         let list_type = DataType::List(Box::new(DataType::Digest));
         vec![
             (list_type, "*auth_path".to_string()),

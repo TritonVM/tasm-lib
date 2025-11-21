@@ -197,7 +197,7 @@ impl AirConstraintEvaluation {
 }
 
 impl BasicSnippet for AirConstraintEvaluation {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         match self.memory_layout {
             MemoryLayout::Dynamic(_) => vec![
                 (DataType::VoidPointer, "*curr_main_row".to_string()),
@@ -209,7 +209,7 @@ impl BasicSnippet for AirConstraintEvaluation {
         }
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![(Self::output_type(), "evaluated_constraints".to_owned())]
     }
 

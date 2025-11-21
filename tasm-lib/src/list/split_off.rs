@@ -52,14 +52,14 @@ impl SplitOff {
 }
 
 impl BasicSnippet for SplitOff {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         vec![
             (self.self_type(), "self".to_owned()),
             (DataType::U32, "at".to_owned()),
         ]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![(self.self_type(), "new_list".to_owned())]
     }
 

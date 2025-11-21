@@ -29,13 +29,13 @@ use crate::traits::basic_snippet::SignOffFingerprint;
 pub struct Xor;
 
 impl BasicSnippet for Xor {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         ["right", "left"]
             .map(|side| (DataType::U64, side.to_string()))
             .to_vec()
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![(DataType::U64, "xor".to_string())]
     }
 

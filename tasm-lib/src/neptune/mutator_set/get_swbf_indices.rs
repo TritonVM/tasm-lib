@@ -21,7 +21,7 @@ pub struct GetSwbfIndices {
 }
 
 impl BasicSnippet for GetSwbfIndices {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         vec![
             (DataType::U64, "aocl_leaf".to_string()),
             (DataType::Digest, "receiver_preimage".to_string()),
@@ -30,7 +30,7 @@ impl BasicSnippet for GetSwbfIndices {
         ]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![(DataType::VoidPointer, "*index_list".to_string())]
     }
 

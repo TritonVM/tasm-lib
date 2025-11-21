@@ -21,11 +21,11 @@ impl SumOfXfes {
 }
 
 impl BasicSnippet for SumOfXfes {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         vec![(self.input_type(), "*array".to_owned())]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![(DataType::Xfe, "sum".to_owned())]
     }
 

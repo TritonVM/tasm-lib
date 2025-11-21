@@ -28,11 +28,11 @@ use crate::traits::basic_snippet::SignOffFingerprint;
 pub struct TrailingZeros;
 
 impl BasicSnippet for TrailingZeros {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         vec![(DataType::U32, "arg".to_string())]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![(DataType::U32, "trailing_zeros(arg)".to_string())]
     }
 

@@ -15,11 +15,11 @@ use crate::prelude::*;
 pub struct Squeeze;
 
 impl BasicSnippet for Squeeze {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         vec![]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         let produce_type = DataType::Array(Box::new(ArrayType {
             element_type: DataType::Bfe,
             length: RATE,

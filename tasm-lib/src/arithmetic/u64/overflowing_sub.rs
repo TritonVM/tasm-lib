@@ -84,13 +84,13 @@ impl OverflowingSub {
 }
 
 impl BasicSnippet for OverflowingSub {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         ["subtrahend", "minuend"]
             .map(|s| (DataType::U64, s.to_string()))
             .to_vec()
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![
             (DataType::U64, "wrapped_diff".to_string()),
             (DataType::Bool, "is_overflow".to_string()),

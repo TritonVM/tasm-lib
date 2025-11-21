@@ -49,11 +49,11 @@ impl AbsorbMultipleStaticSize {
 }
 
 impl BasicSnippet for AbsorbMultipleStaticSize {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         vec![(DataType::VoidPointer, "*sequence".to_string())]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![(DataType::VoidPointer, "(sequence + size)".to_string())]
     }
 

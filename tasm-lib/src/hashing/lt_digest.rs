@@ -8,14 +8,14 @@ use crate::prelude::*;
 pub struct LtDigest;
 
 impl BasicSnippet for LtDigest {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         vec![
             (DataType::VoidPointer, "*digest_lhs".to_owned()),
             (DataType::VoidPointer, "*digest_rhs".to_owned()),
         ]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![(DataType::Bool, "digest_lhs > digest_rhs".to_owned())]
     }
 

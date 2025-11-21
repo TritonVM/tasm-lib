@@ -11,7 +11,7 @@ impl MemCpy {
 }
 
 impl BasicSnippet for MemCpy {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         vec![
             (DataType::VoidPointer, "read_source".to_string()),
             (DataType::VoidPointer, "write_dest".to_string()),
@@ -19,7 +19,7 @@ impl BasicSnippet for MemCpy {
         ]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![]
     }
 

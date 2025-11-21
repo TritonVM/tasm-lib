@@ -194,11 +194,11 @@ mod tests {
     struct DummyTestSnippetC;
 
     impl BasicSnippet for DummyTestSnippetA {
-        fn inputs(&self) -> Vec<(DataType, String)> {
+        fn parameters(&self) -> Vec<(DataType, String)> {
             vec![]
         }
 
-        fn outputs(&self) -> Vec<(DataType, String)> {
+        fn return_values(&self) -> Vec<(DataType, String)> {
             vec![(DataType::Xfe, "dummy".to_string())]
         }
 
@@ -220,11 +220,11 @@ mod tests {
     }
 
     impl BasicSnippet for DummyTestSnippetB {
-        fn inputs(&self) -> Vec<(DataType, String)> {
+        fn parameters(&self) -> Vec<(DataType, String)> {
             vec![]
         }
 
-        fn outputs(&self) -> Vec<(DataType, String)> {
+        fn return_values(&self) -> Vec<(DataType, String)> {
             ["1"; 2]
                 .map(|name| (DataType::Bfe, name.to_string()))
                 .to_vec()
@@ -247,11 +247,11 @@ mod tests {
     }
 
     impl BasicSnippet for DummyTestSnippetC {
-        fn inputs(&self) -> Vec<(DataType, String)> {
+        fn parameters(&self) -> Vec<(DataType, String)> {
             vec![]
         }
 
-        fn outputs(&self) -> Vec<(DataType, String)> {
+        fn return_values(&self) -> Vec<(DataType, String)> {
             vec![(DataType::Bfe, "1".to_string())]
         }
 

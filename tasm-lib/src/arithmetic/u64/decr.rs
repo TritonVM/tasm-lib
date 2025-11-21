@@ -33,11 +33,11 @@ impl Decr {
 }
 
 impl BasicSnippet for Decr {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         vec![(DataType::U64, "arg".to_string())]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![(DataType::U64, "(arg-1)".to_string())]
     }
 

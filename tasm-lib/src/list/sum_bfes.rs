@@ -8,7 +8,7 @@ use crate::prelude::*;
 struct SumOfBfes;
 
 impl BasicSnippet for SumOfBfes {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         vec![(
             // For naming the input argument, I just follow what `Rust` calls this argument
             DataType::List(Box::new(DataType::Bfe)),
@@ -16,7 +16,7 @@ impl BasicSnippet for SumOfBfes {
         )]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![(DataType::Bfe, "sum".to_owned())]
     }
 

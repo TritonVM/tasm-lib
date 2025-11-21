@@ -61,11 +61,11 @@ impl NewGenericDynClaim {
 }
 
 impl BasicSnippet for NewGenericDynClaim {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         vec![(DataType::StructRef(claim_type()), "*claim".to_owned())]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![(
             challenges_data_type(self.total_number_of_challenges_returned()),
             "challenges".to_owned(),

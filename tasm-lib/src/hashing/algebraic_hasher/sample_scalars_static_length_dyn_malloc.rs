@@ -19,11 +19,11 @@ impl SampleScalarsStaticLengthDynMalloc {
 }
 
 impl BasicSnippet for SampleScalarsStaticLengthDynMalloc {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         vec![]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![(
             DataType::Array(Box::new(ArrayType {
                 element_type: DataType::Xfe,

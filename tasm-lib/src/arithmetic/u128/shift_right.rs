@@ -35,14 +35,14 @@ impl ShiftRight {
 }
 
 impl BasicSnippet for ShiftRight {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         let arg = (DataType::U128, "arg".to_string());
         let shift_amount = (DataType::U32, "shift_amount".to_string());
 
         vec![arg, shift_amount]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![(DataType::U128, "shifted_arg".to_string())]
     }
 

@@ -18,13 +18,13 @@ pub struct Filter {
 }
 
 impl BasicSnippet for Filter {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         let element_type = self.f.domain();
         let list_type = DataType::List(Box::new(element_type));
         vec![(list_type, "*input_list".to_string())]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         let element_type = self.f.range();
         let list_type = DataType::List(Box::new(element_type));
         vec![(list_type, "*output_list".to_string())]
@@ -267,11 +267,11 @@ mod tests {
     pub struct TestHashXFieldElementLsb;
 
     impl BasicSnippet for TestHashXFieldElementLsb {
-        fn inputs(&self) -> Vec<(DataType, String)> {
+        fn parameters(&self) -> Vec<(DataType, String)> {
             vec![(DataType::Xfe, "element".to_string())]
         }
 
-        fn outputs(&self) -> Vec<(DataType, String)> {
+        fn return_values(&self) -> Vec<(DataType, String)> {
             vec![(DataType::Bool, "b".to_string())]
         }
 

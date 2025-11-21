@@ -24,11 +24,11 @@ use crate::traits::basic_snippet::SignOffFingerprint;
 pub struct PrimitiveRootOfUnity;
 
 impl BasicSnippet for PrimitiveRootOfUnity {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         vec![(DataType::U64, "order".to_owned())]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![(DataType::Bfe, "root_of_unity".to_string())]
     }
 

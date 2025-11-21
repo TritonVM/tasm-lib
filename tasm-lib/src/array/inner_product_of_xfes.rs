@@ -35,7 +35,7 @@ impl InnerProductOfXfes {
 }
 
 impl BasicSnippet for InnerProductOfXfes {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         let argument_type = DataType::Array(Box::new(ArrayType {
             element_type: DataType::Xfe,
             length: self.length,
@@ -47,7 +47,7 @@ impl BasicSnippet for InnerProductOfXfes {
         ]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![(DataType::Xfe, "inner_product".to_owned())]
     }
 

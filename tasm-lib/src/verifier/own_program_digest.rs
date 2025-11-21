@@ -12,11 +12,11 @@ use crate::prelude::*;
 pub struct OwnProgramDigest;
 
 impl BasicSnippet for OwnProgramDigest {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         vec![]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![(DataType::Digest, "own_program_digest".to_owned())]
     }
 

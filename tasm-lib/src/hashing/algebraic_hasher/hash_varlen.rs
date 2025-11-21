@@ -27,14 +27,14 @@ use crate::traits::basic_snippet::SignOffFingerprint;
 pub struct HashVarlen;
 
 impl BasicSnippet for HashVarlen {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         vec![
             (DataType::VoidPointer, "*addr".to_owned()),
             (DataType::U32, "length".to_owned()),
         ]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![(DataType::Digest, "digest".to_owned())]
     }
 

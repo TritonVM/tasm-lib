@@ -8,7 +8,7 @@ use crate::prelude::*;
 pub struct Absorb;
 
 impl BasicSnippet for Absorb {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         vec![(
             DataType::Array(Box::new(ArrayType {
                 element_type: DataType::Bfe,
@@ -18,7 +18,7 @@ impl BasicSnippet for Absorb {
         )]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![]
     }
 

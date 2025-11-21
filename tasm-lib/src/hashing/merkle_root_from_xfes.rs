@@ -35,12 +35,12 @@ impl MerkleRootFromXfes {
 }
 
 impl BasicSnippet for MerkleRootFromXfes {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         let list_type = DataType::List(Box::new(DataType::Xfe));
         vec![(list_type, "*leafs".to_string())]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![(DataType::Digest, "root".to_string())]
     }
 

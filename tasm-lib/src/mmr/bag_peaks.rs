@@ -43,13 +43,13 @@ impl BagPeaks {
 }
 
 impl BasicSnippet for BagPeaks {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         let mmr_accumulator = DataType::List(Box::new(DataType::Digest));
 
         vec![(mmr_accumulator, "*mmra".to_string())]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![(DataType::Digest, "digest".to_owned())]
     }
 

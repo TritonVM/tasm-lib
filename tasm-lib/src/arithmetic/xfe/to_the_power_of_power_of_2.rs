@@ -28,14 +28,14 @@ use crate::traits::basic_snippet::SignOffFingerprint;
 pub struct ToThePowerOfPowerOf2;
 
 impl BasicSnippet for ToThePowerOfPowerOf2 {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         vec![
             (DataType::U32, "log_2_exponent".to_owned()),
             (DataType::Xfe, "base".to_owned()),
         ]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![(DataType::Xfe, "result".to_owned())]
     }
 

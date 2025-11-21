@@ -38,7 +38,7 @@ impl MerkleVerify {
 }
 
 impl BasicSnippet for MerkleVerify {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         vec![
             (DataType::Digest, "root".to_string()),
             (DataType::U32, "tree_height".to_string()),
@@ -47,7 +47,7 @@ impl BasicSnippet for MerkleVerify {
         ]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![]
     }
 

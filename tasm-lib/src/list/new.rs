@@ -12,11 +12,11 @@ use crate::traits::function::FunctionInitialState;
 pub struct New;
 
 impl BasicSnippet for New {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         vec![]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![(DataType::VoidPointer, "*list".to_string())]
     }
 

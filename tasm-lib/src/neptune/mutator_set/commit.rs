@@ -27,13 +27,13 @@ use crate::traits::basic_snippet::SignOffFingerprint;
 pub struct Commit;
 
 impl BasicSnippet for Commit {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         ["receiver_digest", "sender_randomness", "item"]
             .map(|name| (DataType::Digest, name.to_string()))
             .to_vec()
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![(DataType::Digest, "commitment".to_string())]
     }
 

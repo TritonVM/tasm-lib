@@ -19,8 +19,8 @@ use crate::push_encodable;
 ///
 /// [dyn-compatible]: https://doc.rust-lang.org/reference/items/traits.html#dyn-compatibility
 pub trait BasicSnippet {
-    fn inputs(&self) -> Vec<(DataType, String)>;
-    fn outputs(&self) -> Vec<(DataType, String)>;
+    fn parameters(&self) -> Vec<(DataType, String)>;
+    fn return_values(&self) -> Vec<(DataType, String)>;
     fn entrypoint(&self) -> String;
     fn code(&self, library: &mut Library) -> Vec<LabelledInstruction>;
 
@@ -62,7 +62,7 @@ pub trait BasicSnippet {
             return code;
         }
 
-        let input_hints = generate_hints_for_input_values(self.inputs());
+        let input_hints = generate_hints_for_input_values(self.parameters());
 
         triton_asm! {
             {observed_entrypoint}:
@@ -131,7 +131,7 @@ pub trait BasicSnippet {
             size.try_into().unwrap()
         };
 
-        io_size(self.outputs()) - io_size(self.inputs())
+        io_size(self.return_values()) - io_size(self.parameters())
     }
 
     /// Contains an entry for every sign off.
@@ -337,8 +337,8 @@ mod tests {
             struct $name;
 
             impl BasicSnippet for $name {
-                fn inputs(&self) -> Vec<(DataType, String)> { vec![] }
-                fn outputs(&self) -> Vec<(DataType, String)> { vec![] }
+                fn parameters(&self) -> Vec<(DataType, String)> { vec![] }
+                fn return_values(&self) -> Vec<(DataType, String)> { vec![] }
                 fn entrypoint(&self) -> String {
                     stringify!($name).to_ascii_lowercase()
                 }

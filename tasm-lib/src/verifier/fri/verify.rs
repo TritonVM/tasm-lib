@@ -97,7 +97,7 @@ impl FriSnippet {
 }
 
 impl BasicSnippet for FriSnippet {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         let proof_iter_ref = DataType::StructRef(vm_proof_iter_type());
         let argument_0 = (proof_iter_ref, "*vm_proof_iter".to_string());
 
@@ -107,7 +107,7 @@ impl BasicSnippet for FriSnippet {
         vec![argument_0, argument_1]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![(
             Self::indexed_leafs_list_type(),
             "indices_and_elements".to_string(),

@@ -49,11 +49,11 @@ impl NewEmptyInputAndOutput {
 }
 
 impl BasicSnippet for NewEmptyInputAndOutput {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         vec![(DataType::Digest, "program_digest".to_owned())]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![(
             challenges_data_type(self.total_number_of_challenges_returned()),
             "challenges".to_owned(),

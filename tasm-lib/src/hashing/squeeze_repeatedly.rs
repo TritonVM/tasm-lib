@@ -8,14 +8,14 @@ use crate::prelude::*;
 pub struct SqueezeRepeatedly;
 
 impl BasicSnippet for SqueezeRepeatedly {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         vec![
             (DataType::VoidPointer, "address".to_string()),
             (DataType::U32, "num_squeezes".to_string()),
         ]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![
             (DataType::VoidPointer, "address".to_string()),
             (DataType::U32, "num_squeezes".to_string()),
