@@ -1,3 +1,5 @@
+//! Contains an interface for defining composable snippets of Triton assembly.
+
 use std::collections::HashMap;
 use std::fmt::Display;
 use std::fmt::Formatter;
@@ -56,7 +58,21 @@ use crate::push_encodable;
 ///     }
 /// }
 /// ```
-///  
+///
+/// ### A Caveat Regarding Type Safety
+///
+/// The methods [`parameters`](Self::parameters) and
+/// [`return_values`](Self::return_values) define some expected and returned
+/// [`DataType`]s, respectively. Note that there is no mechanism that enforces
+/// any guarantees about these types. Notably:
+/// - tasm-lib never checks any kind of type consistency or correctness,
+///   neither at run- nor compile-time
+/// - [Triton VM](triton_vm) does not know anything about types
+///
+/// While the types defined in these respective methods streamline a snippet’s
+/// testability and simplify the required reasoning when composing them, they
+/// are _only_ used as a development aid.
+///
 /// ### Dyn-Compatibility
 ///
 /// This trait is [dyn-compatible] (previously known as “object safe”).
@@ -68,11 +84,17 @@ pub trait BasicSnippet {
     /// The parameters are expected to be on top of Triton VM’s stack when
     /// the snippet is called. If this is not the case, behavior of the snippet
     /// is generally undefined.
+    ///
+    /// See also the
+    /// [caveat regarding type safety](Self#a-caveat-regarding-type-safety).
     fn parameters(&self) -> Vec<(DataType, String)>;
 
     /// The (types of the) values this snippet computes.
     ///
     /// The return values are at the top of the stack when the snippet returns.
+    ///
+    /// See also the
+    /// [caveat regarding type safety](Self#a-caveat-regarding-type-safety).
     fn return_values(&self) -> Vec<(DataType, String)>;
 
     /// The name of the snippet as a possible target for Triton VM’s
@@ -88,16 +110,18 @@ pub trait BasicSnippet {
     /// 1. Uphold all post-conditions
     ///     - listed explicitly in the snippet’s documentation, and
     ///     - implied by [`return_values`](Self::return_values).
+    ///
+    /// Notably, no type checking of any kind is performed. See also the
+    /// [caveat regarding type safety](Self#a-caveat-regarding-type-safety).
     fn code(&self, library: &mut Library) -> Vec<LabelledInstruction>;
 
     /// Adds “type hints” to the [code](Self::code).
     ///
-    /// This method should not be overwritten by implementors of the trait.
+    /// This method should _not_ be overwritten by implementors of the trait.
     ///
     /// Note that type hints do not change the behavior of Triton VM in any
     /// way. They are only useful in debuggers, like the
     /// [Triton TUI](https://crates.io/crates/triton-tui).
-    #[doc(hidden)]
     fn annotated_code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
         fn generate_hints_for_input_values(inputs: Vec<(DataType, String)>) -> Vec<String> {
             let mut input_hints = vec![];

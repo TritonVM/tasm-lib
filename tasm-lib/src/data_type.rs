@@ -14,6 +14,9 @@ use crate::memory::write_words_to_memory_leave_pointer;
 use crate::memory::write_words_to_memory_pop_pointer;
 use crate::pop_encodable;
 
+/// A type hint for developers of Triton Assembly.
+///
+/// Note that _no_ type checking is performed.
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub enum DataType {
     Bool,
