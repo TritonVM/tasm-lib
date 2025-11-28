@@ -1,12 +1,14 @@
 //! List operations, mimicking [`Vec`] in some ways (but not in others).
 //!
-//! Lists may only contain elements whose type has
-//! [static size](crate::BFieldCodec::static_length).
+//! The snippets in this module are only designed for lists that contain
+//! elements whose type has [static size](crate::BFieldCodec::static_length).
+//! The exception from this rule is [`Map`][self::higher_order::map::Map] (and
+//! the more general [`ChainMap`][self::higher_order::map::ChainMap]).
 //!
 //! Like [`Vec`], a list can be [created][self::new::New],
 //! [pushed to][self::push::Push], [popped from][self::pop::Pop],
-//! [written to][self::set::Set], and asked for its
-//! [length][self::length::Length], among other operations.
+//! [written to][self::set::Set], [read from][self::get::Get],
+//! and asked for its [length][self::length::Length], among other operations.
 //!
 //! Unlike [`Vec`], lists do not track their capacity. Instead, list created at
 //! Triton VM's runtime get access to an entire [memory page][crate::memory].

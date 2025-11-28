@@ -8,6 +8,12 @@ use crate::snippet_bencher::BenchmarkCase;
 use crate::traits::function::Function;
 use crate::traits::function::FunctionInitialState;
 
+/// Creates a new list and returns a pointer to it.
+///
+/// Lists like these do not have an explicit capacity. Instead, they have
+/// access to a full [memory page][crate::memory]. Snippets like
+/// [`Push`][super::push::Push] and [`Set`][super::set::Set] ensure that all
+/// list access is in bounds.
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct New;
 
