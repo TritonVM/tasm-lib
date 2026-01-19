@@ -70,7 +70,7 @@ impl BasicSnippet for Sub {
 
     fn sign_offs(&self) -> HashMap<Reviewer, SignOffFingerprint> {
         let mut sign_offs = HashMap::new();
-        sign_offs.insert(Reviewer("ferdinand"), 0x7d887e69af21cab6.into());
+        sign_offs.insert(Reviewer("ferdinand"), 0x8dad59997cb49bd9.into());
         sign_offs
     }
 }

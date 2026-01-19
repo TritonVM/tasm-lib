@@ -94,7 +94,7 @@ impl BasicSnippet for Log2Floor {
 
     fn sign_offs(&self) -> HashMap<Reviewer, SignOffFingerprint> {
         let mut sign_offs = HashMap::new();
-        sign_offs.insert(Reviewer("ferdinand"), 0x549a2ff4d3b45eda.into());
+        sign_offs.insert(Reviewer("ferdinand"), 0xc89c4b19e24a3ba1.into());
         sign_offs
     }
 }

@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+
 use triton_vm::prelude::*;
 
 use crate::prelude::*;
@@ -82,7 +83,7 @@ impl BasicSnippet for OverflowingAdd {
 
     fn sign_offs(&self) -> HashMap<Reviewer, SignOffFingerprint> {
         let mut sign_offs = HashMap::new();
-        sign_offs.insert(Reviewer("ferdinand"), 0x7226f66f533b188a.into());
+        sign_offs.insert(Reviewer("ferdinand"), 0x77f1dc470c2bb719.into());
         sign_offs
     }
 }

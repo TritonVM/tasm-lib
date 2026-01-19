@@ -150,10 +150,10 @@ impl BasicSnippet for InnerProductOfThreeRowsWithWeights {
         let mut sign_offs = HashMap::new();
 
         if self == &Self::new(379, MainElementType::Bfe, 88) {
-            sign_offs.insert(Reviewer("ferdinand"), 0x7e46570df803d4b.into());
+            sign_offs.insert(Reviewer("ferdinand"), 0x7bf20b54fa1bbed3.into());
         }
         if self == &Self::new(379, MainElementType::Xfe, 88) {
-            sign_offs.insert(Reviewer("ferdinand"), 0x1c549ac8d61e6a70.into());
+            sign_offs.insert(Reviewer("ferdinand"), 0x5996476ab229bd47.into());
         }
 
         sign_offs

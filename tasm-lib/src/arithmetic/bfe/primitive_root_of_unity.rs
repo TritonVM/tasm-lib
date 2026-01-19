@@ -178,7 +178,7 @@ impl BasicSnippet for PrimitiveRootOfUnity {
 
     fn sign_offs(&self) -> HashMap<Reviewer, SignOffFingerprint> {
         let mut sign_offs = HashMap::new();
-        sign_offs.insert(Reviewer("ferdinand"), 0xfcf839b15db0eef5.into());
+        sign_offs.insert(Reviewer("ferdinand"), 0x7e7f78606c82b7d1.into());
 
         sign_offs
     }

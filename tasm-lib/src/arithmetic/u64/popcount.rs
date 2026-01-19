@@ -54,7 +54,7 @@ impl BasicSnippet for PopCount {
 
     fn sign_offs(&self) -> HashMap<Reviewer, SignOffFingerprint> {
         let mut sign_offs = HashMap::new();
-        sign_offs.insert(Reviewer("ferdinand"), 0xeaae261c6df2bcbb.into());
+        sign_offs.insert(Reviewer("ferdinand"), 0xa23391ac8286ed10.into());
         sign_offs
     }
 }

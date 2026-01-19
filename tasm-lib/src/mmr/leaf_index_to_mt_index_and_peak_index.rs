@@ -134,7 +134,7 @@ impl BasicSnippet for MmrLeafIndexToMtIndexAndPeakIndex {
 
     fn sign_offs(&self) -> HashMap<Reviewer, SignOffFingerprint> {
         let mut sign_offs = HashMap::new();
-        sign_offs.insert(Reviewer("ferdinand"), 0xdbc9fd10de0f2dbd.into());
+        sign_offs.insert(Reviewer("ferdinand"), 0xfaeccefe8b0b120.into());
         sign_offs
     }
 }

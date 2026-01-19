@@ -124,7 +124,7 @@ impl BasicSnippet for OverflowingSub {
 
     fn sign_offs(&self) -> HashMap<Reviewer, SignOffFingerprint> {
         let mut sign_offs = HashMap::new();
-        sign_offs.insert(Reviewer("ferdinand"), 0x4e4c796ae06e4400.into());
+        sign_offs.insert(Reviewer("ferdinand"), 0xad11205197978c1d.into());
         sign_offs
     }
 }

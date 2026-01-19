@@ -1,8 +1,10 @@
 use std::collections::HashMap;
+
 use triton_vm::prelude::*;
 
 use crate::prelude::*;
-use crate::traits::basic_snippet::{Reviewer, SignOffFingerprint};
+use crate::traits::basic_snippet::Reviewer;
+use crate::traits::basic_snippet::SignOffFingerprint;
 
 /// Is the top of the stack an odd u32?
 ///
@@ -52,7 +54,7 @@ impl BasicSnippet for IsOdd {
 
     fn sign_offs(&self) -> HashMap<Reviewer, SignOffFingerprint> {
         let mut sign_offs = HashMap::new();
-        sign_offs.insert(Reviewer("ferdinand"), 0xaa871f100a4a185.into());
+        sign_offs.insert(Reviewer("ferdinand"), 0xa573894027409e47.into());
         sign_offs
     }
 }

@@ -1,8 +1,10 @@
 use std::collections::HashMap;
+
 use triton_vm::prelude::*;
 
 use crate::prelude::*;
-use crate::traits::basic_snippet::{Reviewer, SignOffFingerprint};
+use crate::traits::basic_snippet::Reviewer;
+use crate::traits::basic_snippet::SignOffFingerprint;
 
 /// Is the top of the stack a u32?
 ///
@@ -50,7 +52,7 @@ impl BasicSnippet for IsU32 {
 
     fn sign_offs(&self) -> HashMap<Reviewer, SignOffFingerprint> {
         let mut sign_offs = HashMap::new();
-        sign_offs.insert(Reviewer("ferdinand"), 0x95dae6d2fe11abda.into());
+        sign_offs.insert(Reviewer("ferdinand"), 0x7eeef18dd91aa7a7.into());
         sign_offs
     }
 }

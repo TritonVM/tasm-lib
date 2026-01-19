@@ -124,10 +124,10 @@ impl BasicSnippet for Push {
     fn sign_offs(&self) -> HashMap<Reviewer, SignOffFingerprint> {
         let mut sign_offs = HashMap::new();
         match self.element_type.stack_size() {
-            1 => _ = sign_offs.insert(Reviewer("ferdinand"), 0x292abedacc166a44.into()),
-            2 => _ = sign_offs.insert(Reviewer("ferdinand"), 0x713379aa2ec2f141.into()),
-            3 => _ = sign_offs.insert(Reviewer("ferdinand"), 0x187fb6005d7699cc.into()),
-            5 => _ = sign_offs.insert(Reviewer("ferdinand"), 0x456653f3204bda08.into()),
+            1 => _ = sign_offs.insert(Reviewer("ferdinand"), 0x718981e3d21dc9d2.into()),
+            2 => _ = sign_offs.insert(Reviewer("ferdinand"), 0x885f097adff5e5f6.into()),
+            3 => _ = sign_offs.insert(Reviewer("ferdinand"), 0x9d962aecbcdf0a19.into()),
+            5 => _ = sign_offs.insert(Reviewer("ferdinand"), 0x1774f90a0fb1c3eb.into()),
             _ => (),
         }
 

@@ -75,7 +75,7 @@ impl BasicSnippet for Incr {
 
     fn sign_offs(&self) -> HashMap<Reviewer, SignOffFingerprint> {
         let mut sign_offs = HashMap::new();
-        sign_offs.insert(Reviewer("ferdinand"), 0x786629a8064b2786.into());
+        sign_offs.insert(Reviewer("ferdinand"), 0x9b758bb656258905.into());
         sign_offs
     }
 }

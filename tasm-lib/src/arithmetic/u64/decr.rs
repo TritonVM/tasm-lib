@@ -86,7 +86,7 @@ impl BasicSnippet for Decr {
 
     fn sign_offs(&self) -> HashMap<Reviewer, SignOffFingerprint> {
         let mut sign_offs = HashMap::new();
-        sign_offs.insert(Reviewer("ferdinand"), 0xc7d3ab3d4996bc9c.into());
+        sign_offs.insert(Reviewer("ferdinand"), 0xc5b5d50e60281819.into());
         sign_offs
     }
 }

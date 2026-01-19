@@ -59,11 +59,11 @@ pub struct FriVerify {
 impl From<Fri> for FriVerify {
     fn from(fri: Fri) -> Self {
         Self {
-            domain_generator: fri.domain.generator,
+            domain_generator: fri.domain.generator(),
 
             // This runtime type-conversion prevents a FRI domain of length 2^32 from being created.
-            domain_length: fri.domain.length.try_into().unwrap(),
-            domain_offset: fri.domain.offset,
+            domain_length: fri.domain.len().try_into().unwrap(),
+            domain_offset: fri.domain.offset(),
             expansion_factor: fri.expansion_factor.try_into().unwrap(),
             num_collinearity_checks: fri.num_collinearity_checks.try_into().unwrap(),
         }
@@ -1154,6 +1154,7 @@ mod tests {
     use num_traits::Zero;
     use proptest::collection::vec;
     use rayon::prelude::*;
+    use test_strategy::proptest;
     use triton_vm::proof_item::ProofItem;
     use twenty_first::math::ntt::ntt;
     use twenty_first::util_types::sponge::Sponge;
@@ -1182,8 +1183,8 @@ mod tests {
                 expansion_factor,
                 num_collinearity_checks,
                 domain_length,
-                domain_offset: domain.offset,
-                domain_generator: domain.generator,
+                domain_offset: domain.offset(),
+                domain_generator: domain.generator(),
             }
         }
 

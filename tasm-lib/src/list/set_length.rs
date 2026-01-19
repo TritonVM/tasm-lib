@@ -58,7 +58,7 @@ impl BasicSnippet for SetLength {
 
     fn sign_offs(&self) -> HashMap<Reviewer, SignOffFingerprint> {
         let mut sign_offs = HashMap::new();
-        sign_offs.insert(Reviewer("ferdinand"), 0x8306d6fa39eba00a.into());
+        sign_offs.insert(Reviewer("ferdinand"), 0xff218b8ee1882c10.into());
         sign_offs
     }
 }

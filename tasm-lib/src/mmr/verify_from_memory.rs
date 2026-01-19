@@ -124,7 +124,7 @@ impl BasicSnippet for MmrVerifyFromMemory {
 
     fn sign_offs(&self) -> HashMap<Reviewer, SignOffFingerprint> {
         let mut sign_offs = HashMap::new();
-        sign_offs.insert(Reviewer("ferdinand"), 0xc35bd96dd2348c49.into());
+        sign_offs.insert(Reviewer("ferdinand"), 0x79df3fecee2c597.into());
         sign_offs
     }
 }

@@ -280,7 +280,7 @@ pub fn prove_and_verify(
     let report = profile
         .with_cycle_count(aet.processor_trace.nrows())
         .with_padded_height(padded_height)
-        .with_fri_domain_len(fri.domain.length);
+        .with_fri_domain_len(fri.domain.len());
     println!("{report}");
 
     println!("Done proving. Elapsed time: {measured_time:?}");

@@ -121,16 +121,17 @@ impl BasicSnippet for ShiftLeft {
 
     fn sign_offs(&self) -> HashMap<Reviewer, SignOffFingerprint> {
         let mut sign_offs = HashMap::new();
-        sign_offs.insert(Reviewer("ferdinand"), 0x4898e915d48c39b7.into());
+        sign_offs.insert(Reviewer("ferdinand"), 0x4d9d78686bfa6221.into());
         sign_offs
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use rand::rngs::StdRng;
+
     use super::*;
     use crate::test_prelude::*;
-    use rand::rngs::StdRng;
 
     impl Closure for ShiftLeft {
         type Args = <ShiftRight as Closure>::Args;

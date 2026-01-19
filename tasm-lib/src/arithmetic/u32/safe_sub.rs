@@ -66,7 +66,7 @@ impl BasicSnippet for SafeSub {
 
     fn sign_offs(&self) -> HashMap<Reviewer, SignOffFingerprint> {
         let mut sign_offs = HashMap::new();
-        sign_offs.insert(Reviewer("ferdinand"), 0x40fd42d47d3b4bf4.into());
+        sign_offs.insert(Reviewer("ferdinand"), 0x75a4191cfa996c3f.into());
         sign_offs
     }
 }

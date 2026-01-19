@@ -185,16 +185,17 @@ impl BasicSnippet for SafeMul {
 
     fn sign_offs(&self) -> HashMap<Reviewer, SignOffFingerprint> {
         let mut sign_offs = HashMap::new();
-        sign_offs.insert(Reviewer("ferdinand"), 0x6a6ab0928dd2f0e4.into());
+        sign_offs.insert(Reviewer("ferdinand"), 0xbba006a82c82b12f.into());
         sign_offs
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use rand::rngs::StdRng;
+
     use super::*;
     use crate::test_prelude::*;
-    use rand::rngs::StdRng;
 
     impl SafeMul {
         fn test_assertion_failure(&self, left: u128, right: u128, error_ids: &[i128]) {

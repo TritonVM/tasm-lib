@@ -102,7 +102,7 @@ pub fn extract_fri_proof(
     let fri_proof_stream = proof_stream.clone();
     let fri_verify_result = fri.verify(&mut proof_stream).unwrap();
     let indices = fri_verify_result.iter().map(|(i, _)| *i).collect_vec();
-    let tree_height = fri.domain.length.ilog2();
+    let tree_height = fri.domain.len().ilog2();
 
     // main
     let main_table_rows = proof_stream

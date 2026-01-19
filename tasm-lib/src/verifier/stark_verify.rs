@@ -81,7 +81,7 @@ impl StarkVerify {
         let num_fri_rounds = fri_params.num_rounds();
 
         let mut j = 0;
-        let mut tree_height: usize = fri_params.domain.length.ilog2().try_into().unwrap();
+        let mut tree_height: usize = fri_params.domain.len().ilog2().try_into().unwrap();
 
         let mut acc = NUM_FULL_DOMAIN_AUTH_PATHS * tree_height * fri_params.num_collinearity_checks;
         while j < num_fri_rounds {
@@ -144,12 +144,12 @@ impl StarkVerify {
         // we end up sampling indices that generate different authentication
         // paths.
         let mut proof_stream = ProofStream::try_from(proof).unwrap();
+        proof_stream.alter_fiat_shamir_state_with(claim);
         let log2_padded_height = proof_stream
             .dequeue()
             .unwrap()
             .try_into_log2_padded_height()
             .unwrap();
-        proof_stream.alter_fiat_shamir_state_with(claim);
 
         // Main-table Merkle root
         let _main_table_root = proof_stream
@@ -222,7 +222,7 @@ impl StarkVerify {
         let fri_proof_stream = proof_stream.clone();
         let fri_verify_result = fri.verify(&mut proof_stream).unwrap();
         let indices = fri_verify_result.iter().map(|(i, _)| *i).collect_vec();
-        let tree_height = fri.domain.length.ilog2();
+        let tree_height = fri.domain.len().ilog2();
         let fri_digests =
             FriVerify::from(fri).extract_digests_required_for_proving(&fri_proof_stream);
 
@@ -1477,7 +1477,7 @@ pub mod tests {
         let report = profile
             .with_cycle_count(aet.processor_trace.nrows())
             .with_padded_height(padded_height)
-            .with_fri_domain_len(stark.fri(padded_height).unwrap().domain.length);
+            .with_fri_domain_len(stark.fri(padded_height).unwrap().domain.len());
         println!("Done generating proof for non-determinism");
         println!("{report}");
 

@@ -106,10 +106,6 @@ mod bench {
     #[ignore = "Very slow, about 340s on my powerful laptop"]
     #[test]
     fn benchmark() {
-        let mut seed = [0u8; 32];
-        seed[0] = 0xa7;
-        seed[1] = 0xf7;
-
         let public_input = PublicInput::default();
         let intermediate_state = StandaloneFriVerify::singleton().pseudorandom_intermediate_state();
 
