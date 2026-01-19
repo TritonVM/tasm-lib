@@ -55,6 +55,8 @@ pub struct StarkVerify {
 }
 
 impl StarkVerify {
+    const LOG2_PADDED_HEIGHT_TOO_LARGE: i128 = 238;
+
     pub fn new_with_static_layout(stark: Stark) -> Self {
         Self {
             stark,
@@ -744,6 +746,15 @@ impl BasicSnippet for StarkVerify {
                 pop 1
                 // _ *clm *p_iter log_2_padded_height
 
+                /* Verify log_2_padded_height <= 31 */
+                push 32
+                dup 1
+                lt
+                // _ *clm *p_iter log_2_padded_height (32 > log_2_padded_height)
+
+                assert error_id {Self::LOG2_PADDED_HEIGHT_TOO_LARGE}
+                // _ *clm *p_iter log_2_padded_height
+
                 push 2
                 pow
                 hint padded_height = stack[0]
@@ -1192,6 +1203,7 @@ pub mod tests {
 
     use num_traits::ConstZero;
     use tasm_object_derive::TasmObject;
+    use triton_vm::proof_item::ProofItem;
 
     use super::*;
     use crate::execute_test;
@@ -1239,6 +1251,50 @@ pub mod tests {
             nondeterminism,
             None,
         );
+    }
+
+    #[test]
+    fn fail_on_too_big_log2_padded_height() {
+        let mut proof_stream = ProofStream::new();
+        proof_stream.enqueue(ProofItem::Log2PaddedHeight(32));
+        let proof: Proof = proof_stream.into();
+
+        let mut nondeterminism = NonDeterminism::new(vec![]);
+        encode_to_memory(
+            &mut nondeterminism.ram,
+            FIRST_NON_DETERMINISTICALLY_INITIALIZED_MEMORY_ADDRESS,
+            &proof,
+        );
+        let (claim_pointer, claim_size) = insert_claim_into_static_memory(
+            &mut nondeterminism.ram,
+            &Claim::new(Digest::default()),
+        );
+
+        let snippet = StarkVerify {
+            stark: Stark::default(),
+            memory_layout: MemoryLayout::conventional_static(),
+        };
+        let default_proof_pointer = bfe!(0);
+        let init_stack = [
+            snippet.init_stack_for_isolated_run(),
+            vec![claim_pointer, default_proof_pointer],
+        ]
+        .concat();
+
+        let program =
+            Program::new(&snippet.link_for_isolated_run_populated_static_memory(claim_size));
+        let mut vm_state = VMState::new(program, [].into(), nondeterminism.clone());
+        vm_state.op_stack.stack = init_stack.clone();
+        let error = vm_state.run().unwrap_err();
+        match error {
+            InstructionError::AssertionFailed(assertion_error) => {
+                assert_eq!(
+                    StarkVerify::LOG2_PADDED_HEIGHT_TOO_LARGE,
+                    assertion_error.id.unwrap()
+                );
+            }
+            _ => panic!(),
+        }
     }
 
     /// Run the verifier, and return the cycle count and inner padded
