@@ -5,6 +5,5 @@ pub mod derive_from_stark;
 pub mod number_of_rounds;
 #[cfg(test)]
 mod standalone_fri_verify;
-pub mod test_helpers;
 pub mod verify;
 pub mod verify_fri_authentication_paths;
