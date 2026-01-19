@@ -234,15 +234,15 @@ impl BasicSnippet for SafeMul {
 
 #[cfg(test)]
 mod tests {
+    use num::BigUint;
+    use num::One;
+    use rand::rngs::StdRng;
+
     use super::*;
     use crate::arithmetic::u160::u128_to_u160;
     use crate::arithmetic::u160::u128_to_u160_shl_32;
     use crate::arithmetic::u160::u128_to_u160_shl_32_lower_limb_filled;
     use crate::test_prelude::*;
-
-    use num::BigUint;
-    use num::One;
-    use rand::rngs::StdRng;
 
     impl SafeMul {
         fn test_assertion_failure(&self, left: [u32; 5], right: [u32; 5], error_ids: &[i128]) {

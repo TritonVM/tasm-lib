@@ -163,17 +163,17 @@ impl BasicSnippet for DivMod {
 
 #[cfg(test)]
 mod tests {
+    use num::BigUint;
+    use num::Integer;
+    use num_traits::Zero;
+    use rand::rngs::StdRng;
+
     use super::*;
     use crate::arithmetic::u160::u128_to_u160;
     use crate::library::STATIC_MEMORY_FIRST_ADDRESS;
     use crate::test_helpers::negative_test;
     use crate::test_prelude::Algorithm;
     use crate::test_prelude::*;
-
-    use num::BigUint;
-    use num::Integer;
-    use num_traits::Zero;
-    use rand::rngs::StdRng;
 
     #[test]
     fn std_test() {

@@ -48,9 +48,10 @@ impl BasicSnippet for SafeAdd {
 
 #[cfg(test)]
 mod tests {
+    use rand::rngs::StdRng;
+
     use super::*;
     use crate::test_prelude::*;
-    use rand::rngs::StdRng;
 
     impl SafeAdd {
         fn assert_expected_add_behavior(&self, lhs: u128, rhs: u128) {

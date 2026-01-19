@@ -65,13 +65,13 @@ impl BasicSnippet for SafeAdd {
 
 #[cfg(test)]
 mod tests {
+    use num::BigUint;
+    use rand::rngs::StdRng;
+
     use super::*;
     use crate::arithmetic::u160::u128_to_u160_shl_32;
     use crate::arithmetic::u160::u128_to_u160_shl_32_lower_limb_filled;
     use crate::test_prelude::*;
-
-    use num::BigUint;
-    use rand::rngs::StdRng;
 
     #[test]
     fn rust_shadow() {

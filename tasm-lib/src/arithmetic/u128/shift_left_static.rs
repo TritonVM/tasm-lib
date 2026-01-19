@@ -76,9 +76,10 @@ impl<const N: u8> BasicSnippet for ShiftLeftStatic<N> {
 
 #[cfg(test)]
 pub(crate) mod tests {
+    use rand::rngs::StdRng;
+
     use super::*;
     use crate::test_prelude::*;
-    use rand::rngs::StdRng;
 
     impl<const N: u8> Closure for ShiftLeftStatic<N> {
         type Args = u128;
