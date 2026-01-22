@@ -3,6 +3,42 @@
 All notable changes are documented in this file.
 Lines marked “(!)” indicate a breaking change.
 
+## [2.0.0](https://github.com/TritonVM/tasm-lib/compare/v1.0.0..v2.0.0) - 2026-01-22
+
+### ✨ Features
+
+- Add `lt` snippet for u160 ([8c9bb1b3](https://github.com/TritonVM/tasm-lib/commit/8c9bb1b3))
+- Add addition snippets for u160 types ([d211bff9](https://github.com/TritonVM/tasm-lib/commit/d211bff9))
+- Add SafeMul snippet for u160 ([52e7cf51](https://github.com/TritonVM/tasm-lib/commit/52e7cf51))
+- Add divining div-mod for u160 ([f7dedc23](https://github.com/TritonVM/tasm-lib/commit/f7dedc23))
+- Add u192 overflowing and safe addition ([5b2e38a0](https://github.com/TritonVM/tasm-lib/commit/5b2e38a0))
+
+### 🐛 Bug Fixes
+
+- Bound log2 padded height ([5fa03821](https://github.com/TritonVM/tasm-lib/commit/5fa03821))
+
+### 📚 Documentation
+
+- Document `BasicSnippet` ([9e07282f](https://github.com/TritonVM/tasm-lib/commit/9e07282f))
+- Add notes & caveats regarding type checking ([e9fe700c](https://github.com/TritonVM/tasm-lib/commit/e9fe700c))
+- *(list)* Update caveat regarding element types ([a0d1b041](https://github.com/TritonVM/tasm-lib/commit/a0d1b041))
+- Update README ([33bd0c60](https://github.com/TritonVM/tasm-lib/commit/33bd0c60))
+
+### ⚙️ Miscellaneous
+
+- (!) Update Triton VM version ([35813f7c](https://github.com/TritonVM/tasm-lib/commit/35813f7c))
+- Delete deprecated, unused code ([4ad742fe](https://github.com/TritonVM/tasm-lib/commit/4ad742fe))
+
+### ♻️ Refactor
+
+- Simplify conditionally compiled code ([38510902](https://github.com/TritonVM/tasm-lib/commit/38510902))
+- (!) Rename `BasicSnippet::{in, out}put` ([66e5fa89](https://github.com/TritonVM/tasm-lib/commit/66e5fa89))
+
+### ✅ Testing
+
+- Harden u128 safemul overflow test ([76d15c9c](https://github.com/TritonVM/tasm-lib/commit/76d15c9c))
+- Verify u128 safemul overflow crash ([d02ad128](https://github.com/TritonVM/tasm-lib/commit/d02ad128))
+
 ## [1.0.0](https://github.com/TritonVM/tasm-lib/compare/v0.50.0..v1.0.0) - 2025-10-23
 
 ### ⚙️ Miscellaneous

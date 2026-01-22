@@ -3,7 +3,7 @@ members = ["tasm-lib", "tasm-object-derive"]
 resolver = "2"
 
 [workspace.package]
-version = "1.0.0"
+version = "2.0.0"
 edition = "2024"
 rust-version = "1.89"
 
@@ -18,7 +18,7 @@ readme = "README.md"
 lto = "thin"
 
 [workspace.dependencies.tasm-object-derive]
-version = "1.0.0"
+version = "2.0.0"
 path = "tasm-object-derive"
 
 [workspace.lints.rust]
