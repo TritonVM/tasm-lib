@@ -159,9 +159,10 @@ pub(crate) mod tests {
     impl Closure for OverflowingSub {
         type Args = (u64, u64);
 
-        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
-            let (subtrahend, minuend) = pop_encodable::<Self::Args>(stack);
+        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) -> Result<(), RustShadowError> {
+            let (subtrahend, minuend) = pop_encodable::<Self::Args>(stack)?;
             push_encodable(stack, &minuend.overflowing_sub(subtrahend));
+            Ok(())
         }
 
         fn pseudorandom_args(

@@ -150,21 +150,28 @@ mod tests {
             &self,
             stack: &mut Vec<BFieldElement>,
             memory: &mut HashMap<BFieldElement, BFieldElement>,
-        ) {
-            let new_leaf = pop_encodable::<Digest>(stack);
-            let peaks_pointer = stack.pop().unwrap();
-            let old_num_leafs = pop_encodable::<u64>(stack);
-            let old_peaks = *Vec::decode_from_memory(memory, peaks_pointer).unwrap();
+        ) -> Result<(), RustShadowError> {
+            let new_leaf = pop_encodable::<Digest>(stack)?;
+            let peaks_pointer = stack.pop().ok_or(RustShadowError::StackUnderflow)?;
+            let old_num_leafs = pop_encodable::<u64>(stack)?;
+            let old_peaks = *Vec::decode_from_memory(memory, peaks_pointer)
+                .map_err(|_| RustShadowError::DecodingError)?;
 
             // Mimic all potential artifacts of the snippet.
             // This is _not_ shadowing the actual behavior, only intermediate results.
-            list_push(peaks_pointer, new_leaf.encode(), memory);
+            list_push(peaks_pointer, new_leaf.encode(), memory)?;
             let old_num_peaks = old_num_leafs.count_ones();
             for _ in 0..old_num_peaks {
-                let left = list_pop(peaks_pointer, memory, Digest::LEN);
-                let right = list_pop(peaks_pointer, memory, Digest::LEN);
-                let new = Tip5::hash_pair(right.try_into().unwrap(), left.try_into().unwrap());
-                list_push(peaks_pointer, new.encode(), memory);
+                let left = list_pop(peaks_pointer, memory, Digest::LEN)?;
+                let right = list_pop(peaks_pointer, memory, Digest::LEN)?;
+                let right: Digest = right
+                    .try_into()
+                    .map_err(|_| RustShadowError::DecodingError)?;
+                let left: Digest = left
+                    .try_into()
+                    .map_err(|_| RustShadowError::DecodingError)?;
+                let new = Tip5::hash_pair(right, left);
+                list_push(peaks_pointer, new.encode(), memory)?;
             }
 
             // actually shadow the snippet
@@ -176,6 +183,7 @@ mod tests {
             encode_to_memory(memory, auth_path_pointer, &proof.authentication_path);
             stack.push(peaks_pointer);
             stack.push(auth_path_pointer);
+            Ok(())
         }
 
         fn pseudorandom_initial_state(

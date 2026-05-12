@@ -433,9 +433,13 @@ mod tests {
             &self,
             stack: &mut Vec<BFieldElement>,
             memory: &mut HashMap<BFieldElement, BFieldElement>,
-        ) {
-            let denominator = pop_encodable::<u64>(stack);
-            let numerator = pop_encodable::<u64>(stack);
+        ) -> Result<(), RustShadowError> {
+            let denominator = pop_encodable::<u64>(stack)?;
+            let numerator = pop_encodable::<u64>(stack)?;
+            if denominator == 0 {
+                return Err(RustShadowError::Other);
+            }
+
             let quotient = numerator / denominator;
             let remainder = numerator % denominator;
             push_encodable(stack, &quotient);
@@ -444,6 +448,7 @@ mod tests {
             // Accomodate spilling. This could probably be avoided if the code was compiled
             // by hand instead.
             encode_to_memory(memory, STATIC_MEMORY_FIRST_ADDRESS - bfe!(1), &denominator);
+            Ok(())
         }
 
         fn pseudorandom_initial_state(

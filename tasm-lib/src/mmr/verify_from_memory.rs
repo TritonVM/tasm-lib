@@ -174,19 +174,22 @@ mod tests {
             &self,
             stack: &mut Vec<BFieldElement>,
             memory: &mut HashMap<BFieldElement, BFieldElement>,
-        ) {
-            let auth_path_pointer = stack.pop().unwrap();
-            let leaf = pop_encodable(stack);
-            let leaf_index = pop_encodable(stack);
-            let leaf_count = pop_encodable(stack);
-            let peaks_pointer = stack.pop().unwrap();
+        ) -> Result<(), RustShadowError> {
+            let auth_path_pointer = stack.pop().ok_or(RustShadowError::StackUnderflow)?;
+            let leaf = pop_encodable(stack)?;
+            let leaf_index = pop_encodable(stack)?;
+            let leaf_count = pop_encodable(stack)?;
+            let peaks_pointer = stack.pop().ok_or(RustShadowError::StackUnderflow)?;
 
-            let auth_path = *Vec::<Digest>::decode_from_memory(memory, auth_path_pointer).unwrap();
-            let peaks = *Vec::<Digest>::decode_from_memory(memory, peaks_pointer).unwrap();
+            let auth_path = *Vec::<Digest>::decode_from_memory(memory, auth_path_pointer)
+                .map_err(|_| RustShadowError::DecodingError)?;
+            let peaks = *Vec::<Digest>::decode_from_memory(memory, peaks_pointer)
+                .map_err(|_| RustShadowError::DecodingError)?;
 
             let proof = MmrMembershipProof::new(auth_path);
             let is_valid = proof.verify(leaf_index, leaf, &peaks, leaf_count);
             push_encodable(stack, &is_valid);
+            Ok(())
         }
 
         fn pseudorandom_initial_state(

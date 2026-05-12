@@ -114,6 +114,7 @@ impl BasicSnippet for DeriveFriFromStark {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::U32_TO_USIZE_ERR;
     use crate::rust_shadowing_helper_functions;
     use crate::test_prelude::*;
     use crate::verifier::fri::verify::FriVerify;
@@ -136,14 +137,23 @@ mod tests {
             &self,
             stack: &mut Vec<BFieldElement>,
             memory: &mut HashMap<BFieldElement, BFieldElement>,
-        ) {
-            let padded_height: u32 = stack.pop().unwrap().try_into().unwrap();
-            let fri_from_tvm = self.stark.fri(padded_height.try_into().unwrap()).unwrap();
+        ) -> Result<(), RustShadowError> {
+            let padded_height: u32 = stack
+                .pop()
+                .ok_or(RustShadowError::StackUnderflow)?
+                .try_into()
+                .map_err(|_| RustShadowError::U64ToU32Error)?;
+            let fri_from_tvm = self
+                .stark
+                .fri(padded_height.try_into().expect(U32_TO_USIZE_ERR))
+                .map_err(|_| RustShadowError::Other)?;
             let local_fri: FriVerify = fri_from_tvm.into();
             let fri_pointer =
                 rust_shadowing_helper_functions::dyn_malloc::dynamic_allocator(memory);
             encode_to_memory(memory, fri_pointer, &local_fri);
-            stack.push(fri_pointer)
+            stack.push(fri_pointer);
+
+            Ok(())
         }
 
         fn pseudorandom_initial_state(
@@ -151,12 +161,28 @@ mod tests {
             seed: [u8; 32],
             bench_case: Option<BenchmarkCase>,
         ) -> FunctionInitialState {
+            // Due to an arithmetic-overflow bug in Triton VM v3.0.0, derivation
+            // of a FRI instance using values that are too close to `usize::MAX`
+            // (and what “too close” means depends on the FRI expansion factor)
+            // results in a `panic!`, not an `Err`. The workaround is not pretty
+            // but should be temporary.
+
+            #[cfg(target_pointer_width = "32")]
+            const WORST_CASE_BENCH_SIZE: u32 = 21;
+            #[cfg(target_pointer_width = "64")]
+            const WORST_CASE_BENCH_SIZE: u32 = 23;
+
+            #[cfg(target_pointer_width = "32")]
+            const MAX_BENCH_SIZE: u32 = WORST_CASE_BENCH_SIZE;
+            #[cfg(target_pointer_width = "64")]
+            const MAX_BENCH_SIZE: u32 = 25;
+
             let padded_height: u32 = match bench_case {
                 Some(BenchmarkCase::CommonCase) => 2u32.pow(21),
-                Some(BenchmarkCase::WorstCase) => 2u32.pow(23),
+                Some(BenchmarkCase::WorstCase) => 2u32.pow(WORST_CASE_BENCH_SIZE),
                 None => {
                     let mut rng = StdRng::from_seed(seed);
-                    let mut padded_height = 2u32.pow(rng.random_range(8..=25));
+                    let mut padded_height = 2u32.pow(rng.random_range(8..=MAX_BENCH_SIZE));
 
                     // Don't test parameters that result in too big FRI domains, i.e. larger
                     // than 2^32. Note that this also excludes 2^32 as domain length because

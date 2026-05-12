@@ -142,19 +142,21 @@ mod tests {
             &self,
             stack: &mut Vec<BFieldElement>,
             memory: &mut HashMap<BFieldElement, BFieldElement>,
-        ) {
+        ) -> Result<(), RustShadowError> {
             let ood_curr_row = XFieldElement::new([
-                stack.pop().unwrap(),
-                stack.pop().unwrap(),
-                stack.pop().unwrap(),
+                stack.pop().ok_or(RustShadowError::StackUnderflow)?,
+                stack.pop().ok_or(RustShadowError::StackUnderflow)?,
+                stack.pop().ok_or(RustShadowError::StackUnderflow)?,
             ]);
-            let domain_generator = stack.pop().unwrap();
+            let domain_generator = stack.pop().ok_or(RustShadowError::StackUnderflow)?;
             let ood_next_row = ood_curr_row * domain_generator;
-            let ood_curr_row_pow_num_segments =
-                ood_curr_row.mod_pow_u32(NUM_QUOTIENT_SEGMENTS.try_into().unwrap());
+            let num_quotient_segments: u32 = NUM_QUOTIENT_SEGMENTS
+                .try_into()
+                .map_err(|_| RustShadowError::UsizeToU32Error)?;
+            let ood_curr_row_pow_num_segments = ood_curr_row.mod_pow_u32(num_quotient_segments);
             let static_malloc_size: i32 = (EXTENSION_DEGREE * NUM_OF_OUT_OF_DOMAIN_POINTS)
                 .try_into()
-                .unwrap();
+                .map_err(|_| RustShadowError::Other)?;
             let ood_points_pointer = bfe!(-static_malloc_size - 1);
             insert_as_array(
                 ood_points_pointer,
@@ -162,7 +164,9 @@ mod tests {
                 vec![ood_curr_row, ood_next_row, ood_curr_row_pow_num_segments],
             );
 
-            stack.push(ood_points_pointer)
+            stack.push(ood_points_pointer);
+
+            Ok(())
         }
 
         fn pseudorandom_initial_state(

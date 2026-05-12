@@ -478,15 +478,16 @@ mod tests {
             &self,
             stack: &mut Vec<BFieldElement>,
             memory: &mut HashMap<BFieldElement, BFieldElement>,
-        ) {
-            let _root_of_unity = stack.pop().unwrap();
-            let input_pointer = stack.pop().unwrap();
+        ) -> Result<(), RustShadowError> {
+            let _root_of_unity = stack.pop().ok_or(RustShadowError::StackUnderflow)?;
+            let input_pointer = stack.pop().ok_or(RustShadowError::StackUnderflow)?;
 
-            let mut vector =
-                *Vec::<XFieldElement>::decode_from_memory(memory, input_pointer).unwrap();
+            let mut vector = *Vec::<XFieldElement>::decode_from_memory(memory, input_pointer)
+                .map_err(|_| RustShadowError::DecodingError)?;
             ntt(&mut vector);
 
             encode_to_memory(memory, input_pointer, &vector);
+            Ok(())
         }
 
         fn pseudorandom_initial_state(
@@ -534,7 +535,7 @@ mod tests {
             let rust = rust_final_state(&function, &stack, &stdin, &nondeterminism, &None);
 
             // run tvm
-            let tasm = tasm_final_state(&function, &stack, &stdin, nondeterminism, &None);
+            let tasm = tasm_final_state(&function, &stack, &stdin, nondeterminism, &None).unwrap();
 
             assert_eq!(
                 rust.public_output, tasm.public_output,

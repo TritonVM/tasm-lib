@@ -49,6 +49,7 @@ use triton_vm::prelude::TableId;
 pub use triton_vm::twenty_first;
 
 use crate::test_helpers::prepend_program_with_stack_setup;
+use crate::traits::rust_shadow::RustShadowError;
 
 pub(crate) const U32_TO_USIZE_ERR: &str =
     "internal error: type `usize` should have at least 32 bits";
@@ -104,17 +105,24 @@ pub fn push_encodable<T: BFieldCodec>(stack: &mut Vec<BFieldElement>, value: &T)
 
 /// Pops an element of the specified, generic type from the stack.
 ///
-/// ### Panics
+/// ### Errors
 ///
-/// Panics if
+/// Errors if
 /// - the generic type has [dynamic length](BFieldCodec::static_length)
 /// - the stack does not contain enough elements
 /// - the top of the stack does not correspond to a [`BFieldCodec`] encoded
 ///   element of type `T`
-pub fn pop_encodable<T: BFieldCodec>(stack: &mut Vec<BFieldElement>) -> T {
-    let len = T::static_length().unwrap();
-    let limbs = (0..len).map(|_| stack.pop().unwrap()).collect_vec();
-    *T::decode(&limbs).unwrap()
+pub fn pop_encodable<T: BFieldCodec>(stack: &mut Vec<BFieldElement>) -> Result<T, RustShadowError> {
+    let Some(len) = T::static_length() else {
+        return Err(RustShadowError::Other);
+    };
+    let limbs: Vec<_> = (0..len)
+        .map(|_| stack.pop().ok_or(RustShadowError::StackUnderflow))
+        .try_collect()?;
+
+    T::decode(&limbs)
+        .map(|t| *t)
+        .map_err(|_| RustShadowError::DecodingError)
 }
 
 /// Execute a Triton-VM program and test correct behavior indicators.
@@ -126,7 +134,7 @@ pub(crate) fn execute_test(
     std_in: Vec<BFieldElement>,
     nondeterminism: NonDeterminism,
     maybe_sponge: Option<Tip5>,
-) -> VMState {
+) -> Result<VMState, RustShadowError> {
     let init_stack = stack.to_owned();
     let public_input = PublicInput::new(std_in.clone());
     let program = Program::new(code);
@@ -142,33 +150,36 @@ pub(crate) fn execute_test(
     maybe_write_debuggable_vm_state_to_disk(&vm_state);
 
     if let Err(err) = vm_state.run() {
-        panic!("{err}\n\nFinal state was: {vm_state}")
+        eprintln!("{err}\n\nFinal state was: {vm_state}");
+        return Err(RustShadowError::VmError);
     }
     let terminal_state = vm_state;
 
     if !terminal_state.jump_stack.is_empty() {
-        panic!("Jump stack must be unchanged after code execution");
+        eprintln!("Jump stack must be unchanged after code execution");
+        return Err(RustShadowError::VmError);
     }
 
     let final_stack_height = terminal_state.op_stack.stack.len() as isize;
     let initial_stack_height = init_stack.len();
-    assert_eq!(
-        expected_stack_diff,
-        final_stack_height - initial_stack_height as isize,
-        "Code must grow/shrink stack with expected number of elements.\n
-        init height: {initial_stack_height}\n
-        end height:  {final_stack_height}\n
-        expected difference: {expected_stack_diff}\n\n
-        initial stack: {}\n
-        final stack:   {}",
-        init_stack.iter().skip(NUM_OP_STACK_REGISTERS).join(","),
-        terminal_state
-            .op_stack
-            .stack
-            .iter()
-            .skip(NUM_OP_STACK_REGISTERS)
-            .join(","),
-    );
+    if expected_stack_diff != final_stack_height - initial_stack_height as isize {
+        eprintln!(
+            "Code must grow/shrink stack with expected number of elements.\n
+            init height: {initial_stack_height}\n
+            end height:  {final_stack_height}\n
+            expected difference: {expected_stack_diff}\n\n
+            initial stack: {}\n
+            final stack:   {}",
+            init_stack.iter().skip(NUM_OP_STACK_REGISTERS).join(","),
+            terminal_state
+                .op_stack
+                .stack
+                .iter()
+                .skip(NUM_OP_STACK_REGISTERS)
+                .join(","),
+        );
+        return Err(RustShadowError::VmError);
+    }
 
     // If this environment variable is set, all programs, including the code to prepare the state,
     // will be proven and then verified.
@@ -180,7 +191,7 @@ pub(crate) fn execute_test(
     }
 
     stack.clone_from(&terminal_state.op_stack.stack);
-    terminal_state
+    Ok(terminal_state)
 }
 
 /// If the environment variable TASMLIB_TRITON_TUI is set, write the initial VM state
@@ -435,4 +446,5 @@ pub mod test_prelude {
     pub use crate::traits::read_only_algorithm::ReadOnlyAlgorithmInitialState;
     pub use crate::traits::read_only_algorithm::ShadowedReadOnlyAlgorithm;
     pub use crate::traits::rust_shadow::RustShadow;
+    pub use crate::traits::rust_shadow::RustShadowError;
 }

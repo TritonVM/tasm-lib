@@ -76,13 +76,14 @@ pub(crate) mod tests {
             &self,
             stack: &mut Vec<BFieldElement>,
             memory: &mut HashMap<BFieldElement, BFieldElement>,
-        ) {
-            let new_length = pop_encodable::<u32>(stack);
-            let list_address = stack.pop().unwrap();
+        ) -> Result<(), RustShadowError> {
+            let new_length = pop_encodable::<u32>(stack)?;
+            let list_address = stack.pop().ok_or(RustShadowError::StackUnderflow)?;
             stack.push(list_address);
 
             let new_length = new_length.try_into().expect(U32_TO_USIZE_ERR);
             list_set_length(list_address, new_length, memory);
+            Ok(())
         }
 
         fn pseudorandom_initial_state(

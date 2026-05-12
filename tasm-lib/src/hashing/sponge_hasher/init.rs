@@ -46,9 +46,9 @@ mod tests {
             _: &NonDeterminism,
             _: &[BFieldElement],
             sponge: &mut Option<Tip5>,
-        ) -> Vec<BFieldElement> {
+        ) -> Result<Vec<BFieldElement>, RustShadowError> {
             *sponge = Some(Tip5::init());
-            vec![]
+            Ok(Vec::new())
         }
 
         fn pseudorandom_initial_state(

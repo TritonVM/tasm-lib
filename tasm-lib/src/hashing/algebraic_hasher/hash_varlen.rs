@@ -88,14 +88,16 @@ mod tests {
             nd_digests: VecDeque<Digest>,
             stdin: VecDeque<BFieldElement>,
             sponge: &mut Option<Tip5>,
-        ) -> Vec<BFieldElement> {
+        ) -> Result<Vec<BFieldElement>, RustShadowError> {
             *sponge = Some(Tip5::init());
-
-            AbsorbMultiple.rust_shadow(stack, memory, nd_tokens, nd_digests, stdin, sponge);
-            let [d0, d1, d2, d3, d4, ..] = sponge.as_mut().unwrap().squeeze();
+            AbsorbMultiple.rust_shadow(stack, memory, nd_tokens, nd_digests, stdin, sponge)?;
+            let Some(sponge) = sponge.as_mut() else {
+                return Err(RustShadowError::SpongeUninitialized);
+            };
+            let [d0, d1, d2, d3, d4, ..] = sponge.squeeze();
             push_encodable(stack, &Digest::new([d0, d1, d2, d3, d4]));
 
-            vec![]
+            Ok(Vec::new())
         }
 
         fn pseudorandom_initial_state(

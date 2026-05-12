@@ -180,14 +180,17 @@ mod tests {
             &self,
             stack: &mut Vec<BFieldElement>,
             memory: &mut HashMap<BFieldElement, BFieldElement>,
-        ) {
-            let at = pop_encodable::<u32>(stack)
+        ) -> Result<(), RustShadowError> {
+            let at = pop_encodable::<u32>(stack)?
                 .try_into()
                 .expect(U32_TO_USIZE_ERR);
-            let list_pointer = stack.pop().unwrap();
+            let list_pointer = stack.pop().ok_or(RustShadowError::StackUnderflow)?;
 
             let mut list =
-                load_list_unstructured(self.element_type.stack_size(), list_pointer, memory);
+                load_list_unstructured(self.element_type.stack_size(), list_pointer, memory)?;
+            if at > list.len() {
+                return Err(RustShadowError::Other);
+            }
             let new_list = list.split_off(at);
 
             let new_list_pointer = dynamic_allocator(memory);
@@ -198,6 +201,7 @@ mod tests {
                 memory.insert(new_list_pointer + bfe!(offset), word);
             }
             stack.push(new_list_pointer);
+            Ok(())
         }
 
         fn pseudorandom_initial_state(

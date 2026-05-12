@@ -141,7 +141,7 @@ pub(crate) mod tests {
 
         pub fn random_len_idx_ptr(
             bench_case: Option<BenchmarkCase>,
-            rng: &mut impl rand::Rng,
+            rng: &mut impl Rng,
         ) -> (usize, usize, BFieldElement) {
             let (index, list_length) = match bench_case {
                 Some(BenchmarkCase::CommonCase) => (16, 32),
@@ -162,15 +162,23 @@ pub(crate) mod tests {
             &self,
             stack: &mut Vec<BFieldElement>,
             memory: &HashMap<BFieldElement, BFieldElement>,
-        ) {
-            let index: u32 = stack.pop().unwrap().try_into().unwrap();
-            let list_pointer = stack.pop().unwrap();
+        ) -> Result<(), RustShadowError> {
+            let index: u32 = stack
+                .pop()
+                .ok_or(RustShadowError::StackUnderflow)?
+                .try_into()
+                .map_err(|_| RustShadowError::U64ToU32Error)?;
+            let list_pointer = stack.pop().ok_or(RustShadowError::StackUnderflow)?;
 
             let index: usize = index.try_into().expect(U32_TO_USIZE_ERR);
-            let element_length = self.element_type.static_length().unwrap();
-            let element = list_get(list_pointer, index, memory, element_length);
+            let element_length = self
+                .element_type
+                .static_length()
+                .ok_or(RustShadowError::Other)?;
+            let element = list_get(list_pointer, index, memory, element_length)?;
 
             stack.extend(element.into_iter().rev());
+            Ok(())
         }
 
         fn pseudorandom_initial_state(

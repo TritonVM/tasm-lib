@@ -178,27 +178,29 @@ mod tests {
             &self,
             stack: &mut Vec<BFieldElement>,
             memory: &mut HashMap<BFieldElement, BFieldElement>,
-        ) {
+        ) -> Result<(), RustShadowError> {
             let input_type = self.f.domain();
-            let list_pointer = stack.pop().unwrap();
+            let list_pointer = stack.pop().ok_or(RustShadowError::StackUnderflow)?;
 
             // forall elements, read + map + maybe copy
             let list_length =
-                rust_shadowing_helper_functions::list::list_get_length(list_pointer, memory);
+                rust_shadowing_helper_functions::list::list_get_length(list_pointer, memory)?;
             let mut satisfied = true;
             for i in 0..list_length {
-                let input_item = list_get(list_pointer, i, memory, input_type.stack_size());
+                let input_item = list_get(list_pointer, i, memory, input_type.stack_size())?;
                 for bfe in input_item.into_iter().rev() {
                     stack.push(bfe);
                 }
 
                 self.f.apply(stack, memory);
 
-                let single_result = stack.pop().unwrap().value() != 0;
+                let single_result =
+                    stack.pop().ok_or(RustShadowError::StackUnderflow)?.value() != 0;
                 satisfied = satisfied && single_result;
             }
 
             stack.push(BFieldElement::new(satisfied as u64));
+            Ok(())
         }
 
         fn pseudorandom_initial_state(

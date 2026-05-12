@@ -94,8 +94,8 @@ mod tests {
             &self,
             stack: &mut Vec<BFieldElement>,
             memory: &mut HashMap<BFieldElement, BFieldElement>,
-        ) {
-            let mut array_pointer = stack.pop().unwrap();
+        ) -> Result<(), RustShadowError> {
+            let mut array_pointer = stack.pop().ok_or(RustShadowError::StackUnderflow)?;
             let mut array_quote_unquote = vec![XFieldElement::zero(); self.length];
             for array_elem in array_quote_unquote.iter_mut() {
                 for word in array_elem.coefficients.iter_mut() {
@@ -112,6 +112,7 @@ mod tests {
             for word in sum.coefficients.into_iter().rev() {
                 stack.push(word);
             }
+            Ok(())
         }
 
         fn pseudorandom_initial_state(

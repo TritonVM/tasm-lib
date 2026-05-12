@@ -105,13 +105,14 @@ mod tests {
             memory: &HashMap<BFieldElement, BFieldElement>,
             _: VecDeque<BFieldElement>,
             _: VecDeque<Digest>,
-        ) {
-            let stack_digest = pop_encodable::<Digest>(stack);
-            let leaf_index = pop_encodable::<u64>(stack);
-            let ram_ptr = pop_encodable::<BFieldElement>(stack);
+        ) -> Result<(), RustShadowError> {
+            let stack_digest = pop_encodable::<Digest>(stack)?;
+            let leaf_index = pop_encodable::<u64>(stack)?;
+            let ram_ptr = pop_encodable::<BFieldElement>(stack)?;
 
             let stack_digest_is_left_sibling = leaf_index.is_multiple_of(2);
-            let sibling_digest = *Digest::decode_from_memory(memory, ram_ptr).unwrap();
+            let sibling_digest = *Digest::decode_from_memory(memory, ram_ptr)
+                .map_err(|_| RustShadowError::DecodingError)?;
             let (left_digest, right_digest) = if stack_digest_is_left_sibling {
                 (stack_digest, sibling_digest)
             } else {
@@ -124,6 +125,8 @@ mod tests {
             push_encodable(stack, &(ram_ptr + bfe!(Digest::LEN)));
             push_encodable(stack, &parent_index);
             push_encodable(stack, &parent_digest);
+
+            Ok(())
         }
 
         fn pseudorandom_initial_state(

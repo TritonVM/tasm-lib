@@ -102,16 +102,20 @@ mod tests {
             _nondeterminism: &NonDeterminism,
             _public_input: &[BFieldElement],
             sponge: &mut Option<Tip5>,
-        ) -> Vec<BFieldElement> {
-            let sponge = sponge.as_mut().expect("sponge must be initialized");
-            let input_pointer: BFieldElement = stack.pop().unwrap();
+        ) -> Result<Vec<BFieldElement>, RustShadowError> {
+            let Some(sponge) = sponge.as_mut() else {
+                return Err(RustShadowError::SpongeUninitialized);
+            };
+            let input_pointer: BFieldElement =
+                stack.pop().ok_or(RustShadowError::StackUnderflow)?;
             let input: [BFieldElement; 10] = (0..10)
                 .map(|i| memory[&(BFieldElement::new(i) + input_pointer)])
                 .collect_vec()
                 .try_into()
                 .unwrap();
             sponge.absorb(input);
-            Vec::default()
+
+            Ok(Vec::new())
         }
 
         fn pseudorandom_initial_state(

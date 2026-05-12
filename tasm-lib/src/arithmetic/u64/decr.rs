@@ -99,9 +99,13 @@ mod tests {
     impl Closure for Decr {
         type Args = u64;
 
-        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
-            let arg = pop_encodable::<Self::Args>(stack);
-            push_encodable(stack, &arg.checked_sub(1).unwrap());
+        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) -> Result<(), RustShadowError> {
+            let arg = pop_encodable::<Self::Args>(stack)?;
+            let decremented = arg
+                .checked_sub(1)
+                .ok_or(RustShadowError::ArithmeticOverflow)?;
+            push_encodable(stack, &decremented);
+            Ok(())
         }
 
         fn pseudorandom_args(

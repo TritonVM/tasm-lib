@@ -89,8 +89,10 @@ pub(crate) mod tests {
             _: &NonDeterminism,
             _: &[BFieldElement],
             sponge: &mut Option<Tip5>,
-        ) -> Vec<BFieldElement> {
-            let sponge = sponge.as_mut().expect("sponge must be initialized");
+        ) -> Result<Vec<BFieldElement>, RustShadowError> {
+            let Some(sponge) = sponge.as_mut() else {
+                return Err(RustShadowError::SpongeUninitialized);
+            };
             let num_squeezes =
                 SampleScalarsStaticLengthDynMalloc::num_squeezes(self.num_elements_to_sample);
             let pseudorandomness = (0..num_squeezes)
@@ -99,13 +101,13 @@ pub(crate) mod tests {
             let scalars_pointer = self.scalars_pointer;
             insert_as_array(scalars_pointer, memory, pseudorandomness);
 
-            vec![]
+            Ok(Vec::new())
         }
 
         fn pseudorandom_initial_state(
             &self,
             seed: [u8; 32],
-            _bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
+            _bench_case: Option<BenchmarkCase>,
         ) -> ProcedureInitialState {
             let mut rng = StdRng::from_seed(seed);
             let stack = self.init_stack_for_isolated_run();
@@ -168,7 +170,8 @@ pub(crate) mod tests {
             &[],
             NonDeterminism::default(),
             &Some(sponge.clone()),
-        );
+        )
+        .unwrap();
 
         let scalar_pointer = snippet.scalars_pointer;
         let read_scalar = |i| array_get(scalar_pointer, i, &tasm.ram, EXTENSION_DEGREE);

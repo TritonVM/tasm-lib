@@ -165,13 +165,14 @@ mod tests {
             &self,
             stack: &mut Vec<BFieldElement>,
             memory: &mut HashMap<BFieldElement, BFieldElement>,
-        ) {
+        ) -> Result<(), RustShadowError> {
             const BFIELDELEMENT_SIZE: usize = 1;
-            let list_pointer = stack.pop().unwrap();
-            let list = load_list_with_copy_elements::<BFIELDELEMENT_SIZE>(list_pointer, memory);
+            let list_pointer = stack.pop().ok_or(RustShadowError::StackUnderflow)?;
+            let list = load_list_with_copy_elements::<BFIELDELEMENT_SIZE>(list_pointer, memory)?;
 
             let sum: BFieldElement = list.into_iter().map(|x| x[0]).sum();
             stack.push(sum);
+            Ok(())
         }
 
         fn pseudorandom_initial_state(

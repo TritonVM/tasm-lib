@@ -5,6 +5,7 @@ use triton_vm::prelude::*;
 
 use super::basic_snippet::BasicSnippet;
 use super::rust_shadow::RustShadow;
+use super::rust_shadow::RustShadowError;
 use crate::InitVmState;
 use crate::linker::execute_bench;
 use crate::prelude::Tip5;
@@ -35,7 +36,7 @@ pub trait Function: BasicSnippet {
         &self,
         stack: &mut Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
-    );
+    ) -> Result<(), RustShadowError>;
 
     /// Return (init_stack, init_memory)
     fn pseudorandom_initial_state(
@@ -45,7 +46,7 @@ pub trait Function: BasicSnippet {
     ) -> FunctionInitialState;
 
     fn corner_case_initial_states(&self) -> Vec<FunctionInitialState> {
-        vec![]
+        Vec::new()
     }
 }
 
@@ -112,9 +113,10 @@ where
         stack: &mut Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
         _sponge: &mut Option<Tip5>,
-    ) -> Vec<BFieldElement> {
-        self.function.rust_shadow(stack, memory);
-        vec![]
+    ) -> Result<Vec<BFieldElement>, RustShadowError> {
+        self.function.rust_shadow(stack, memory)?;
+
+        Ok(Vec::new())
     }
 
     /// Test rust-tasm equivalence.

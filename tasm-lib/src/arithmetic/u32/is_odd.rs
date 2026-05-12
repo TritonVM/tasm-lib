@@ -67,10 +67,11 @@ mod tests {
     impl Closure for IsOdd {
         type Args = u32;
 
-        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
-            let v = pop_encodable::<Self::Args>(stack);
+        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) -> Result<(), RustShadowError> {
+            let v = pop_encodable::<Self::Args>(stack)?;
             let is_odd = v % 2 == 1;
             push_encodable(stack, &is_odd);
+            Ok(())
         }
 
         fn pseudorandom_args(

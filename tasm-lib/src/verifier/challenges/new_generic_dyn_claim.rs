@@ -231,9 +231,11 @@ mod tests {
             _nondeterminism: &NonDeterminism,
             _public_input: &[BFieldElement],
             sponge: &mut Option<Tip5>,
-        ) -> Vec<BFieldElement> {
-            let sponge = sponge.as_mut().expect("sponge must be initialized");
-            let claim_pointer = stack.pop().unwrap();
+        ) -> Result<Vec<BFieldElement>, RustShadowError> {
+            let Some(sponge) = sponge.as_mut() else {
+                return Err(RustShadowError::SpongeUninitialized);
+            };
+            let claim_pointer = stack.pop().ok_or(RustShadowError::StackUnderflow)?;
             let claim = load_claim_from_memory(claim_pointer, memory);
             let challenges = sponge.sample_scalars(self.num_of_fiat_shamir_challenges);
             let challenges = Challenges::new(challenges, &claim);
@@ -243,7 +245,7 @@ mod tests {
 
             insert_as_array(challenges_pointer, memory, challenges.challenges.to_vec());
 
-            vec![]
+            Ok(Vec::new())
         }
 
         fn pseudorandom_initial_state(

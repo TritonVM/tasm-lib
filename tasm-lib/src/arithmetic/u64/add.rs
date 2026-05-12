@@ -79,10 +79,13 @@ mod tests {
     impl Closure for Add {
         type Args = <OverflowingAdd as Closure>::Args;
 
-        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
-            let (left, right) = pop_encodable::<Self::Args>(stack);
-            let sum = left.checked_add(right).expect("overflow occurred");
+        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) -> Result<(), RustShadowError> {
+            let (left, right) = pop_encodable::<Self::Args>(stack)?;
+            let sum = left
+                .checked_add(right)
+                .ok_or(RustShadowError::ArithmeticOverflow)?;
             push_encodable(stack, &sum);
+            Ok(())
         }
 
         fn pseudorandom_args(&self, seed: [u8; 32], _: Option<BenchmarkCase>) -> Self::Args {

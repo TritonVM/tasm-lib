@@ -91,12 +91,14 @@ mod tests {
         fn rust_shadow(
             &self,
             stack: &mut Vec<BFieldElement>,
-            memory: &mut std::collections::HashMap<BFieldElement, BFieldElement>,
+            memory: &mut HashMap<BFieldElement, BFieldElement>,
             _nondeterminism: &NonDeterminism,
             _public_input: &[BFieldElement],
             sponge: &mut Option<Tip5>,
-        ) -> Vec<BFieldElement> {
-            let sponge = sponge.as_mut().expect("sponge must be initialized");
+        ) -> Result<Vec<BFieldElement>, RustShadowError> {
+            let Some(sponge) = sponge.as_mut() else {
+                return Err(RustShadowError::SpongeUninitialized);
+            };
             let num_squeezes = Self::num_squeezes(self.num_elements);
             let pseudorandomness = (0..num_squeezes)
                 .flat_map(|_| sponge.squeeze().to_vec())
@@ -109,7 +111,7 @@ mod tests {
                 memory.insert(BFieldElement::new(i as u64) + scalars_pointer, *pr);
             }
 
-            vec![]
+            Ok(Vec::new())
         }
 
         fn pseudorandom_initial_state(
@@ -154,7 +156,8 @@ mod tests {
                     &[],
                     NonDeterminism::default(),
                     &Some(init_sponge.clone()),
-                );
+                )
+                .unwrap();
 
                 let final_ram = tasm.ram;
                 let snippet_output_scalar_pointer =

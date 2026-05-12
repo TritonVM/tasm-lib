@@ -5,6 +5,7 @@ use triton_vm::prelude::*;
 
 use super::basic_snippet::BasicSnippet;
 use super::rust_shadow::RustShadow;
+use super::rust_shadow::RustShadowError;
 use crate::InitVmState;
 use crate::linker::execute_bench;
 use crate::prelude::Tip5;
@@ -33,7 +34,7 @@ pub trait Accessor: BasicSnippet {
         &self,
         stack: &mut Vec<BFieldElement>,
         memory: &HashMap<BFieldElement, BFieldElement>,
-    );
+    ) -> Result<(), RustShadowError>;
 
     fn pseudorandom_initial_state(
         &self,
@@ -42,7 +43,7 @@ pub trait Accessor: BasicSnippet {
     ) -> AccessorInitialState;
 
     fn corner_case_initial_states(&self) -> Vec<AccessorInitialState> {
-        vec![]
+        Vec::new()
     }
 }
 
@@ -88,9 +89,10 @@ where
         stack: &mut Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
         _sponge: &mut Option<Tip5>,
-    ) -> Vec<BFieldElement> {
-        self.accessor.rust_shadow(stack, memory);
-        vec![]
+    ) -> Result<Vec<BFieldElement>, RustShadowError> {
+        self.accessor.rust_shadow(stack, memory)?;
+
+        Ok(Vec::new())
     }
 
     fn test(&self) {

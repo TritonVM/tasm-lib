@@ -10,6 +10,6 @@ use crate::traits::function::Function;
 /// state accordingly.
 pub fn dynamic_allocator(memory: &mut HashMap<BFieldElement, BFieldElement>) -> BFieldElement {
     let mut init_stack = empty_stack();
-    DynMalloc.rust_shadow(&mut init_stack, memory);
+    DynMalloc.rust_shadow(&mut init_stack, memory).unwrap();
     init_stack.pop().unwrap()
 }

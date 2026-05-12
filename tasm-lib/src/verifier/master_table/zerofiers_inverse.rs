@@ -197,13 +197,18 @@ mod tests {
             &self,
             stack: &mut Vec<BFieldElement>,
             memory: &mut HashMap<BFieldElement, BFieldElement>,
-        ) {
-            let trace_domain_generator = stack.pop().unwrap();
-            let padded_height: u32 = stack.pop().unwrap().value().try_into().unwrap();
+        ) -> Result<(), RustShadowError> {
+            let trace_domain_generator = stack.pop().ok_or(RustShadowError::StackUnderflow)?;
+            let padded_height: u32 = stack
+                .pop()
+                .ok_or(RustShadowError::StackUnderflow)?
+                .value()
+                .try_into()
+                .map_err(|_| RustShadowError::U64ToU32Error)?;
             let out_of_domain_point_curr_row = XFieldElement::new([
-                stack.pop().unwrap(),
-                stack.pop().unwrap(),
-                stack.pop().unwrap(),
+                stack.pop().ok_or(RustShadowError::StackUnderflow)?,
+                stack.pop().ok_or(RustShadowError::StackUnderflow)?,
+                stack.pop().ok_or(RustShadowError::StackUnderflow)?,
             ]);
             let initial_zerofier_inv =
                 (out_of_domain_point_curr_row - BFieldElement::one()).inverse();
@@ -224,6 +229,7 @@ mod tests {
                     terminal_zerofier_inv,
                 ],
             );
+            Ok(())
         }
 
         fn pseudorandom_initial_state(

@@ -12,6 +12,7 @@ use crate::snippet_bencher::write_benchmarks;
 use crate::test_helpers::test_rust_equivalence_given_complete_state;
 use crate::traits::basic_snippet::BasicSnippet;
 use crate::traits::rust_shadow::RustShadow;
+use crate::traits::rust_shadow::RustShadowError;
 
 /// A trait that can modify all parts of the VM state.
 ///
@@ -39,7 +40,7 @@ pub trait Procedure: BasicSnippet {
         nondeterminism: &NonDeterminism,
         public_input: &[BFieldElement],
         sponge: &mut Option<Tip5>,
-    ) -> Vec<BFieldElement>;
+    ) -> Result<Vec<BFieldElement>, RustShadowError>;
 
     fn preprocess<T: BFieldCodec>(_meta_input: T, _nondeterminism: &mut NonDeterminism) {}
 
@@ -50,7 +51,7 @@ pub trait Procedure: BasicSnippet {
     ) -> ProcedureInitialState;
 
     fn corner_case_initial_states(&self) -> Vec<ProcedureInitialState> {
-        vec![]
+        Vec::new()
     }
 }
 
@@ -95,7 +96,7 @@ impl<P: Procedure> RustShadow for ShadowedProcedure<P> {
         stack: &mut Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
         sponge: &mut Option<Tip5>,
-    ) -> Vec<BFieldElement> {
+    ) -> Result<Vec<BFieldElement>, RustShadowError> {
         self.procedure
             .rust_shadow(stack, memory, nondeterminism, stdin, sponge)
     }

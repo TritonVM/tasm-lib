@@ -166,13 +166,15 @@ mod tests {
         fn rust_shadow(
             &self,
             stack: &mut Vec<BFieldElement>,
-            memory: &mut std::collections::HashMap<BFieldElement, BFieldElement>,
+            memory: &mut HashMap<BFieldElement, BFieldElement>,
             _: &NonDeterminism,
             _: &[BFieldElement],
             sponge: &mut Option<Tip5>,
-        ) -> Vec<BFieldElement> {
-            let sponge = sponge.as_mut().expect("sponge must be initialized");
-            let program_digest = pop_encodable(stack);
+        ) -> Result<Vec<BFieldElement>, RustShadowError> {
+            let Some(sponge) = sponge.as_mut() else {
+                return Err(RustShadowError::SpongeUninitialized);
+            };
+            let program_digest = pop_encodable(stack)?;
 
             let claim = Claim::new(program_digest);
             let challenges = sponge.sample_scalars(self.num_of_fiat_shamir_challenges);
@@ -190,7 +192,7 @@ mod tests {
                 challenges.challenges.to_vec(),
             );
 
-            vec![]
+            Ok(Vec::new())
         }
 
         fn pseudorandom_initial_state(

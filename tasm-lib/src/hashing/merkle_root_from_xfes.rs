@@ -240,15 +240,16 @@ mod tests {
             &self,
             stack: &mut Vec<BFieldElement>,
             memory: &mut HashMap<BFieldElement, BFieldElement>,
-        ) {
-            let leafs_pointer = stack.pop().unwrap();
-            let leafs = *Vec::<XFieldElement>::decode_from_memory(memory, leafs_pointer).unwrap();
+        ) -> Result<(), RustShadowError> {
+            let leafs_pointer = stack.pop().ok_or(RustShadowError::StackUnderflow)?;
+            let leafs = *Vec::<XFieldElement>::decode_from_memory(memory, leafs_pointer)
+                .map_err(|_| RustShadowError::DecodingError)?;
             let leafs = leafs.into_iter().map(Digest::from).collect_vec();
-            let mt = MerkleTree::par_new(&leafs).unwrap();
+            let mt = MerkleTree::par_new(&leafs).map_err(|_| RustShadowError::Other)?;
 
             if leafs.len() == 1 {
                 stack.extend(mt.root().reversed().values());
-                return;
+                return Ok(());
             }
 
             // Write entire Merkle tree to memory, because that's what the VM does
@@ -256,21 +257,22 @@ mod tests {
             list_new(first_layer_pointer, memory);
             for node_count in 0..(leafs.len() >> 1) {
                 let node_index = node_count + (1 << (mt.height() - 1));
-                let node = mt.node(node_index).unwrap();
-                list_push(first_layer_pointer, node.values().to_vec(), memory)
+                let node = mt.node(node_index).ok_or(RustShadowError::Other)?;
+                list_push(first_layer_pointer, node.values().to_vec(), memory)?
             }
 
             let rest_of_tree_pointer = dynamic_allocator(memory);
             for layer in 2..=mt.height() {
                 for node_count in 0..(leafs.len() >> layer) {
                     let node_index = node_count + (1 << (mt.height() - layer));
-                    let node = mt.node(node_index).unwrap();
+                    let node = mt.node(node_index).ok_or(RustShadowError::Other)?;
                     let pointer = rest_of_tree_pointer + bfe!(node_index * Digest::LEN);
                     encode_to_memory(memory, pointer, &node);
                 }
             }
-
             stack.extend(mt.root().reversed().values());
+
+            Ok(())
         }
 
         fn pseudorandom_initial_state(

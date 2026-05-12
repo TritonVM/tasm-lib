@@ -167,16 +167,17 @@ mod tests {
             stack: &mut Vec<BFieldElement>,
             memory: &mut HashMap<BFieldElement, BFieldElement>,
             _: &NonDeterminism,
-        ) {
-            let b_index = stack.pop().unwrap().value() as usize;
-            let a_index = stack.pop().unwrap().value() as usize;
-            let list_pointer = stack.pop().unwrap();
+        ) -> Result<(), RustShadowError> {
+            let b_index = stack.pop().ok_or(RustShadowError::StackUnderflow)?.value() as usize;
+            let a_index = stack.pop().ok_or(RustShadowError::StackUnderflow)?.value() as usize;
+            let list_pointer = stack.pop().ok_or(RustShadowError::StackUnderflow)?;
             let element_size = self.element_type.stack_size();
 
-            let a = list_get(list_pointer, a_index, memory, element_size);
-            let b = list_get(list_pointer, b_index, memory, element_size);
-            list_set(list_pointer, a_index, b, memory);
-            list_set(list_pointer, b_index, a, memory);
+            let a = list_get(list_pointer, a_index, memory, element_size)?;
+            let b = list_get(list_pointer, b_index, memory, element_size)?;
+            list_set(list_pointer, a_index, b, memory)?;
+            list_set(list_pointer, b_index, a, memory)?;
+            Ok(())
         }
 
         fn pseudorandom_initial_state(

@@ -240,22 +240,21 @@ mod tests {
             &self,
             stack: &mut Vec<BFieldElement>,
             memory: &mut HashMap<BFieldElement, BFieldElement>,
-        ) {
-            let list_b_pointer = stack.pop().unwrap();
-            let list_a_pointer = stack.pop().unwrap();
+        ) -> Result<(), RustShadowError> {
+            let list_b_pointer = stack.pop().ok_or(RustShadowError::StackUnderflow)?;
+            let list_a_pointer = stack.pop().ok_or(RustShadowError::StackUnderflow)?;
 
-            let a: Vec<[BFieldElement; Digest::LEN]> =
-                load_list_with_copy_elements(list_a_pointer, memory);
+            let a = load_list_with_copy_elements::<{ Digest::LEN }>(list_a_pointer, memory)?;
             let mut a = a.into_iter().map(Digest::new).collect_vec();
             a.sort_unstable();
-            let b: Vec<[BFieldElement; Digest::LEN]> =
-                load_list_with_copy_elements(list_b_pointer, memory);
+            let b = load_list_with_copy_elements::<{ Digest::LEN }>(list_b_pointer, memory)?;
             let mut b = b.into_iter().map(Digest::new).collect_vec();
             b.sort_unstable();
 
             // equate and push result to stack
             let result = a == b;
             stack.push(BFieldElement::new(result as u64));
+            Ok(())
         }
 
         fn pseudorandom_initial_state(

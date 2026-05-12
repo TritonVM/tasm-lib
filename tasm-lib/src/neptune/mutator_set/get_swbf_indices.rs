@@ -195,11 +195,11 @@ mod tests {
             &self,
             stack: &mut Vec<BFieldElement>,
             memory: &mut HashMap<BFieldElement, BFieldElement>,
-        ) {
-            let item = pop_encodable::<Digest>(stack);
-            let sender_randomness = pop_encodable::<Digest>(stack);
-            let receiver_preimage = pop_encodable::<Digest>(stack);
-            let aocl_leaf_index = pop_encodable::<u64>(stack);
+        ) -> Result<(), RustShadowError> {
+            let item = pop_encodable::<Digest>(stack)?;
+            let sender_randomness = pop_encodable::<Digest>(stack)?;
+            let receiver_preimage = pop_encodable::<Digest>(stack)?;
+            let aocl_leaf_index = pop_encodable::<u64>(stack)?;
 
             let mut sponge_seed = [item, sender_randomness, receiver_preimage]
                 .map(|d| d.values())
@@ -215,7 +215,7 @@ mod tests {
                 if squeezed_elements.is_empty() {
                     squeezed_elements = sponge.squeeze().into_iter().rev().collect_vec();
                 }
-                let element = squeezed_elements.pop().unwrap();
+                let element = squeezed_elements.pop().ok_or(RustShadowError::Other)?;
                 if element != BFieldElement::new(BFieldElement::MAX) {
                     u32_indices.push(element.value() as u32 % self.window_size);
                 }
@@ -237,7 +237,7 @@ mod tests {
                     i,
                     vec![BFieldElement::new(*index as u64)],
                     memory,
-                );
+                )?;
             }
 
             // Compare derived indices to actual implementation (copy-pasted from
@@ -259,11 +259,9 @@ mod tests {
                 .collect_vec();
 
             // Sanity check that this RUST-shadowing agrees with the real deal
-            assert_eq!(
-                indices_from_mutator_set.to_vec(),
-                u128_indices,
-                "VM-calculated indices must match that from mutator set module"
-            );
+            if indices_from_mutator_set.to_vec() != u128_indices {
+                return Err(RustShadowError::Other);
+            }
 
             let u128_list_pointer =
                 rust_shadowing_helper_functions::dyn_malloc::dynamic_allocator(memory);
@@ -274,6 +272,7 @@ mod tests {
             );
 
             stack.push(u128_list_pointer);
+            Ok(())
         }
 
         fn pseudorandom_initial_state(

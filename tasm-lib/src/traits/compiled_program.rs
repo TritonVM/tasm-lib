@@ -14,6 +14,7 @@ pub trait CompiledProgram {
     fn program() -> Program {
         let (program_instructions, library) = Self::code();
         let library_instructions = library.all_imports();
+
         Program::new(&[program_instructions, library_instructions].concat())
     }
 
@@ -120,6 +121,7 @@ mod tests {
                 a = b;
                 b = c;
             }
+
             Ok(vec![b])
         }
 

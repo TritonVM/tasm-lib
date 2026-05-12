@@ -78,9 +78,12 @@ mod tests {
             _nondeterminism: &NonDeterminism,
             _public_input: &[BFieldElement],
             sponge: &mut Option<Tip5>,
-        ) -> Vec<BFieldElement> {
-            let sponge = sponge.as_mut().expect("sponge must be initialized");
-            let input_pointer: BFieldElement = stack.pop().unwrap();
+        ) -> Result<Vec<BFieldElement>, RustShadowError> {
+            let Some(sponge) = sponge.as_mut() else {
+                return Err(RustShadowError::SpongeUninitialized);
+            };
+            let input_pointer: BFieldElement =
+                stack.pop().ok_or(RustShadowError::StackUnderflow)?;
             let first_word = input_pointer + BFieldElement::new(LIST_METADATA_SIZE as u64);
             let input_length = memory[&input_pointer].value();
             let input = (0..input_length)
@@ -88,7 +91,7 @@ mod tests {
                 .collect_vec();
             sponge.pad_and_absorb_all(&input);
 
-            Vec::default()
+            Ok(Vec::new())
         }
 
         fn pseudorandom_initial_state(

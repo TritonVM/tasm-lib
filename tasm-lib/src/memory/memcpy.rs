@@ -117,11 +117,13 @@ mod tests {
             &self,
             stack: &mut Vec<BFieldElement>,
             memory: &mut HashMap<BFieldElement, BFieldElement>,
-        ) {
-            let len = pop_encodable(stack);
-            let write_dest = stack.pop().unwrap();
-            let read_source = stack.pop().unwrap();
-            assert!(len < DEFAULT_MAX_DYN_FIELD_SIZE);
+        ) -> Result<(), RustShadowError> {
+            let len = pop_encodable(stack)?;
+            let write_dest = stack.pop().ok_or(RustShadowError::StackUnderflow)?;
+            let read_source = stack.pop().ok_or(RustShadowError::StackUnderflow)?;
+            if len >= DEFAULT_MAX_DYN_FIELD_SIZE {
+                return Err(RustShadowError::Other);
+            }
 
             for i in 0..len {
                 let offset = bfe!(i);
@@ -129,6 +131,7 @@ mod tests {
                 let element = maybe_element.copied().unwrap_or_default();
                 memory.insert(write_dest + offset, element);
             }
+            Ok(())
         }
 
         fn pseudorandom_initial_state(

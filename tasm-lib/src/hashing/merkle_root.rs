@@ -232,22 +232,24 @@ mod tests {
             &self,
             stack: &mut Vec<BFieldElement>,
             memory: &mut HashMap<BFieldElement, BFieldElement>,
-        ) {
-            let leafs_pointer = stack.pop().unwrap();
-            let leafs = *Vec::decode_from_memory(memory, leafs_pointer).unwrap();
-            let mt = MerkleTree::par_new(&leafs).unwrap();
+        ) -> Result<(), RustShadowError> {
+            let leafs_pointer = stack.pop().ok_or(RustShadowError::StackUnderflow)?;
+            let leafs = *Vec::decode_from_memory(memory, leafs_pointer)
+                .map_err(|_| RustShadowError::DecodingError)?;
+            let mt = MerkleTree::par_new(&leafs).map_err(|_| RustShadowError::Other)?;
 
             // mimic snippet: write internal nodes to memory, skipping (dummy) node 0
             let tree_pointer = dynamic_allocator(memory);
             let num_internal_nodes = leafs.len();
 
             for node_index in 1..num_internal_nodes {
-                let node = mt.node(node_index).unwrap();
+                let node = mt.node(node_index).ok_or(RustShadowError::Other)?;
                 let node_address = tree_pointer + bfe!(node_index * Digest::LEN);
                 encode_to_memory(memory, node_address, &node);
             }
 
             stack.extend(mt.root().reversed().values());
+            Ok(())
         }
 
         fn pseudorandom_initial_state(

@@ -76,9 +76,10 @@ mod tests {
     impl Closure for Xor {
         type Args = (u64, u64);
 
-        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
-            let (right, left) = pop_encodable::<Self::Args>(stack);
+        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) -> Result<(), RustShadowError> {
+            let (right, left) = pop_encodable::<Self::Args>(stack)?;
             push_encodable(stack, &(left ^ right));
+            Ok(())
         }
 
         fn pseudorandom_args(

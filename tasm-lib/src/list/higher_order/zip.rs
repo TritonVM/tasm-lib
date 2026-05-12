@@ -13,6 +13,7 @@ use crate::prelude::*;
 use crate::rust_shadowing_helper_functions::list::untyped_insert_random_list;
 use crate::snippet_bencher::BenchmarkCase;
 use crate::traits::function::*;
+use crate::traits::rust_shadow::RustShadowError;
 
 /// Zips two lists of equal length, returning a new list of pairs of elements.
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
@@ -214,16 +215,18 @@ impl Function for Zip {
         &self,
         stack: &mut Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
-    ) {
+    ) -> Result<(), RustShadowError> {
         use crate::rust_shadowing_helper_functions::dyn_malloc;
         use crate::rust_shadowing_helper_functions::list;
 
-        let right_pointer = stack.pop().unwrap();
-        let left_pointer = stack.pop().unwrap();
+        let right_pointer = stack.pop().ok_or(RustShadowError::StackUnderflow)?;
+        let left_pointer = stack.pop().ok_or(RustShadowError::StackUnderflow)?;
 
-        let left_length = list::list_get_length(left_pointer, memory);
-        let right_length = list::list_get_length(right_pointer, memory);
-        assert_eq!(left_length, right_length);
+        let left_length = list::list_get_length(left_pointer, memory)?;
+        let right_length = list::list_get_length(right_pointer, memory)?;
+        if left_length != right_length {
+            return Err(RustShadowError::Other);
+        }
         let len = left_length;
 
         let output_pointer = dyn_malloc::dynamic_allocator(memory);
@@ -231,14 +234,16 @@ impl Function for Zip {
         list::list_set_length(output_pointer, len, memory);
 
         for i in 0..len {
-            let left_item = list::list_get(left_pointer, i, memory, self.left_type.stack_size());
-            let right_item = list::list_get(right_pointer, i, memory, self.right_type.stack_size());
+            let left_item = list::list_get(left_pointer, i, memory, self.left_type.stack_size())?;
+            let right_item =
+                list::list_get(right_pointer, i, memory, self.right_type.stack_size())?;
 
             let pair = right_item.into_iter().chain(left_item).collect_vec();
-            list::list_set(output_pointer, i, pair, memory);
+            list::list_set(output_pointer, i, pair, memory)?;
         }
 
         stack.push(output_pointer);
+        Ok(())
     }
 
     fn pseudorandom_initial_state(
@@ -310,13 +315,13 @@ mod tests {
         let right_pointer = bfe!(1_u64 << 60); // far enough
 
         let mut ram = HashMap::default();
-        write_list_to_ram(&mut ram, left_pointer, &left_list);
-        write_list_to_ram(&mut ram, right_pointer, &right_list);
+        write_list_to_ram(&mut ram, left_pointer, &left_list)?;
+        write_list_to_ram(&mut ram, right_pointer, &right_list)?;
 
         let mut stack = [empty_stack(), vec![left_pointer, right_pointer]].concat();
 
         let zip = Zip::new(DataType::U32, DataType::Xfe);
-        zip.rust_shadow(&mut stack, &mut ram);
+        zip.rust_shadow(&mut stack, &mut ram).unwrap();
         let output_list_pointer = stack.pop().unwrap();
         let tasm_zipped = *Vec::decode_from_memory(&ram, output_list_pointer).unwrap();
 
@@ -328,11 +333,13 @@ mod tests {
         ram: &mut HashMap<BFieldElement, BFieldElement>,
         list_pointer: BFieldElement,
         list: &[T],
-    ) {
+    ) -> Result<(), RustShadowError> {
         list::list_new(list_pointer, ram);
         for &item in list {
-            list::list_push(list_pointer, item.encode(), ram);
+            list::list_push(list_pointer, item.encode(), ram)?;
         }
+
+        Ok(())
     }
 }
 

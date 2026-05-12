@@ -49,7 +49,7 @@ impl BasicSnippet for VerifyFriAuthenticationPaths {
         "tasmlib_verifier_fri_verify_fri_authentication_paths".into()
     }
 
-    fn code(&self, _library: &mut crate::library::Library) -> Vec<LabelledInstruction> {
+    fn code(&self, _library: &mut Library) -> Vec<LabelledInstruction> {
         let entrypoint = self.entrypoint();
         let main_loop = format!("{entrypoint}_main_loop");
 
@@ -145,7 +145,7 @@ mod tests {
     }
 
     impl Distribution<IndexType> for StandardUniform {
-        fn sample<R: rand::Rng + ?Sized>(&self, rng: &mut R) -> IndexType {
+        fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> IndexType {
             if rng.random() {
                 IndexType::A
             } else {
@@ -160,13 +160,13 @@ mod tests {
             stack: &mut Vec<BFieldElement>,
             memory: &mut HashMap<BFieldElement, BFieldElement>,
             nondeterminism: &NonDeterminism,
-        ) {
-            let root = pop_encodable(stack);
-            let idx_last_elem = pop_encodable(stack);
-            let idx_end_condition = pop_encodable(stack);
-            let leaf_last_element_pointer = pop_encodable(stack);
-            let xor_bitflag = pop_encodable::<u32>(stack);
-            let dom_len_minus_one = pop_encodable::<u32>(stack);
+        ) -> Result<(), RustShadowError> {
+            let root = pop_encodable(stack)?;
+            let idx_last_elem = pop_encodable(stack)?;
+            let idx_end_condition = pop_encodable(stack)?;
+            let leaf_last_element_pointer = pop_encodable(stack)?;
+            let xor_bitflag = pop_encodable::<u32>(stack)?;
+            let dom_len_minus_one = pop_encodable::<u32>(stack)?;
 
             let dom_len = dom_len_minus_one + 1;
             let tree_height = dom_len.ilog2();
@@ -186,7 +186,7 @@ mod tests {
                     .map(|x| x.value())
                     .unwrap_or_default()
                     .try_into()
-                    .unwrap();
+                    .map_err(|_| RustShadowError::U64ToU32Error)?;
                 let node_index = (leaf_index_a_round_0 & dom_len_minus_one) ^ xor_bitflag;
                 let leaf_index = node_index ^ dom_len;
 
@@ -202,12 +202,15 @@ mod tests {
                     indexed_leafs: vec![(leaf_index as usize, leaf.into())],
                     authentication_structure: authentication_path,
                 };
-                assert!(inclusion_proof.verify(root));
+                if !inclusion_proof.verify(root) {
+                    return Err(RustShadowError::InvalidProof);
+                }
 
                 idx_element_pointer.decrement();
                 auth_path_counter += 1;
                 leaf_pointer -= bfe!(EXTENSION_DEGREE as u64);
             }
+            Ok(())
         }
 
         fn pseudorandom_initial_state(

@@ -1149,7 +1149,6 @@ impl FriVerify {
 #[cfg(test)]
 mod tests {
     use std::collections::HashSet;
-    use std::panic::catch_unwind;
 
     use num_traits::Zero;
     use proptest::collection::vec;
@@ -1219,9 +1218,14 @@ mod tests {
     }
 
     impl FriSnippet {
-        /// Test helper – panics if verification fails.
-        fn verify_from_proof_with_digests(&self, proof: Vec<BFieldElement>, digests: Vec<Digest>) {
-            let items = *Vec::<ProofItem>::decode(&proof).unwrap();
+        /// Test helper – errors if verification fails.
+        fn verify_from_proof_with_digests(
+            &self,
+            proof: Vec<BFieldElement>,
+            digests: Vec<Digest>,
+        ) -> Result<(), RustShadowError> {
+            let items =
+                *Vec::<ProofItem>::decode(&proof).map_err(|_| RustShadowError::DecodingError)?;
             let proof_stream = ProofStream {
                 items,
                 items_index: 0,
@@ -1237,7 +1241,9 @@ mod tests {
                 &[],
                 nondeterminism,
                 &Some(Tip5::init()),
-            );
+            )?;
+
+            Ok(())
         }
 
         fn set_up_stack_and_non_determinism(
@@ -1289,16 +1295,21 @@ mod tests {
             nondeterminism: &NonDeterminism,
             _public_input: &[BFieldElement],
             sponge: &mut Option<Tip5>,
-        ) -> Vec<BFieldElement> {
-            let fri_pointer = stack.pop().unwrap();
-            let fri_verify = *FriVerify::decode_from_memory(memory, fri_pointer).unwrap();
-            assert_eq!(fri_verify, self.test_instance);
+        ) -> Result<Vec<BFieldElement>, RustShadowError> {
+            let fri_pointer = stack.pop().ok_or(RustShadowError::StackUnderflow)?;
+            let fri_verify = *FriVerify::decode_from_memory(memory, fri_pointer)
+                .map_err(|_| RustShadowError::DecodingError)?;
+            if fri_verify != self.test_instance {
+                return Err(RustShadowError::Other);
+            }
 
-            let proof_iter_pointer = stack.pop().unwrap();
+            let proof_iter_pointer = stack.pop().ok_or(RustShadowError::StackUnderflow)?;
 
             // uses highly specific knowledge about `BFieldCodec` and the test setup
-            let proof_stream_pointer =
-                *memory.get(&proof_iter_pointer).unwrap() - BFieldElement::new(2);
+            let mem_value = *memory
+                .get(&proof_iter_pointer)
+                .ok_or(RustShadowError::DecodingError)?;
+            let proof_stream_pointer = mem_value - BFieldElement::new(2);
             // todo: hack using local knowledge: `fri_verify` lives directly after `vm_proof_iter`.
             //  Replace this once we have a better way to decode.
             let proof_stream_size = (fri_pointer - proof_stream_pointer).value() as usize;
@@ -1307,7 +1318,7 @@ mod tests {
                 proof_stream_pointer,
                 proof_stream_size,
             )
-            .unwrap();
+            .map_err(|_| RustShadowError::DecodingError)?;
 
             let revealed_indices_and_elements = fri_verify.call(&mut proof_stream, nondeterminism);
 
@@ -1323,7 +1334,7 @@ mod tests {
             *sponge = Some(proof_stream.sponge);
 
             // no standard output
-            vec![]
+            Ok(Vec::new())
         }
 
         fn pseudorandom_initial_state(
@@ -1517,7 +1528,8 @@ mod tests {
             &stdin,
             nondeterminism,
             &sponge,
-        );
+        )
+        .unwrap();
 
         assert_eq!(rust.public_output, tasm.public_output);
         verify_stack_growth(&shadowed_procedure, &initial_stack, &tasm.op_stack.stack);
@@ -1590,7 +1602,9 @@ mod tests {
         let snippet = FriSnippet {
             test_instance: test_case.fri_verify,
         };
-        snippet.verify_from_proof_with_digests(proof.clone(), digests.clone());
+        snippet
+            .verify_from_proof_with_digests(proof.clone(), digests.clone())
+            .unwrap();
 
         let proof_len = proof.len();
         (0..proof_len).into_par_iter().for_each(|i| {
@@ -1599,7 +1613,8 @@ mod tests {
             }
             let mut proof = proof.clone();
             proof[i].increment();
-            catch_unwind(|| snippet.verify_from_proof_with_digests(proof, digests.clone()))
+            snippet
+                .verify_from_proof_with_digests(proof, digests.clone())
                 .expect_err(&format!(
                     "Verification must fail, but succeeded at element {i}/{proof_len}"
                 ));
@@ -1626,7 +1641,8 @@ mod tests {
             &stdin,
             nondeterminism,
             &sponge,
-        );
+        )
+        .unwrap();
 
         assert!(tasm.secret_digests.is_empty());
     }

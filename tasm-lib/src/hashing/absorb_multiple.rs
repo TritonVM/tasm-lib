@@ -162,14 +162,16 @@ mod tests {
             _: VecDeque<Digest>,
             _: VecDeque<BFieldElement>,
             sponge: &mut Option<Tip5>,
-        ) -> Vec<BFieldElement> {
-            let length = pop_encodable::<u32>(stack).try_into().unwrap();
-            let address = stack.pop().unwrap();
+        ) -> Result<Vec<BFieldElement>, RustShadowError> {
+            let length = pop_encodable::<u32>(stack)?.try_into().unwrap();
+            let address = stack.pop().ok_or(RustShadowError::StackUnderflow)?;
 
-            let sponge = sponge.as_mut().expect("sponge must be initialized");
+            let Some(sponge) = sponge.as_mut() else {
+                return Err(RustShadowError::SpongeUninitialized);
+            };
             sponge.pad_and_absorb_all(&array_from_memory::<BFieldElement>(address, length, memory));
 
-            vec![]
+            Ok(Vec::new())
         }
 
         fn pseudorandom_initial_state(

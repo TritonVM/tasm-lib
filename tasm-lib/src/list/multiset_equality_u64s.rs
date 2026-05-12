@@ -327,16 +327,16 @@ mod tests {
             &self,
             stack: &mut Vec<BFieldElement>,
             memory: &mut HashMap<BFieldElement, BFieldElement>,
-        ) {
-            let list_b_pointer = stack.pop().unwrap();
-            let list_a_pointer = stack.pop().unwrap();
+        ) -> Result<(), RustShadowError> {
+            let list_b_pointer = stack.pop().ok_or(RustShadowError::StackUnderflow)?;
+            let list_a_pointer = stack.pop().ok_or(RustShadowError::StackUnderflow)?;
 
-            let a: Vec<[BFieldElement; 2]> = load_list_with_copy_elements(list_a_pointer, memory);
-            let b: Vec<[BFieldElement; 2]> = load_list_with_copy_elements(list_b_pointer, memory);
+            let a = load_list_with_copy_elements::<2>(list_a_pointer, memory)?;
+            let b = load_list_with_copy_elements::<2>(list_b_pointer, memory)?;
 
             if a.len() != b.len() {
                 stack.push(BFieldElement::zero());
-                return;
+                return Ok(());
             }
 
             let len = a.len();
@@ -350,15 +350,15 @@ mod tests {
 
             // compute running products
             let mut running_product_a = XFieldElement::one();
-            for i in 0..len as u64 {
-                let u64_elem = list_get(list_a_pointer, i as usize, memory, U64_STACK_SIZE);
+            for i in 0..len {
+                let u64_elem = list_get(list_a_pointer, i, memory, U64_STACK_SIZE)?;
                 let m = XFieldElement::new([u64_elem[0], u64_elem[1], BFieldElement::zero()]);
                 let factor = m - indeterminate;
                 running_product_a *= factor;
             }
             let mut running_product_b = XFieldElement::one();
-            for i in 0..len as u64 {
-                let u64_elem = list_get(list_b_pointer, i as usize, memory, U64_STACK_SIZE);
+            for i in 0..len {
+                let u64_elem = list_get(list_b_pointer, i, memory, U64_STACK_SIZE)?;
                 let m = XFieldElement::new([u64_elem[0], u64_elem[1], BFieldElement::zero()]);
                 let factor = m - indeterminate;
                 running_product_b *= factor;
@@ -370,8 +370,9 @@ mod tests {
                 STATIC_MEMORY_FIRST_ADDRESS - bfe!(EXTENSION_DEGREE as u64 - 1),
                 &running_product_a,
             );
+            stack.push(bfe!((running_product_a == running_product_b) as u64));
 
-            stack.push(bfe!((running_product_a == running_product_b) as u64))
+            Ok(())
         }
 
         fn pseudorandom_initial_state(

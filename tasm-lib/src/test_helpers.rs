@@ -13,6 +13,7 @@ use crate::execute_with_terminal_state;
 use crate::prelude::Tip5;
 use crate::traits::basic_snippet::SignedOffSnippet;
 use crate::traits::rust_shadow::RustShadow;
+use crate::traits::rust_shadow::RustShadowError;
 
 pub fn rust_final_state<T: RustShadow>(
     shadowed_snippet: &T,
@@ -26,13 +27,15 @@ pub fn rust_final_state<T: RustShadow>(
     let mut rust_sponge = sponge.clone();
 
     // run rust shadow
-    let output = shadowed_snippet.rust_shadow_wrapper(
-        stdin,
-        nondeterminism,
-        &mut rust_stack,
-        &mut rust_memory,
-        &mut rust_sponge,
-    );
+    let output = shadowed_snippet
+        .rust_shadow_wrapper(
+            stdin,
+            nondeterminism,
+            &mut rust_stack,
+            &mut rust_memory,
+            &mut rust_sponge,
+        )
+        .unwrap();
 
     RustShadowOutputState {
         public_output: output,
@@ -48,7 +51,7 @@ pub fn tasm_final_state<T: RustShadow>(
     stdin: &[BFieldElement],
     nondeterminism: NonDeterminism,
     sponge: &Option<Tip5>,
-) -> VMState {
+) -> Result<VMState, RustShadowError> {
     // run tvm
     link_and_run_tasm_for_test(
         shadowed_snippet,
@@ -177,7 +180,8 @@ pub fn test_rust_equivalence_given_complete_state<T: RustShadow>(
         stdin,
         nondeterminism.clone(),
         sponge,
-    );
+    )
+    .unwrap();
 
     assert_eq!(
         rust.public_output, tasm.public_output,
@@ -205,7 +209,7 @@ pub fn link_and_run_tasm_for_test<T: RustShadow>(
     std_in: Vec<BFieldElement>,
     nondeterminism: NonDeterminism,
     maybe_sponge: Option<Tip5>,
-) -> VMState {
+) -> Result<VMState, RustShadowError> {
     let code = snippet_struct.inner().link_for_isolated_run();
 
     execute_test(
@@ -273,23 +277,17 @@ fn instruction_error_from_failing_code<S: RustShadow>(
     snippet: &S,
     init_state: InitVmState,
 ) -> InstructionError {
-    // `AssertUnwindSafe` is fine because the caught panic is discarded immediately
-    let rust_result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        let mut rust_stack = init_state.stack.clone();
-        let mut rust_memory = init_state.nondeterminism.ram.clone();
-        let mut rust_sponge = init_state.sponge.clone();
-        snippet.rust_shadow_wrapper(
-            &init_state.public_input,
-            &init_state.nondeterminism,
-            &mut rust_stack,
-            &mut rust_memory,
-            &mut rust_sponge,
-        )
-    }));
-    assert!(
-        rust_result.is_err(),
-        "Failed to fail: Rust-shadowing must panic in negative test case"
+    let mut rust_stack = init_state.stack.clone();
+    let mut rust_memory = init_state.nondeterminism.ram.clone();
+    let mut rust_sponge = init_state.sponge.clone();
+    let rust_result = snippet.rust_shadow_wrapper(
+        &init_state.public_input,
+        &init_state.nondeterminism,
+        &mut rust_stack,
+        &mut rust_memory,
+        &mut rust_sponge,
     );
+    rust_result.expect_err("Failed to fail: Rust-shadowing must panic in negative test case");
 
     let code = snippet.inner().link_for_isolated_run();
     let tvm_result = execute_with_terminal_state(
@@ -299,7 +297,6 @@ fn instruction_error_from_failing_code<S: RustShadow>(
         &init_state.nondeterminism,
         init_state.sponge,
     );
-
     tvm_result.expect_err("Failed to fail: Triton VM execution must crash in negative test case")
 }
 
@@ -322,11 +319,7 @@ pub fn prepend_program_with_sponge_init(program: &Program) -> Program {
 
 /// Store the output from Triton VM's `proof` function as files, such that a deterministic
 /// proof can be used for debugging purposes.
-pub fn maybe_write_tvm_output_to_disk(
-    stark: &Stark,
-    claim: &triton_vm::proof::Claim,
-    proof: &Proof,
-) {
+pub fn maybe_write_tvm_output_to_disk(stark: &Stark, claim: &Claim, proof: &Proof) {
     use std::io::Write;
     let Ok(_) = std::env::var("TASMLIB_STORE") else {
         return;

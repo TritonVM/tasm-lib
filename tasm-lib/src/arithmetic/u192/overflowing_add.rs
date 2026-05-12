@@ -116,7 +116,7 @@ pub(crate) mod tests {
             let initial_stack = self.set_up_test_stack((rhs, lhs));
 
             let mut expected_stack = initial_stack.clone();
-            self.rust_shadow(&mut expected_stack);
+            self.rust_shadow(&mut expected_stack).unwrap();
 
             test_rust_equivalence_given_complete_state(
                 &ShadowedClosure::new(Self),
@@ -147,17 +147,18 @@ pub(crate) mod tests {
     impl Closure for OverflowingAdd {
         type Args = (U192, U192);
 
-        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
-            let left: U192 = pop_encodable(stack);
+        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) -> Result<(), RustShadowError> {
+            let left: U192 = pop_encodable(stack)?;
             let left: BigUint = BigUint::new(left.to_vec());
-            let right: U192 = pop_encodable(stack);
+            let right: U192 = pop_encodable(stack)?;
             let right: BigUint = BigUint::new(right.to_vec());
             let sum = left + right;
             let mut sum = sum.to_u32_digits();
-            assert!(
-                sum.len() <= 6 || sum.len() == 7 && *sum.last().unwrap() == 1,
-                "Value must be bounded thusly"
-            );
+            let overflow_shape_is_valid =
+                sum.len() <= 6 || (sum.len() == 7 && sum.last().copied().is_some_and(|x| x == 1));
+            if !overflow_shape_is_valid {
+                return Err(RustShadowError::Other);
+            }
 
             let is_overflow = sum.len() == 7;
 
@@ -165,6 +166,7 @@ pub(crate) mod tests {
             let sum: U192 = sum.to_vec().try_into().unwrap();
             push_encodable(stack, &sum);
             push_encodable(stack, &is_overflow);
+            Ok(())
         }
 
         fn pseudorandom_args(&self, seed: [u8; 32], _: Option<BenchmarkCase>) -> Self::Args {
@@ -184,7 +186,7 @@ pub(crate) mod tests {
 
     #[macro_rules_attr::apply(test)]
     fn rust_shadow() {
-        ShadowedClosure::new(OverflowingAdd).test();
+        ShadowedClosure::new(OverflowingAdd).test()
     }
 
     #[macro_rules_attr::apply(test)]

@@ -27,7 +27,7 @@ impl BasicSnippet for HashStaticSize {
         )
     }
 
-    fn code(&self, library: &mut crate::library::Library) -> Vec<LabelledInstruction> {
+    fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
         let entrypoint = self.entrypoint();
         let absorb_subroutine =
             library.import(Box::new(AbsorbMultipleStaticSize { size: self.size }));
@@ -82,27 +82,30 @@ mod tests {
             nondeterminism: &NonDeterminism,
             public_input: &[BFieldElement],
             sponge: &mut Option<Tip5>,
-        ) -> Vec<BFieldElement> {
+        ) -> Result<Vec<BFieldElement>, RustShadowError> {
             *sponge = Some(Tip5::init());
 
             let absorb_snippet = AbsorbMultipleStaticSize { size: self.size };
-            absorb_snippet.rust_shadow(stack, memory, nondeterminism, public_input, sponge);
+            absorb_snippet.rust_shadow(stack, memory, nondeterminism, public_input, sponge)?;
 
             // Sponge-squeeze
-            let mut squeezed = sponge.as_mut().unwrap().squeeze();
+            let Some(sponge) = sponge.as_mut() else {
+                return Err(RustShadowError::SpongeUninitialized);
+            };
+            let mut squeezed = sponge.squeeze();
             squeezed.reverse();
             stack.extend(squeezed);
 
             // Pop returned digest
-            let digest = pop_encodable::<Digest>(stack);
+            let digest = pop_encodable::<Digest>(stack)?;
 
             // Remove 5 more words:
             for _ in 0..Digest::LEN {
-                stack.pop().unwrap();
+                stack.pop().ok_or(RustShadowError::StackUnderflow)?;
             }
 
             // Remove pointer
-            let input_pointer_plus_size = stack.pop().unwrap();
+            let input_pointer_plus_size = stack.pop().ok_or(RustShadowError::StackUnderflow)?;
 
             // Put digest back on stack
             stack.extend(digest.reversed().values().to_vec());
@@ -111,7 +114,7 @@ mod tests {
 
             // _ d4 d3 d2 d1 d0 *ret_addr
 
-            vec![]
+            Ok(Vec::new())
         }
 
         fn pseudorandom_initial_state(

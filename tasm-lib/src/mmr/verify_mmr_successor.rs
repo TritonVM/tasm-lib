@@ -426,16 +426,23 @@ mod tests {
             memory: &HashMap<BFieldElement, BFieldElement>,
             nd_tokens: VecDeque<BFieldElement>,
             nd_digests: VecDeque<Digest>,
-        ) {
-            let new_mmr_pointer = stack.pop().unwrap();
-            let old_mmr_pointer = stack.pop().unwrap();
+        ) -> Result<(), RustShadowError> {
+            let new_mmr_pointer = stack.pop().ok_or(RustShadowError::StackUnderflow)?;
+            let old_mmr_pointer = stack.pop().ok_or(RustShadowError::StackUnderflow)?;
 
-            let new_mmr = *MmrAccumulator::decode_from_memory(memory, new_mmr_pointer).unwrap();
-            let old_mmr = *MmrAccumulator::decode_from_memory(memory, old_mmr_pointer).unwrap();
+            let new_mmr = *MmrAccumulator::decode_from_memory(memory, new_mmr_pointer)
+                .map_err(|_| RustShadowError::DecodingError)?;
+            let old_mmr = *MmrAccumulator::decode_from_memory(memory, old_mmr_pointer)
+                .map_err(|_| RustShadowError::DecodingError)?;
 
             // figure out the length of the authentication path
-            let num_new_leafs = new_mmr.num_leafs() - old_mmr.num_leafs();
-            let new_dummy_leafs = vec![Digest::default(); num_new_leafs.try_into().unwrap()];
+            let num_new_leafs = new_mmr
+                .num_leafs()
+                .checked_sub(old_mmr.num_leafs())
+                .ok_or(RustShadowError::ArithmeticOverflow)?
+                .try_into()
+                .map_err(|_| RustShadowError::U64ToUsizeError)?;
+            let new_dummy_leafs = vec![Digest::default(); num_new_leafs];
             let dummy_proof = MmrSuccessorProof::new_from_batch_append(&old_mmr, &new_dummy_leafs);
             let auth_path_len = dummy_proof.paths.len();
 
@@ -443,7 +450,11 @@ mod tests {
             let mut path = vec![];
             if auth_path_len > 0 {
                 let first_element = (0..Digest::LEN).rev().map(|i| nd_tokens[i]).collect_vec();
-                path.push(Digest::new(first_element.try_into().unwrap()));
+                path.push(Digest::new(
+                    first_element
+                        .try_into()
+                        .map_err(|_| RustShadowError::Other)?,
+                ));
             }
 
             // grab remaining path elements from nd digests
@@ -451,7 +462,10 @@ mod tests {
                 path.extend((0..auth_path_len - 1).map(|i| nd_digests[i]));
             }
 
-            assert!(MmrSuccessorProof { paths: path }.verify(&old_mmr, &new_mmr));
+            MmrSuccessorProof { paths: path }
+                .verify(&old_mmr, &new_mmr)
+                .then_some(())
+                .ok_or(RustShadowError::InvalidProof)
         }
 
         fn pseudorandom_initial_state(

@@ -129,10 +129,11 @@ mod tests {
             XFieldElement,
         );
 
-        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
-            let (p2x, p1y, p1x, p0y, p0x) = pop_encodable::<Self::Args>(stack);
+        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) -> Result<(), RustShadowError> {
+            let (p2x, p1y, p1x, p0y, p0x) = pop_encodable::<Self::Args>(stack)?;
             let p2y = Polynomial::get_colinear_y((p0x, p0y), (p1x, p1y), p2x);
             push_encodable(stack, &p2y);
+            Ok(())
         }
 
         fn pseudorandom_args(&self, seed: [u8; 32], _: Option<BenchmarkCase>) -> Self::Args {

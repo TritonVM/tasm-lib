@@ -165,13 +165,14 @@ mod tests {
             &self,
             stack: &mut Vec<BFieldElement>,
             memory: &mut HashMap<BFieldElement, BFieldElement>,
-        ) {
+        ) -> Result<(), RustShadowError> {
             let element = (0..self.element_type.stack_size())
-                .map(|_| stack.pop().unwrap())
-                .collect();
-            let list_pointer = stack.pop().unwrap();
+                .map(|_| stack.pop().ok_or(RustShadowError::StackUnderflow))
+                .try_collect()?;
+            let list_pointer = stack.pop().ok_or(RustShadowError::StackUnderflow)?;
+            list_push(list_pointer, element, memory)?;
 
-            list_push(list_pointer, element, memory);
+            Ok(())
         }
 
         fn pseudorandom_initial_state(

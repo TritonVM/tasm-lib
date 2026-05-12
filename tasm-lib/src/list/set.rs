@@ -150,15 +150,17 @@ mod tests {
             &self,
             stack: &mut Vec<BFieldElement>,
             memory: &mut HashMap<BFieldElement, BFieldElement>,
-        ) {
-            let index = pop_encodable::<u32>(stack);
-            let list_pointer = stack.pop().unwrap();
+        ) -> Result<(), RustShadowError> {
+            let index = pop_encodable::<u32>(stack)?;
+            let list_pointer = stack.pop().ok_or(RustShadowError::StackUnderflow)?;
             let element = (0..self.element_type.stack_size())
-                .map(|_| stack.pop().unwrap())
-                .collect_vec();
+                .map(|_| stack.pop().ok_or(RustShadowError::StackUnderflow))
+                .try_collect()?;
 
             let index = index.try_into().expect(U32_TO_USIZE_ERR);
-            list_set(list_pointer, index, element, memory);
+            list_set(list_pointer, index, element, memory)?;
+
+            Ok(())
         }
 
         fn pseudorandom_initial_state(

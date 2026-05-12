@@ -75,11 +75,13 @@ mod tests {
             _: &NonDeterminism,
             _: &[BFieldElement],
             sponge: &mut Option<Tip5>,
-        ) -> Vec<BFieldElement> {
-            let num_squeezes = stack.pop().unwrap().value() as usize;
-            let address = stack.pop().unwrap();
+        ) -> Result<Vec<BFieldElement>, RustShadowError> {
+            let num_squeezes = stack.pop().ok_or(RustShadowError::StackUnderflow)?.value() as usize;
+            let address = stack.pop().ok_or(RustShadowError::StackUnderflow)?;
 
-            let sponge = sponge.as_mut().expect("sponge must be initialized");
+            let Some(sponge) = sponge.as_mut() else {
+                return Err(RustShadowError::SpongeUninitialized);
+            };
             let sequence = (0..num_squeezes)
                 .flat_map(|_| sponge.squeeze().to_vec())
                 .collect_vec();
@@ -92,7 +94,7 @@ mod tests {
             stack.push(new_address);
             stack.push(BFieldElement::new(0));
 
-            vec![]
+            Ok(Vec::new())
         }
 
         fn pseudorandom_initial_state(
@@ -148,7 +150,7 @@ mod tests {
             let rust = rust_final_state(&shadow, &stack, &stdin, &nondeterminism, &sponge);
 
             // run tvm
-            let tasm = tasm_final_state(&shadow, &stack, &stdin, nondeterminism, &sponge);
+            let tasm = tasm_final_state(&shadow, &stack, &stdin, nondeterminism, &sponge).unwrap();
 
             assert_eq!(
                 rust.public_output, tasm.public_output,

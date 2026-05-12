@@ -52,9 +52,10 @@ mod tests {
     impl Closure for LeadingZeros {
         type Args = u32;
 
-        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
-            let arg = pop_encodable::<Self::Args>(stack);
+        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) -> Result<(), RustShadowError> {
+            let arg = pop_encodable::<Self::Args>(stack)?;
             push_encodable(stack, &arg.leading_zeros());
+            Ok(())
         }
 
         fn pseudorandom_args(

@@ -1341,7 +1341,8 @@ pub mod tests {
             vec![],
             non_determinism,
             None,
-        );
+        )
+        .unwrap();
 
         let (aet, _public_output) = VM::trace_execution(
             inner_program,

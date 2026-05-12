@@ -85,9 +85,10 @@ mod tests {
     impl<const N: u8> Closure for ShiftRightStatic<N> {
         type Args = <ShiftLeftStatic<N> as Closure>::Args;
 
-        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
-            let v = pop_encodable::<Self::Args>(stack);
+        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) -> Result<(), RustShadowError> {
+            let v = pop_encodable::<Self::Args>(stack)?;
             push_encodable(stack, &(v >> N));
+            Ok(())
         }
 
         fn pseudorandom_args(

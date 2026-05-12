@@ -76,9 +76,14 @@ mod tests {
             &self,
             stack: &mut Vec<BFieldElement>,
             memory: &mut HashMap<BFieldElement, BFieldElement>,
-        ) {
-            let fri_verify = FriVerify::decode_from_memory(memory, stack.pop().unwrap()).unwrap();
+        ) -> Result<(), RustShadowError> {
+            let fri_verify = FriVerify::decode_from_memory(
+                memory,
+                stack.pop().ok_or(RustShadowError::StackUnderflow)?,
+            )
+            .map_err(|_| RustShadowError::DecodingError)?;
             stack.push(BFieldElement::new(fri_verify.num_rounds() as u64));
+            Ok(())
         }
 
         fn pseudorandom_initial_state(

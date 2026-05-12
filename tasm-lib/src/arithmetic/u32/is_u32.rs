@@ -65,10 +65,11 @@ mod tests {
     impl Closure for IsU32 {
         type Args = BFieldElement;
 
-        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
-            let value = stack.pop().unwrap();
+        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) -> Result<(), RustShadowError> {
+            let value = stack.pop().ok_or(RustShadowError::StackUnderflow)?;
             let is_u32 = u32::try_from(value).is_ok();
             push_encodable(stack, &is_u32);
+            Ok(())
         }
 
         fn pseudorandom_args(

@@ -132,7 +132,7 @@ pub(crate) mod tests {
             let initial_stack = self.set_up_test_stack((arg, shift_amount));
 
             let mut expected_stack = initial_stack.clone();
-            self.rust_shadow(&mut expected_stack);
+            self.rust_shadow(&mut expected_stack).unwrap();
 
             test_rust_equivalence_given_complete_state(
                 &ShadowedClosure::new(Self),
@@ -148,10 +148,13 @@ pub(crate) mod tests {
     impl Closure for ShiftLeft {
         type Args = (u64, u32);
 
-        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
-            let (arg, shift_amount) = pop_encodable::<Self::Args>(stack);
-            assert!(shift_amount < 64);
+        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) -> Result<(), RustShadowError> {
+            let (arg, shift_amount) = pop_encodable::<Self::Args>(stack)?;
+            if shift_amount >= 64 {
+                return Err(RustShadowError::ArithmeticOverflow);
+            }
             push_encodable(stack, &(arg << shift_amount));
+            Ok(())
         }
 
         fn pseudorandom_args(

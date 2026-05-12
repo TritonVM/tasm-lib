@@ -95,10 +95,13 @@ mod tests {
     impl Closure for ShiftRight {
         type Args = (u32, u32);
 
-        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
-            let (arg, shift_amount) = pop_encodable::<Self::Args>(stack);
-            assert!(shift_amount < 32);
+        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) -> Result<(), RustShadowError> {
+            let (arg, shift_amount) = pop_encodable::<Self::Args>(stack)?;
+            if shift_amount >= 32 {
+                return Err(RustShadowError::ArithmeticOverflow);
+            }
             push_encodable(stack, &(arg >> shift_amount));
+            Ok(())
         }
 
         fn pseudorandom_args(

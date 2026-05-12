@@ -73,10 +73,11 @@ mod tests {
     impl Closure for Or {
         type Args = (u32, u32);
 
-        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
-            let (right, left) = pop_encodable::<Self::Args>(stack);
+        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) -> Result<(), RustShadowError> {
+            let (right, left) = pop_encodable::<Self::Args>(stack)?;
             let or = left | right;
             push_encodable(stack, &or);
+            Ok(())
         }
 
         fn pseudorandom_args(

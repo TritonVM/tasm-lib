@@ -3,6 +3,7 @@ use triton_vm::prelude::*;
 
 use super::basic_snippet::BasicSnippet;
 use super::rust_shadow::RustShadow;
+use super::rust_shadow::RustShadowError;
 use crate::linker::execute_bench;
 use crate::prelude::Tip5;
 use crate::push_encodable;
@@ -32,14 +33,14 @@ pub trait Closure: BasicSnippet {
     /// top of the stack as the last element of the tuple.
     type Args: BFieldCodec;
 
-    fn rust_shadow(&self, stack: &mut Vec<BFieldElement>);
+    fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) -> Result<(), RustShadowError>;
 
     /// Given a [seed](StdRng::Seed), generate pseudorandom [arguments](Self::Args),
     /// from which an [initial stack](Self::set_up_test_stack) can be constructed.
     fn pseudorandom_args(&self, seed: [u8; 32], bench_case: Option<BenchmarkCase>) -> Self::Args;
 
     fn corner_case_args(&self) -> Vec<Self::Args> {
-        vec![]
+        Vec::new()
     }
 
     fn set_up_test_stack(&self, args: Self::Args) -> Vec<BFieldElement> {
@@ -71,9 +72,10 @@ impl<C: Closure> RustShadow for ShadowedClosure<C> {
         stack: &mut Vec<BFieldElement>,
         _memory: &mut std::collections::HashMap<BFieldElement, BFieldElement>,
         _sponge: &mut Option<Tip5>,
-    ) -> Vec<BFieldElement> {
-        self.closure.rust_shadow(stack);
-        vec![]
+    ) -> Result<Vec<BFieldElement>, RustShadowError> {
+        self.closure.rust_shadow(stack)?;
+
+        Ok(Vec::new())
     }
 
     fn test(&self) {

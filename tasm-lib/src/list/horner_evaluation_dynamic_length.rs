@@ -129,20 +129,22 @@ mod tests {
             &self,
             stack: &mut Vec<BFieldElement>,
             memory: &mut HashMap<BFieldElement, BFieldElement>,
-        ) {
-            let x0 = stack.pop().unwrap();
-            let x1 = stack.pop().unwrap();
-            let x2 = stack.pop().unwrap();
+        ) -> Result<(), RustShadowError> {
+            let x0 = stack.pop().ok_or(RustShadowError::StackUnderflow)?;
+            let x1 = stack.pop().ok_or(RustShadowError::StackUnderflow)?;
+            let x2 = stack.pop().ok_or(RustShadowError::StackUnderflow)?;
             let x = XFieldElement::new([x0, x1, x2]);
 
-            let address = stack.pop().unwrap();
-            let coefficients = *Vec::<XFieldElement>::decode_from_memory(memory, address).unwrap();
+            let address = stack.pop().ok_or(RustShadowError::StackUnderflow)?;
+            let coefficients = *Vec::<XFieldElement>::decode_from_memory(memory, address)
+                .map_err(|_| RustShadowError::DecodingError)?;
             let polynomial = Polynomial::new(coefficients);
 
             let value = polynomial.evaluate_in_same_field(x);
             stack.push(value.coefficients[2]);
             stack.push(value.coefficients[1]);
             stack.push(value.coefficients[0]);
+            Ok(())
         }
 
         fn pseudorandom_initial_state(

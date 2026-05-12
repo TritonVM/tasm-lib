@@ -112,18 +112,28 @@ mod tests {
             &self,
             stack: &mut Vec<BFieldElement>,
             memory: &HashMap<BFieldElement, BFieldElement>,
-        ) {
+        ) -> Result<(), RustShadowError> {
             // If the type can be decoded then it must have valid size indicators
-            let pointer = stack.pop().unwrap();
-            let obj = T::decode_from_memory(memory, pointer).unwrap();
+            let pointer = stack.pop().ok_or(RustShadowError::StackUnderflow)?;
+            let obj = T::decode_from_memory(memory, pointer)
+                .map_err(|_| RustShadowError::DecodingError)?;
             let encoding_len = obj.encode().len();
-            let encoding_len: u32 = encoding_len.try_into().unwrap();
+            let encoding_len: u32 = encoding_len
+                .try_into()
+                .map_err(|_| RustShadowError::UsizeToU32Error)?;
 
             // Verify contained in ND-region
-            let start_address: u32 = pointer.value().try_into().unwrap();
-            let _end_address = start_address.checked_add(encoding_len).unwrap();
+            let start_address: u32 = pointer
+                .value()
+                .try_into()
+                .map_err(|_| RustShadowError::U64ToU32Error)?;
+            let _end_address = start_address
+                .checked_add(encoding_len)
+                .ok_or(RustShadowError::ArithmeticOverflow)?;
 
-            stack.push(bfe!(obj.encode().len() as u64));
+            stack.push(bfe!(u64::from(encoding_len)));
+
+            Ok(())
         }
 
         fn pseudorandom_initial_state(

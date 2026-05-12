@@ -118,9 +118,9 @@ mod tests {
             _: &HashMap<BFieldElement, BFieldElement>,
             _: VecDeque<BFieldElement>,
             nd_digests: VecDeque<Digest>,
-        ) {
-            let stack_digest = pop_encodable::<Digest>(stack);
-            let leaf_index = pop_encodable::<u64>(stack);
+        ) -> Result<(), RustShadowError> {
+            let stack_digest = pop_encodable::<Digest>(stack)?;
+            let leaf_index = pop_encodable::<u64>(stack)?;
 
             let stack_digest_is_left_sibling = leaf_index.is_multiple_of(2);
             let (left_digest, right_digest) = if stack_digest_is_left_sibling {
@@ -134,6 +134,8 @@ mod tests {
 
             push_encodable(stack, &parent_index);
             push_encodable(stack, &parent_digest);
+
+            Ok(())
         }
 
         fn pseudorandom_initial_state(
@@ -166,11 +168,12 @@ mod tests {
                 &[],
                 initial_state.nondeterminism,
                 &None,
-            );
+            )
+            .unwrap();
 
             let mut final_stack = final_state.op_stack.stack;
-            let _ = pop_encodable::<Digest>(&mut final_stack);
-            let calculated_parent_index = pop_encodable::<u64>(&mut final_stack);
+            let _ = pop_encodable::<Digest>(&mut final_stack).unwrap();
+            let calculated_parent_index = pop_encodable::<u64>(&mut final_stack).unwrap();
 
             assert_eq!(expected_parent_index, calculated_parent_index);
             assert_eq!(mt_index / 2, calculated_parent_index);

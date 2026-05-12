@@ -140,12 +140,14 @@ mod tests {
             _: &NonDeterminism,
             _: &[BFieldElement],
             sponge: &mut Option<Tip5>,
-        ) -> Vec<BFieldElement> {
-            let sponge = sponge.as_mut().expect("sponge must be initialized");
+        ) -> Result<Vec<BFieldElement>, RustShadowError> {
+            let Some(sponge) = sponge.as_mut() else {
+                return Err(RustShadowError::SpongeUninitialized);
+            };
 
             // collect upper bound and number from stack
-            let upper_bound = stack.pop().unwrap().value() as u32;
-            let number = stack.pop().unwrap().value() as usize;
+            let upper_bound = stack.pop().ok_or(RustShadowError::StackUnderflow)?.value() as u32;
+            let number = stack.pop().ok_or(RustShadowError::StackUnderflow)?.value() as usize;
 
             println!("sampling {number} indices between 0 and {upper_bound}");
             println!("sponge before: {}", sponge.state.iter().join(","));
@@ -163,13 +165,13 @@ mod tests {
                     list_pointer,
                     vec![BFieldElement::new(*index as u64)],
                     memory,
-                );
+                )?;
             }
             println!("sponge after: {}", sponge.state.iter().join(","));
 
             stack.push(list_pointer);
 
-            vec![]
+            Ok(Vec::new())
         }
 
         fn pseudorandom_initial_state(

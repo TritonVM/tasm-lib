@@ -83,8 +83,10 @@ mod tests {
             _nondeterminism: &NonDeterminism,
             _public_input: &[BFieldElement],
             sponge: &mut Option<Tip5>,
-        ) -> Vec<BFieldElement> {
-            let sponge = sponge.as_mut().expect("sponge must be initialized");
+        ) -> Result<Vec<BFieldElement>, RustShadowError> {
+            let Some(sponge) = sponge.as_mut() else {
+                return Err(RustShadowError::SpongeUninitialized);
+            };
             let mut array_pointer =
                 rust_shadowing_helper_functions::dyn_malloc::dynamic_allocator(memory);
             stack.push(array_pointer);
@@ -94,7 +96,7 @@ mod tests {
                 array_pointer.increment();
             }
 
-            Vec::default()
+            Ok(Vec::new())
         }
 
         fn pseudorandom_initial_state(

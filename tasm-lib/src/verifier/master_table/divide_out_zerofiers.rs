@@ -260,7 +260,8 @@ mod tests {
                 vec![],
                 NonDeterminism::default().with_ram(memory),
                 None,
-            );
+            )
+            .unwrap();
 
             // read the array pointed to by the pointer living on top of the stack
             AirConstraintEvaluation::read_result_from_memory(final_state).0
@@ -347,7 +348,7 @@ mod bench {
             &self,
             _: &mut Vec<BFieldElement>,
             _: &mut HashMap<BFieldElement, BFieldElement>,
-        ) {
+        ) -> Result<(), RustShadowError> {
             // Never called as we do a more manual test.
             // The more manual test is done bc we don't want to
             // have to simulate all the intermediate calculations

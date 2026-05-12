@@ -148,9 +148,13 @@ mod tests {
     impl Closure for SafePow {
         type Args = (u32, u32);
 
-        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
-            let (base, exponent) = pop_encodable::<Self::Args>(stack);
-            push_encodable(stack, &(base.pow(exponent)));
+        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) -> Result<(), RustShadowError> {
+            let (base, exponent) = pop_encodable::<Self::Args>(stack)?;
+            let pow = base
+                .checked_pow(exponent)
+                .ok_or(RustShadowError::ArithmeticOverflow)?;
+            push_encodable(stack, &pow);
+            Ok(())
         }
 
         fn pseudorandom_args(
@@ -213,7 +217,7 @@ mod tests {
         ] {
             let initial_stack = SafePow.set_up_test_stack((base, exp));
             let mut expected_final_stack = initial_stack.clone();
-            SafePow.rust_shadow(&mut expected_final_stack);
+            SafePow.rust_shadow(&mut expected_final_stack).unwrap();
 
             let _vm_output_state = test_rust_equivalence_given_complete_state(
                 &ShadowedClosure::new(SafePow),

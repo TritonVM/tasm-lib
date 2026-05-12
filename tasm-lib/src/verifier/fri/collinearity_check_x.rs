@@ -70,14 +70,15 @@ mod tests {
             &self,
             stack: &mut Vec<BFieldElement>,
             memory: &mut HashMap<BFieldElement, BFieldElement>,
-        ) {
+        ) -> Result<(), RustShadowError> {
             // read stack arguments
-            let round = stack.pop().unwrap().value() as usize;
-            let index = stack.pop().unwrap().value() as u32;
-            let fri_verify_address = stack.pop().unwrap();
+            let round = stack.pop().ok_or(RustShadowError::StackUnderflow)?.value() as usize;
+            let index = stack.pop().ok_or(RustShadowError::StackUnderflow)?.value() as u32;
+            let fri_verify_address = stack.pop().ok_or(RustShadowError::StackUnderflow)?;
 
             // read fri_verify object from memory
-            let fri_verify = FriVerify::decode_from_memory(memory, fri_verify_address).unwrap();
+            let fri_verify = FriVerify::decode_from_memory(memory, fri_verify_address)
+                .map_err(|_| RustShadowError::DecodingError)?;
 
             // invoke actual function
             let x = fri_verify.get_collinearity_check_x(index, round);
@@ -86,6 +87,7 @@ mod tests {
             stack.push(x.coefficients[2]);
             stack.push(x.coefficients[1]);
             stack.push(x.coefficients[0]);
+            Ok(())
         }
 
         fn pseudorandom_initial_state(

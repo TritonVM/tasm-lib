@@ -172,7 +172,7 @@ mod tests {
             &self,
             stack: &mut Vec<BFieldElement>,
             memory: &mut HashMap<BFieldElement, BFieldElement>,
-        ) {
+        ) -> Result<(), RustShadowError> {
             let load_digest = |ptr: BFieldElement| {
                 Digest::new([
                     memory[&ptr],
@@ -182,12 +182,13 @@ mod tests {
                     memory[&(ptr + bfe!(4))],
                 ])
             };
-            let rhs_ptr = stack.pop().unwrap();
-            let lhs_ptr = stack.pop().unwrap();
+            let rhs_ptr = stack.pop().ok_or(RustShadowError::StackUnderflow)?;
+            let lhs_ptr = stack.pop().ok_or(RustShadowError::StackUnderflow)?;
             let rhs = load_digest(rhs_ptr);
             let lhs = load_digest(lhs_ptr);
 
             stack.push(bfe!((rhs < lhs) as u64));
+            Ok(())
         }
 
         fn pseudorandom_initial_state(

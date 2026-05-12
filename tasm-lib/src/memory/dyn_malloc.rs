@@ -10,6 +10,7 @@ use crate::prelude::*;
 use crate::snippet_bencher::BenchmarkCase;
 use crate::traits::function::Function;
 use crate::traits::function::FunctionInitialState;
+use crate::traits::rust_shadow::RustShadowError;
 
 /// The location of the dynamic allocator state in memory.
 ///
@@ -102,17 +103,16 @@ impl Function for DynMalloc {
         &self,
         stack: &mut Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
-    ) {
+    ) -> Result<(), RustShadowError> {
         let mut page_idx = memory.get(&DYN_MALLOC_ADDRESS).copied().unwrap_or_default();
         if page_idx.is_zero() {
             page_idx = DYN_MALLOC_FIRST_PAGE.into();
         }
         let page_idx = page_idx;
 
-        assert!(
-            page_idx.value() < NUM_ALLOCATABLE_PAGES,
-            "All allocations must happen inside dyn malloc's region"
-        );
+        if page_idx.value() >= NUM_ALLOCATABLE_PAGES {
+            return Err(RustShadowError::Other);
+        }
 
         let next_page_idx = page_idx + bfe!(1);
 
@@ -120,6 +120,7 @@ impl Function for DynMalloc {
 
         let page_address = page_idx * BFieldElement::new(DYN_MALLOC_PAGE_SIZE);
         stack.push(page_address);
+        Ok(())
     }
 
     fn pseudorandom_initial_state(
@@ -280,10 +281,11 @@ pub mod tests {
             &self,
             stack: &mut Vec<BFieldElement>,
             memory: &mut HashMap<BFieldElement, BFieldElement>,
-        ) {
+        ) -> Result<(), RustShadowError> {
             for _ in 0..self.num_calls {
-                DynMalloc.rust_shadow(stack, memory);
+                DynMalloc.rust_shadow(stack, memory)?;
             }
+            Ok(())
         }
 
         fn pseudorandom_initial_state(

@@ -84,13 +84,14 @@ mod tests {
     impl Closure for HashFromStack {
         type Args = Vec<BFieldElement>;
 
-        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
+        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) -> Result<(), RustShadowError> {
             let mut preimage = vec![];
             for _ in 0..self.ty_len {
-                preimage.push(stack.pop().unwrap());
+                preimage.push(stack.pop().ok_or(RustShadowError::StackUnderflow)?);
             }
 
             push_encodable(stack, &Tip5::hash_varlen(&preimage));
+            Ok(())
         }
 
         fn pseudorandom_args(&self, seed: [u8; 32], _: Option<BenchmarkCase>) -> Self::Args {

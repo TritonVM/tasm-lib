@@ -184,14 +184,14 @@ mod tests {
             &self,
             stack: &mut Vec<BFieldElement>,
             memory: &mut HashMap<BFieldElement, BFieldElement>,
-        ) {
+        ) -> Result<(), RustShadowError> {
             let needle = (0..self.element_type.stack_size())
-                .map(|_| stack.pop().unwrap())
-                .collect_vec();
+                .map(|_| stack.pop().ok_or(RustShadowError::StackUnderflow))
+                .try_collect()?;
 
-            let haystack_list_ptr = stack.pop().unwrap();
+            let haystack_list_ptr = stack.pop().ok_or(RustShadowError::StackUnderflow)?;
             let haystack_elems =
-                load_list_unstructured(self.element_type.stack_size(), haystack_list_ptr, memory);
+                load_list_unstructured(self.element_type.stack_size(), haystack_list_ptr, memory)?;
 
             stack.push(bfe!(haystack_elems.contains(&needle) as u32));
 
@@ -201,6 +201,8 @@ mod tests {
                 memory.insert(static_pointer, word);
                 static_pointer.increment();
             }
+
+            Ok(())
         }
 
         fn pseudorandom_initial_state(

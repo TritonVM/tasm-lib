@@ -100,7 +100,7 @@ mod tests {
             let initial_stack = self.set_up_test_stack((left, right));
 
             let mut expected_stack = initial_stack.clone();
-            self.rust_shadow(&mut expected_stack);
+            self.rust_shadow(&mut expected_stack).unwrap();
 
             test_rust_equivalence_given_complete_state(
                 &ShadowedClosure::new(Self),
@@ -116,10 +116,11 @@ mod tests {
     impl Closure for LtPreserveArgs {
         type Args = <Lt as Closure>::Args;
 
-        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
-            let (right, left) = pop_encodable::<Self::Args>(stack);
+        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) -> Result<(), RustShadowError> {
+            let (right, left) = pop_encodable::<Self::Args>(stack)?;
             push_encodable(stack, &(right, left));
             push_encodable(stack, &(left < right));
+            Ok(())
         }
 
         fn pseudorandom_args(

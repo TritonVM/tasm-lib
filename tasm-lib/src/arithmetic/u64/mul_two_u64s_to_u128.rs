@@ -103,10 +103,11 @@ mod tests {
     impl Closure for MulTwoU64sToU128 {
         type Args = (u64, u64);
 
-        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
-            let (right, left) = pop_encodable::<Self::Args>(stack);
+        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) -> Result<(), RustShadowError> {
+            let (right, left) = pop_encodable::<Self::Args>(stack)?;
             let product = u128::from(left) * u128::from(right);
             push_encodable(stack, &product);
+            Ok(())
         }
 
         fn pseudorandom_args(

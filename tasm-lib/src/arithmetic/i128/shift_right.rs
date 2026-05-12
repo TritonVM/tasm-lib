@@ -253,7 +253,7 @@ mod tests {
             let initial_stack = self.set_up_test_stack((arg, shamt));
 
             let mut expected_stack = initial_stack.clone();
-            self.rust_shadow(&mut expected_stack);
+            self.rust_shadow(&mut expected_stack).unwrap();
 
             test_rust_equivalence_given_complete_state(
                 &ShadowedClosure::new(Self),
@@ -269,9 +269,10 @@ mod tests {
     impl Closure for ShiftRight {
         type Args = (i128, u32);
 
-        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
-            let (arg, shift_amount) = pop_encodable::<Self::Args>(stack);
+        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) -> Result<(), RustShadowError> {
+            let (arg, shift_amount) = pop_encodable::<Self::Args>(stack)?;
             push_encodable(stack, &(arg >> shift_amount));
+            Ok(())
         }
 
         fn pseudorandom_args(&self, seed: [u8; 32], _: Option<BenchmarkCase>) -> Self::Args {
@@ -319,10 +320,11 @@ mod tests {
             &[],
             NonDeterminism::default(),
             &None,
-        );
+        )
+        .unwrap();
 
         let final_stack = &mut final_state.op_stack.stack;
-        let num_bits_in_result = pop_encodable::<i128>(final_stack).count_ones();
+        let num_bits_in_result = pop_encodable::<i128>(final_stack).unwrap().count_ones();
 
         if arg.is_positive() {
             prop_assert_eq!(0, num_bits_in_result);

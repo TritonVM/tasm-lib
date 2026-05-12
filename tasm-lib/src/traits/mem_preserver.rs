@@ -6,6 +6,7 @@ use triton_vm::prelude::*;
 
 use super::basic_snippet::BasicSnippet;
 use super::rust_shadow::RustShadow;
+use super::rust_shadow::RustShadowError;
 use crate::InitVmState;
 use crate::linker::execute_bench;
 use crate::snippet_bencher::BenchmarkCase;
@@ -36,7 +37,7 @@ pub trait MemPreserver: BasicSnippet {
         nd_digests: VecDeque<Digest>,
         stdin: VecDeque<BFieldElement>,
         sponge: &mut Option<Tip5>,
-    ) -> Vec<BFieldElement>;
+    ) -> Result<Vec<BFieldElement>, RustShadowError>;
 
     fn pseudorandom_initial_state(
         &self,
@@ -45,7 +46,7 @@ pub trait MemPreserver: BasicSnippet {
     ) -> MemPreserverInitialState;
 
     fn corner_case_initial_states(&self) -> Vec<MemPreserverInitialState> {
-        vec![]
+        Vec::new()
     }
 }
 
@@ -93,7 +94,7 @@ where
         stack: &mut Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
         sponge: &mut Option<Tip5>,
-    ) -> Vec<BFieldElement> {
+    ) -> Result<Vec<BFieldElement>, RustShadowError> {
         self.mem_preserver.rust_shadow(
             stack,
             memory,

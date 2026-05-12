@@ -7,6 +7,7 @@ use crate::empty_stack;
 use crate::prelude::*;
 use crate::traits::procedure::Procedure;
 use crate::traits::procedure::ProcedureInitialState;
+use crate::traits::rust_shadow::RustShadowError;
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct WriteToStdout {
@@ -46,13 +47,14 @@ impl Procedure for WriteToStdout {
         _: &NonDeterminism,
         _: &[BFieldElement],
         _: &mut Option<Tip5>,
-    ) -> Vec<BFieldElement> {
-        let mut ret = vec![];
+    ) -> Result<Vec<BFieldElement>, RustShadowError> {
+        let mut ret = Vec::new();
         for _ in 0..self.data_type.stack_size() {
-            let value = stack.pop().unwrap();
+            let value = stack.pop().ok_or(RustShadowError::StackUnderflow)?;
             ret.push(value);
         }
-        ret
+
+        Ok(ret)
     }
 
     fn pseudorandom_initial_state(

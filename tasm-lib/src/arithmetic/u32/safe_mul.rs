@@ -77,10 +77,13 @@ mod tests {
     impl Closure for SafeMul {
         type Args = (u32, u32);
 
-        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
-            let (right, left) = pop_encodable::<Self::Args>(stack);
-            let product = left.checked_mul(right).unwrap();
+        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) -> Result<(), RustShadowError> {
+            let (right, left) = pop_encodable::<Self::Args>(stack)?;
+            let product = left
+                .checked_mul(right)
+                .ok_or(RustShadowError::ArithmeticOverflow)?;
             push_encodable(stack, &product);
+            Ok(())
         }
 
         fn pseudorandom_args(

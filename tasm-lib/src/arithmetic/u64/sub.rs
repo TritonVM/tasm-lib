@@ -83,7 +83,7 @@ mod tests {
     impl Sub {
         pub fn assert_expected_behavior(&self, subtrahend: u64, minuend: u64) {
             let mut expected_stack = self.set_up_test_stack((subtrahend, minuend));
-            self.rust_shadow(&mut expected_stack);
+            self.rust_shadow(&mut expected_stack).unwrap();
 
             test_rust_equivalence_given_complete_state(
                 &ShadowedClosure::new(Self),
@@ -99,9 +99,13 @@ mod tests {
     impl Closure for Sub {
         type Args = <OverflowingSub as Closure>::Args;
 
-        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
-            let (subtrahend, minuend) = pop_encodable::<Self::Args>(stack);
-            push_encodable(stack, &(minuend - subtrahend));
+        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) -> Result<(), RustShadowError> {
+            let (subtrahend, minuend) = pop_encodable::<Self::Args>(stack)?;
+            let difference = minuend
+                .checked_sub(subtrahend)
+                .ok_or(RustShadowError::ArithmeticOverflow)?;
+            push_encodable(stack, &difference);
+            Ok(())
         }
 
         fn pseudorandom_args(

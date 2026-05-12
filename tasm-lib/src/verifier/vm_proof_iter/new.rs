@@ -177,14 +177,16 @@ mod tests {
             &self,
             stack: &mut Vec<BFieldElement>,
             memory: &mut HashMap<BFieldElement, BFieldElement>,
-        ) {
-            let pointer_to_proof = stack.pop().unwrap();
-            let proof = *Proof::decode_from_memory(memory, pointer_to_proof).unwrap();
+        ) -> Result<(), RustShadowError> {
+            let pointer_to_proof = stack.pop().ok_or(RustShadowError::StackUnderflow)?;
+            let proof = *Proof::decode_from_memory(memory, pointer_to_proof)
+                .map_err(|_| RustShadowError::DecodingError)?;
             let pointer_to_vm_proof_iter =
                 rust_shadowing_helper_functions::dyn_malloc::dynamic_allocator(memory);
             let vm_proof_iter = VmProofIter::new(pointer_to_proof, &proof);
             encode_to_memory(memory, pointer_to_vm_proof_iter, &vm_proof_iter);
             stack.push(pointer_to_vm_proof_iter);
+            Ok(())
         }
 
         fn pseudorandom_initial_state(

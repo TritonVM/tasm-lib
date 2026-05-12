@@ -106,12 +106,13 @@ pub mod tests {
     impl Closure for OverflowingAdd {
         type Args = (u64, u64);
 
-        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
-            let right = pop_encodable::<u64>(stack);
-            let left = pop_encodable::<u64>(stack);
+        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) -> Result<(), RustShadowError> {
+            let right = pop_encodable::<u64>(stack)?;
+            let left = pop_encodable::<u64>(stack)?;
             let (sum, is_overflow) = left.overflowing_add(right);
             push_encodable(stack, &sum);
             push_encodable(stack, &is_overflow);
+            Ok(())
         }
 
         fn pseudorandom_args(

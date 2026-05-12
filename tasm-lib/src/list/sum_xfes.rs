@@ -194,9 +194,9 @@ mod tests {
             &self,
             stack: &mut Vec<BFieldElement>,
             memory: &mut HashMap<BFieldElement, BFieldElement>,
-        ) {
-            let list_pointer = stack.pop().unwrap();
-            let list = load_list_with_copy_elements::<EXTENSION_DEGREE>(list_pointer, memory);
+        ) -> Result<(), RustShadowError> {
+            let list_pointer = stack.pop().ok_or(RustShadowError::StackUnderflow)?;
+            let list = load_list_with_copy_elements::<EXTENSION_DEGREE>(list_pointer, memory)?;
 
             let sum: XFieldElement = list
                 .into_iter()
@@ -205,6 +205,7 @@ mod tests {
             for elem in sum.coefficients.into_iter().rev() {
                 stack.push(elem);
             }
+            Ok(())
         }
 
         fn pseudorandom_initial_state(

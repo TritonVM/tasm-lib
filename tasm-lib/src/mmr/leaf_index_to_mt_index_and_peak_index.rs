@@ -151,7 +151,7 @@ pub(crate) mod tests {
             let initial_stack = self.set_up_test_stack((num_leafs, leaf_index));
 
             let mut expected_stack = initial_stack.clone();
-            self.rust_shadow(&mut expected_stack);
+            self.rust_shadow(&mut expected_stack).unwrap();
 
             test_rust_equivalence_given_complete_state(
                 &ShadowedClosure::new(Self),
@@ -167,14 +167,18 @@ pub(crate) mod tests {
     impl Closure for MmrLeafIndexToMtIndexAndPeakIndex {
         type Args = (u64, u64);
 
-        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
-            let (num_leafs, leaf_index) = pop_encodable::<Self::Args>(stack);
+        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) -> Result<(), RustShadowError> {
+            let (num_leafs, leaf_index) = pop_encodable::<Self::Args>(stack)?;
 
+            if leaf_index >= num_leafs {
+                return Err(RustShadowError::Other);
+            }
             let (mt_index, peak_index) =
                 leaf_index_to_mt_index_and_peak_index(leaf_index, num_leafs);
 
             push_encodable(stack, &mt_index);
             push_encodable(stack, &peak_index);
+            Ok(())
         }
 
         fn pseudorandom_args(

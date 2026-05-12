@@ -152,10 +152,11 @@ pub mod tests {
     impl Closure for XfeModPowU32 {
         type Args = (u32, XFieldElement);
 
-        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
-            let (exponent, base) = pop_encodable::<Self::Args>(stack);
+        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) -> Result<(), RustShadowError> {
+            let (exponent, base) = pop_encodable::<Self::Args>(stack)?;
             let result = base.mod_pow_u32(exponent);
             push_encodable(stack, &result);
+            Ok(())
         }
 
         fn pseudorandom_args(

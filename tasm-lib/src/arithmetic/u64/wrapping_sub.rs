@@ -76,11 +76,12 @@ mod tests {
     impl Closure for WrappingSub {
         type Args = <OverflowingSub as Closure>::Args;
 
-        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
-            let minuend = pop_encodable::<u64>(stack);
-            let subtrahend = pop_encodable::<u64>(stack);
+        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) -> Result<(), RustShadowError> {
+            let minuend = pop_encodable::<u64>(stack)?;
+            let subtrahend = pop_encodable::<u64>(stack)?;
             let difference = minuend.wrapping_sub(subtrahend);
             push_encodable(stack, &difference);
+            Ok(())
         }
 
         fn pseudorandom_args(

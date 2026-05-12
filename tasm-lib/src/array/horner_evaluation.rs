@@ -117,18 +117,23 @@ mod tests {
             &self,
             stack: &mut Vec<BFieldElement>,
             memory: &HashMap<BFieldElement, BFieldElement>,
-        ) {
-            let indeterminate = pop_encodable(stack);
-            let coefficient_ptr = stack.pop().unwrap();
+        ) -> Result<(), RustShadowError> {
+            let indeterminate = pop_encodable(stack)?;
+            let coefficient_ptr = stack.pop().ok_or(RustShadowError::StackUnderflow)?;
 
-            let coefficients = (0..self.num_coefficients)
+            let coefficients: Vec<XFieldElement> = (0..self.num_coefficients)
                 .map(|i| array_get(coefficient_ptr, i, memory, 3))
-                .map(|bfes| XFieldElement::new(bfes.try_into().unwrap()))
-                .collect();
+                .map(|bfes| {
+                    bfes.try_into()
+                        .map(XFieldElement::new)
+                        .map_err(|_| RustShadowError::Other)
+                })
+                .try_collect()?;
             let polynomial = Polynomial::new(coefficients);
             let evaluation = polynomial.evaluate_in_same_field(indeterminate);
 
             push_encodable(stack, &evaluation);
+            Ok(())
         }
 
         fn pseudorandom_initial_state(

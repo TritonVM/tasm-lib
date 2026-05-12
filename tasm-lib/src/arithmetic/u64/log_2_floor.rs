@@ -108,9 +108,11 @@ mod tests {
     impl Closure for Log2Floor {
         type Args = u64;
 
-        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
-            let x = pop_encodable::<Self::Args>(stack);
-            push_encodable(stack, &x.ilog2());
+        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) -> Result<(), RustShadowError> {
+            let x = pop_encodable::<Self::Args>(stack)?;
+            let log = x.checked_ilog2().ok_or(RustShadowError::Other)?;
+            push_encodable(stack, &log);
+            Ok(())
         }
 
         fn pseudorandom_args(

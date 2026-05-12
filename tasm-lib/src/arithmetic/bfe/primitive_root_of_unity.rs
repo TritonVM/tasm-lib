@@ -195,12 +195,17 @@ mod tests {
     impl Closure for PrimitiveRootOfUnity {
         type Args = u64;
 
-        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
-            let order = pop_encodable::<Self::Args>(stack);
-            assert!(!order.is_zero(), "No root of order 0 exists");
-
-            let root_of_unity = BFieldElement::primitive_root_of_unity(order).unwrap();
+        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) -> Result<(), RustShadowError> {
+            let order = pop_encodable::<Self::Args>(stack)?;
+            if order.is_zero() {
+                // no root of order 0 exists
+                return Err(RustShadowError::Other);
+            }
+            let root_of_unity =
+                BFieldElement::primitive_root_of_unity(order).ok_or(RustShadowError::Other)?;
             stack.push(root_of_unity);
+
+            Ok(())
         }
 
         fn pseudorandom_args(

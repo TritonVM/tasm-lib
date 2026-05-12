@@ -7,6 +7,7 @@ use crate::rust_shadowing_helper_functions::list::list_new;
 use crate::snippet_bencher::BenchmarkCase;
 use crate::traits::function::Function;
 use crate::traits::function::FunctionInitialState;
+use crate::traits::rust_shadow::RustShadowError;
 
 /// Creates a new list and returns a pointer to it.
 ///
@@ -57,11 +58,14 @@ impl Function for New {
         &self,
         stack: &mut Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
-    ) {
-        DynMalloc.rust_shadow(stack, memory);
+    ) -> Result<(), RustShadowError> {
+        DynMalloc.rust_shadow(stack, memory)?;
 
-        let &list_pointer = stack.last().unwrap();
+        let list_pointer = stack.last().copied();
+        let list_pointer = list_pointer.ok_or(RustShadowError::StackUnderflow)?;
         list_new(list_pointer, memory);
+
+        Ok(())
     }
 
     fn pseudorandom_initial_state(

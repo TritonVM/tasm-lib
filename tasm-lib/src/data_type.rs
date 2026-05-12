@@ -444,14 +444,14 @@ impl Literal {
     /// - if the element is incorrectly [`BFieldCodec`] encoded
     pub fn pop_from_stack(data_type: DataType, stack: &mut Vec<BFieldElement>) -> Self {
         match data_type {
-            DataType::Bool => Self::Bool(pop_encodable(stack)),
-            DataType::U32 => Self::U32(pop_encodable(stack)),
-            DataType::U64 => Self::U64(pop_encodable(stack)),
-            DataType::U128 => Self::U128(pop_encodable(stack)),
-            DataType::I128 => Self::I128(pop_encodable(stack)),
-            DataType::Bfe => Self::Bfe(pop_encodable(stack)),
-            DataType::Xfe => Self::Xfe(pop_encodable(stack)),
-            DataType::Digest => Self::Digest(pop_encodable(stack)),
+            DataType::Bool => Self::Bool(pop_encodable(stack).unwrap()),
+            DataType::U32 => Self::U32(pop_encodable(stack).unwrap()),
+            DataType::U64 => Self::U64(pop_encodable(stack).unwrap()),
+            DataType::U128 => Self::U128(pop_encodable(stack).unwrap()),
+            DataType::I128 => Self::I128(pop_encodable(stack).unwrap()),
+            DataType::Bfe => Self::Bfe(pop_encodable(stack).unwrap()),
+            DataType::Xfe => Self::Xfe(pop_encodable(stack).unwrap()),
+            DataType::Digest => Self::Digest(pop_encodable(stack).unwrap()),
             DataType::List(_)
             | DataType::Array(_)
             | DataType::Tuple(_)
@@ -720,9 +720,10 @@ mod compare_literals {
             impl Closure for $name {
                 type Args = ($rust_ty, $rust_ty);
 
-                fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
-                    let (right, left) = pop_encodable::<Self::Args>(stack);
+                fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) -> Result<(), RustShadowError>{
+                    let (right, left) = pop_encodable::<Self::Args>(stack)?;
                     push_encodable(stack, &(left == right));
+                    Ok(())
                 }
 
                 fn pseudorandom_args(

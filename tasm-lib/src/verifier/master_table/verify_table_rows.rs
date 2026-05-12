@@ -280,8 +280,8 @@ mod tests {
             memory: &mut HashMap<BFieldElement, BFieldElement>,
             nondeterminism: &NonDeterminism,
             _public_input: &[BFieldElement],
-            sponge: &mut Option<Tip5>,
-        ) -> Vec<BFieldElement> {
+            sponge_arg: &mut Option<Tip5>,
+        ) -> Result<Vec<BFieldElement>, RustShadowError> {
             fn verify_one_row(
                 leaf_index: u32,
                 merkle_root: Digest,
@@ -289,7 +289,7 @@ mod tests {
                 authentication_path: Vec<Digest>,
                 row: &[BFieldElement],
                 sponge: &mut Tip5,
-            ) {
+            ) -> Result<(), RustShadowError> {
                 // We define a local hash_varlen to be able to simulate what happens to the sponge,
                 // as this is required by the test framework.
                 fn local_hash_varlen(input: &[BFieldElement], sponge: &mut Tip5) -> Digest {
@@ -307,40 +307,60 @@ mod tests {
                     authentication_structure: authentication_path,
                 };
 
-                assert!(merkle_tree_inclusion_proof.verify(merkle_root));
+                merkle_tree_inclusion_proof
+                    .verify(merkle_root)
+                    .then_some(())
+                    .ok_or(RustShadowError::InvalidProof)
             }
 
-            *sponge = Some(Tip5::init());
-            let table_rows_pointer = stack.pop().unwrap();
-            let fri_revealed_pointer = stack.pop().unwrap();
-            let merkle_tree_root_pointer = stack.pop().unwrap();
-            let merkle_tree_height: u32 = stack.pop().unwrap().try_into().unwrap();
-            let num_combination_codeword_checks: u32 = stack.pop().unwrap().try_into().unwrap();
+            let table_rows_pointer = stack.pop().ok_or(RustShadowError::StackUnderflow)?;
+            let fri_revealed_pointer = stack.pop().ok_or(RustShadowError::StackUnderflow)?;
+            let merkle_tree_root_pointer = stack.pop().ok_or(RustShadowError::StackUnderflow)?;
+            let merkle_tree_height: u32 = stack
+                .pop()
+                .ok_or(RustShadowError::StackUnderflow)?
+                .try_into()
+                .map_err(|_| RustShadowError::U64ToU32Error)?;
+            let num_combination_codeword_checks: u32 = stack
+                .pop()
+                .ok_or(RustShadowError::StackUnderflow)?
+                .try_into()
+                .map_err(|_| RustShadowError::U64ToU32Error)?;
 
-            let merkle_root = Digest::new(
-                (0..Digest::LEN)
-                    .map(|i| memory[&(merkle_tree_root_pointer + bfe!(i as u32))])
-                    .collect_vec()
-                    .try_into()
-                    .unwrap(),
-            );
+            let merkle_root_innards = (0..Digest::LEN)
+                .map(|i| {
+                    memory
+                        .get(&(merkle_tree_root_pointer + bfe!(i as u32)))
+                        .ok_or(RustShadowError::DecodingError)
+                        .copied()
+                })
+                .try_collect::<_, Vec<_>, _>()?;
+            let merkle_root = Digest::new(merkle_root_innards.try_into().unwrap());
 
             // Verify all rows
+            let mut sponge = Tip5::init();
             let mut j = 0;
             for i in 0..num_combination_codeword_checks {
                 // Read a row from memory
-                let row = (0..self.row_size())
+                let row: Vec<_> = (0..self.row_size())
                     .map(|l| {
-                        memory[&(table_rows_pointer
-                            + bfe!(l as u64 + 1 + (self.row_size() as u64) * i as u64))]
+                        let word_pointer = table_rows_pointer
+                            + bfe!(l as u64 + 1 + (self.row_size() as u64) * i as u64);
+                        memory
+                            .get(&word_pointer)
+                            .copied()
+                            .ok_or(RustShadowError::DecodingError)
                     })
-                    .collect_vec();
+                    .try_collect()?;
 
                 // Read leaf index as provided by the FRI verifier
-                let leaf_index: u32 = nondeterminism.ram
-                    [&(fri_revealed_pointer + bfe!(4) + BFieldElement::new(i as u64 * 4))]
+                let leaf_index: u32 = nondeterminism
+                    .ram
+                    .get(&(fri_revealed_pointer + bfe!(4) + BFieldElement::new(i as u64 * 4)))
+                    .copied()
+                    .ok_or(RustShadowError::DecodingError)?
                     .try_into()
-                    .unwrap();
+                    .map_err(|_| RustShadowError::U64ToU32Error)?;
                 let mut authentication_path = vec![];
                 for _ in 0..merkle_tree_height {
                     authentication_path.push(nondeterminism.digests[j]);
@@ -353,11 +373,12 @@ mod tests {
                     merkle_tree_height,
                     authentication_path,
                     &row,
-                    sponge.as_mut().unwrap(),
-                )
+                    &mut sponge,
+                )?;
             }
+            *sponge_arg = Some(sponge);
 
-            vec![]
+            Ok(Vec::new())
         }
 
         fn pseudorandom_initial_state(

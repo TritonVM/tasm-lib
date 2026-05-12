@@ -342,38 +342,44 @@ mod tests {
         fn rust_shadow(
             &self,
             stack: &mut Vec<BFieldElement>,
-            memory: &mut std::collections::HashMap<BFieldElement, BFieldElement>,
+            memory: &mut HashMap<BFieldElement, BFieldElement>,
             nondeterminism: &NonDeterminism,
-        ) {
-            let denominator: [u32; 5] = pop_encodable(stack);
+        ) -> Result<(), RustShadowError> {
+            let denominator: [u32; 5] = pop_encodable(stack)?;
             let denominator: BigUint = BigUint::new(denominator.to_vec());
-            assert!(!denominator.is_zero());
+            if denominator.is_zero() {
+                return Err(RustShadowError::Other);
+            }
 
-            let numerator: [u32; 5] = pop_encodable(stack);
+            let numerator: [u32; 5] = pop_encodable(stack)?;
             let numerator: BigUint = BigUint::new(numerator.to_vec());
 
             let quotient = &nondeterminism.individual_tokens[0..5];
-            let mut quotient: [u32; 5] =
-                *TasmObject::decode_iter(&mut quotient.iter().cloned()).unwrap();
+            let mut quotient: [u32; 5] = *TasmObject::decode_iter(&mut quotient.iter().cloned())
+                .map_err(|_| RustShadowError::DecodingError)?;
             quotient.reverse();
             let quotient: BigUint = BigUint::new(quotient.to_vec());
 
             let remainder = &nondeterminism.individual_tokens[5..10];
-            let mut remainder: [u32; 5] =
-                *TasmObject::decode_iter(&mut remainder.iter().cloned()).unwrap();
+            let mut remainder: [u32; 5] = *TasmObject::decode_iter(&mut remainder.iter().cloned())
+                .map_err(|_| RustShadowError::DecodingError)?;
             remainder.reverse();
             let remainder: BigUint = BigUint::new(remainder.to_vec());
 
-            assert!(remainder < denominator);
-            assert!(numerator == quotient.clone() * denominator + remainder.clone());
+            if remainder >= denominator {
+                return Err(RustShadowError::Other);
+            }
+            if numerator != quotient.clone() * denominator + remainder.clone() {
+                return Err(RustShadowError::Other);
+            }
 
             let mut quotient = quotient.to_u32_digits();
             quotient.resize(5, 0);
-            let quotient: [u32; 5] = quotient.try_into().unwrap();
+            let quotient: [u32; 5] = quotient.try_into().map_err(|_| RustShadowError::Other)?;
 
             let mut remainder = remainder.to_u32_digits();
             remainder.resize(5, 0);
-            let remainder: [u32; 5] = remainder.try_into().unwrap();
+            let remainder: [u32; 5] = remainder.try_into().map_err(|_| RustShadowError::Other)?;
 
             // Imitate use of static memory
             encode_to_memory(memory, STATIC_MEMORY_FIRST_ADDRESS - bfe!(4), &remainder);
@@ -381,6 +387,7 @@ mod tests {
 
             push_encodable(stack, &quotient);
             push_encodable(stack, &remainder);
+            Ok(())
         }
 
         fn pseudorandom_initial_state(

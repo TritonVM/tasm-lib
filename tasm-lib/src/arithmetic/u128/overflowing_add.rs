@@ -101,7 +101,7 @@ pub(crate) mod tests {
             let initial_stack = self.set_up_test_stack((rhs, lhs));
 
             let mut expected_stack = initial_stack.clone();
-            self.rust_shadow(&mut expected_stack);
+            self.rust_shadow(&mut expected_stack).unwrap();
 
             test_rust_equivalence_given_complete_state(
                 &ShadowedClosure::new(Self),
@@ -125,11 +125,12 @@ pub(crate) mod tests {
     impl Closure for OverflowingAdd {
         type Args = (u128, u128);
 
-        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
-            let (left, right) = pop_encodable::<Self::Args>(stack);
+        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) -> Result<(), RustShadowError> {
+            let (left, right) = pop_encodable::<Self::Args>(stack)?;
             let (sum, is_overflow) = left.overflowing_add(right);
             push_encodable(stack, &sum);
             push_encodable(stack, &is_overflow);
+            Ok(())
         }
 
         fn pseudorandom_args(&self, seed: [u8; 32], _: Option<BenchmarkCase>) -> Self::Args {
@@ -148,8 +149,9 @@ pub(crate) mod tests {
     }
 
     #[macro_rules_attr::apply(test)]
-    fn rust_shadow() {
+    fn rust_shadow() -> Result<(), RustShadowError> {
         ShadowedClosure::new(OverflowingAdd).test();
+        Ok(())
     }
 
     #[macro_rules_attr::apply(test)]

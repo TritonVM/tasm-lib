@@ -136,10 +136,13 @@ mod tests {
     impl Closure for ShiftLeft {
         type Args = <ShiftRight as Closure>::Args;
 
-        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
-            let (arg, shift_amount) = pop_encodable::<Self::Args>(stack);
-            assert!(shift_amount < 128);
+        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) -> Result<(), RustShadowError> {
+            let (arg, shift_amount) = pop_encodable::<Self::Args>(stack)?;
+            if shift_amount >= 128 {
+                return Err(RustShadowError::ArithmeticOverflow);
+            }
             push_encodable(stack, &(arg << shift_amount));
+            Ok(())
         }
 
         fn pseudorandom_args(
@@ -163,7 +166,7 @@ mod tests {
 
     #[macro_rules_attr::apply(test)]
     fn rust_shadow() {
-        ShadowedClosure::new(ShiftLeft).test();
+        ShadowedClosure::new(ShiftLeft).test()
     }
 
     #[macro_rules_attr::apply(proptest)]

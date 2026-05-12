@@ -469,16 +469,16 @@ mod tests {
             &self,
             stack: &mut Vec<BFieldElement>,
             memory: &mut HashMap<BFieldElement, BFieldElement>,
-        ) {
+        ) -> Result<(), RustShadowError> {
             let input_type = self.f.domain();
             let output_type = self.f.range();
 
-            New.rust_shadow(stack, memory);
-            let output_list_pointer = stack.pop().unwrap();
+            New.rust_shadow(stack, memory)?;
+            let output_list_pointer = stack.pop().ok_or(RustShadowError::StackUnderflow)?;
 
-            let input_list_pointers = (0..NUM_INPUT_LISTS)
-                .map(|_| stack.pop().unwrap())
-                .collect_vec();
+            let input_list_pointers: Vec<_> = (0..NUM_INPUT_LISTS)
+                .map(|_| stack.pop().ok_or(RustShadowError::StackUnderflow))
+                .try_collect()?;
 
             // the inner function _must not_ rely on these elements
             let buffer = (0..Self::NUM_INTERNAL_REGISTERS).map(|_| rand::random::<BFieldElement>());
@@ -486,14 +486,15 @@ mod tests {
 
             let mut total_output_len = 0;
             for input_list_pointer in input_list_pointers {
-                let input_list_len = list_get_length(input_list_pointer, memory);
-                let output_list_len = list_get_length(output_list_pointer, memory);
+                let input_list_len = list_get_length(input_list_pointer, memory)?;
+                let output_list_len = list_get_length(output_list_pointer, memory)?;
                 let new_output_list_len = output_list_len + input_list_len;
                 list_set_length(output_list_pointer, new_output_list_len, memory);
 
                 for i in (0..input_list_len).rev() {
                     if input_type.static_length().is_some() {
-                        let elem = list_get(input_list_pointer, i, memory, input_type.stack_size());
+                        let elem =
+                            list_get(input_list_pointer, i, memory, input_type.stack_size())?;
                         stack.extend(elem.into_iter().rev());
                     } else {
                         let (len, ptr) = list_pointer_to_elem_pointer(
@@ -501,15 +502,15 @@ mod tests {
                             i,
                             memory,
                             &input_type,
-                        );
+                        )?;
                         stack.push(ptr);
                         stack.push(bfe!(len));
                     };
                     self.f.apply(stack, memory);
-                    let elem = (0..output_type.stack_size())
-                        .map(|_| stack.pop().unwrap())
-                        .collect();
-                    list_set(output_list_pointer, total_output_len + i, elem, memory);
+                    let elem: Vec<_> = (0..output_type.stack_size())
+                        .map(|_| stack.pop().ok_or(RustShadowError::StackUnderflow))
+                        .try_collect()?;
+                    list_set(output_list_pointer, total_output_len + i, elem, memory)?;
                 }
 
                 total_output_len += input_list_len;
@@ -520,6 +521,7 @@ mod tests {
             }
 
             stack.push(output_list_pointer);
+            Ok(())
         }
 
         fn pseudorandom_initial_state(

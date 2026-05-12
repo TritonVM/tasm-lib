@@ -58,7 +58,7 @@ mod tests {
             let initial_stack = self.set_up_test_stack((lhs, rhs));
 
             let mut expected_stack = initial_stack.clone();
-            self.rust_shadow(&mut expected_stack);
+            self.rust_shadow(&mut expected_stack).unwrap();
 
             test_rust_equivalence_given_complete_state(
                 &ShadowedClosure::new(Self),
@@ -74,10 +74,13 @@ mod tests {
     impl Closure for SafeAdd {
         type Args = <OverflowingAdd as Closure>::Args;
 
-        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
-            let (left, right) = pop_encodable::<Self::Args>(stack);
-            let sum = left.checked_add(right).unwrap();
+        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) -> Result<(), RustShadowError> {
+            let (left, right) = pop_encodable::<Self::Args>(stack)?;
+            let sum = left
+                .checked_add(right)
+                .ok_or(RustShadowError::ArithmeticOverflow)?;
             push_encodable(stack, &sum);
+            Ok(())
         }
 
         fn pseudorandom_args(&self, seed: [u8; 32], _: Option<BenchmarkCase>) -> Self::Args {

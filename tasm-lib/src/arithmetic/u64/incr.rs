@@ -88,10 +88,13 @@ mod tests {
     impl Closure for Incr {
         type Args = u64;
 
-        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
-            let v = pop_encodable::<Self::Args>(stack);
-            let incr = v.checked_add(1).unwrap();
+        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) -> Result<(), RustShadowError> {
+            let v = pop_encodable::<Self::Args>(stack)?;
+            let incr = v
+                .checked_add(1)
+                .ok_or(RustShadowError::ArithmeticOverflow)?;
             push_encodable(stack, &incr);
+            Ok(())
         }
 
         fn pseudorandom_args(

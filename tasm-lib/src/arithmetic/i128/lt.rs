@@ -91,9 +91,10 @@ mod tests {
     impl Closure for Lt {
         type Args = (i128, i128);
 
-        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
-            let (rhs, lhs) = pop_encodable::<Self::Args>(stack);
+        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) -> Result<(), RustShadowError> {
+            let (rhs, lhs) = pop_encodable::<Self::Args>(stack)?;
             push_encodable(stack, &(lhs < rhs));
+            Ok(())
         }
 
         fn pseudorandom_args(&self, seed: [u8; 32], _: Option<BenchmarkCase>) -> Self::Args {

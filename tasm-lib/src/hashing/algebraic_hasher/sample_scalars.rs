@@ -97,9 +97,11 @@ mod tests {
             _: &NonDeterminism,
             _: &[BFieldElement],
             sponge: &mut Option<Tip5>,
-        ) -> Vec<BFieldElement> {
-            let sponge = sponge.as_mut().expect("sponge must be initialized");
-            let num_scalars = stack.pop().unwrap().value() as usize;
+        ) -> Result<Vec<BFieldElement>, RustShadowError> {
+            let Some(sponge) = sponge.as_mut() else {
+                return Err(RustShadowError::SpongeUninitialized);
+            };
+            let num_scalars = stack.pop().ok_or(RustShadowError::StackUnderflow)?.value() as usize;
             let num_squeezes = (num_scalars * 3 + 9) / tip5::RATE;
             let pseudorandomness = (0..num_squeezes)
                 .flat_map(|_| sponge.squeeze().to_vec())
@@ -124,9 +126,9 @@ mod tests {
 
             // the list of scalars was allocated properly; reflect that fact
             memory.insert(scalars_pointer, BFieldElement::new(num_scalars as u64));
-
             stack.push(scalars_pointer);
-            vec![]
+
+            Ok(Vec::new())
         }
 
         fn pseudorandom_initial_state(
@@ -217,7 +219,8 @@ mod tests {
                     &[],
                     NonDeterminism::default(),
                     &Some(init_sponge.clone()),
-                );
+                )
+                .unwrap();
 
                 let final_ram = tasm.ram;
                 let snippet_output_scalar_pointer =
@@ -234,6 +237,7 @@ mod tests {
                             &final_ram,
                             EXTENSION_DEGREE
                         )
+                        .unwrap()
                     );
                 }
             }

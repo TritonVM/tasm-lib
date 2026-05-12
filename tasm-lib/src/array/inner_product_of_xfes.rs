@@ -104,12 +104,21 @@ mod tests {
             &self,
             stack: &mut Vec<BFieldElement>,
             memory: &HashMap<BFieldElement, BFieldElement>,
-        ) {
-            let b = array_from_memory::<XFieldElement>(stack.pop().unwrap(), self.length, memory);
-            let a = array_from_memory::<XFieldElement>(stack.pop().unwrap(), self.length, memory);
+        ) -> Result<(), RustShadowError> {
+            let b = array_from_memory::<XFieldElement>(
+                stack.pop().ok_or(RustShadowError::StackUnderflow)?,
+                self.length,
+                memory,
+            );
+            let a = array_from_memory::<XFieldElement>(
+                stack.pop().ok_or(RustShadowError::StackUnderflow)?,
+                self.length,
+                memory,
+            );
             let inner_product: XFieldElement = a.into_iter().zip(b).map(|(a, b)| a * b).sum();
 
             push_encodable(stack, &inner_product);
+            Ok(())
         }
 
         fn pseudorandom_initial_state(

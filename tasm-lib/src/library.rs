@@ -267,8 +267,9 @@ mod tests {
     impl Closure for DummyTestSnippetA {
         type Args = ZeroSizedType;
 
-        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
+        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) -> Result<(), RustShadowError> {
             push_encodable(stack, &xfe![[1, 1, 1]]);
+            Ok(())
         }
 
         fn pseudorandom_args(&self, _: [u8; 32], _: Option<BenchmarkCase>) -> Self::Args {
@@ -279,9 +280,10 @@ mod tests {
     impl Closure for DummyTestSnippetB {
         type Args = ZeroSizedType;
 
-        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
+        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) -> Result<(), RustShadowError> {
             stack.push(bfe!(1));
             stack.push(bfe!(1));
+            Ok(())
         }
 
         fn pseudorandom_args(&self, _: [u8; 32], _: Option<BenchmarkCase>) -> Self::Args {
@@ -292,8 +294,9 @@ mod tests {
     impl Closure for DummyTestSnippetC {
         type Args = ZeroSizedType;
 
-        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
+        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) -> Result<(), RustShadowError> {
             stack.push(bfe!(1));
+            Ok(())
         }
 
         fn pseudorandom_args(&self, _: [u8; 32], _: Option<BenchmarkCase>) -> Self::Args {

@@ -133,23 +133,21 @@ mod tests {
             &self,
             stack: &mut Vec<BFieldElement>,
             memory: &HashMap<BFieldElement, BFieldElement>,
-        ) {
-            let vm_proof_iter_ptr = stack.pop().unwrap();
-            let vm_proof_iter =
-                *VmProofIter::decode_from_memory(memory, vm_proof_iter_ptr).unwrap();
-            assert_eq!(
-                vm_proof_iter.current_item_count,
-                vm_proof_iter.total_item_count
-            );
+        ) -> Result<(), RustShadowError> {
+            let vm_proof_iter_ptr = stack.pop().ok_or(RustShadowError::StackUnderflow)?;
+            let vm_proof_iter = *VmProofIter::decode_from_memory(memory, vm_proof_iter_ptr)
+                .map_err(|_| RustShadowError::DecodingError)?;
+            if vm_proof_iter.current_item_count != vm_proof_iter.total_item_count {
+                return Err(RustShadowError::InvalidProof);
+            }
 
-            assert_eq!(
-                vm_proof_iter.proof_start_pointer + bfe!(vm_proof_iter.proof_length + 1),
-                vm_proof_iter.current_item_pointer,
-                "{} + {} and {} must match",
-                vm_proof_iter.proof_start_pointer,
-                vm_proof_iter.proof_length,
-                vm_proof_iter.current_item_pointer
-            );
+            if vm_proof_iter.proof_start_pointer + bfe!(vm_proof_iter.proof_length + 1)
+                != vm_proof_iter.current_item_pointer
+            {
+                return Err(RustShadowError::InvalidProof);
+            }
+
+            Ok(())
         }
 
         fn pseudorandom_initial_state(

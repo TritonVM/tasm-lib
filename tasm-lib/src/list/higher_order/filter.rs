@@ -165,33 +165,33 @@ mod tests {
             &self,
             stack: &mut Vec<BFieldElement>,
             memory: &mut HashMap<BFieldElement, BFieldElement>,
-        ) {
+        ) -> Result<(), RustShadowError> {
             let input_type = self.f.domain();
 
             let element_size = self.f.domain().stack_size();
             let safety_offset = LIST_METADATA_SIZE;
 
-            let list_pointer = stack.pop().unwrap();
+            let list_pointer = stack.pop().ok_or(RustShadowError::StackUnderflow)?;
 
             // get list length
-            let len = rust_shadowing_helper_functions::list::list_get_length(list_pointer, memory);
+            let len = rust_shadowing_helper_functions::list::list_get_length(list_pointer, memory)?;
 
             let get_element = rust_shadowing_helper_functions::list::list_get;
 
-            New.rust_shadow(stack, memory);
-            let output_list = stack.pop().unwrap();
+            New.rust_shadow(stack, memory)?;
+            let output_list = stack.pop().ok_or(RustShadowError::StackUnderflow)?;
 
             // set length
             stack.push(output_list);
             stack.push(bfe!(len));
-            SetLength.rust_shadow(stack, memory);
+            SetLength.rust_shadow(stack, memory)?;
             stack.pop();
 
             // forall elements, read + map + maybe copy
             let mut output_index = 0;
             for i in 0..len {
                 // read
-                let mut input_item = get_element(list_pointer, i, memory, input_type.stack_size());
+                let mut input_item = get_element(list_pointer, i, memory, input_type.stack_size())?;
 
                 // put on stack
                 while let Some(element) = input_item.pop() {
@@ -200,14 +200,14 @@ mod tests {
 
                 self.f.apply(stack, memory);
 
-                let satisfied = stack.pop().unwrap().value() != 0;
+                let satisfied = stack.pop().ok_or(RustShadowError::StackUnderflow)?.value() != 0;
 
                 // maybe copy
                 if satisfied {
                     stack.push(list_pointer + bfe!(safety_offset + i * element_size)); // read source
                     stack.push(output_list + bfe!(safety_offset + output_index * element_size)); // write dest
                     stack.push(bfe!(element_size)); // number of words
-                    MemCpy.rust_shadow(stack, memory);
+                    MemCpy.rust_shadow(stack, memory)?;
                     output_index += 1;
                 }
             }
@@ -215,7 +215,9 @@ mod tests {
             // set length
             stack.push(output_list);
             stack.push(bfe!(output_index));
-            SetLength.rust_shadow(stack, memory);
+            SetLength.rust_shadow(stack, memory)?;
+
+            Ok(())
         }
 
         fn pseudorandom_initial_state(

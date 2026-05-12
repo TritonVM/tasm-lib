@@ -65,11 +65,12 @@ mod tests {
     impl Closure for Commit {
         type Args = (Digest, Digest, Digest);
 
-        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
-            let (receiver_digest, sender_randomness, item) = pop_encodable::<Self::Args>(stack);
+        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) -> Result<(), RustShadowError> {
+            let (receiver_digest, sender_randomness, item) = pop_encodable::<Self::Args>(stack)?;
             let commitment =
                 Tip5::hash_pair(Tip5::hash_pair(item, sender_randomness), receiver_digest);
             push_encodable(stack, &commitment);
+            Ok(())
         }
 
         fn pseudorandom_args(&self, seed: [u8; 32], _: Option<BenchmarkCase>) -> Self::Args {

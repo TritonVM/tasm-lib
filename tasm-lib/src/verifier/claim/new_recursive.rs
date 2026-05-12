@@ -147,7 +147,7 @@ pub mod tests {
             nondeterminism: &NonDeterminism,
             _public_input: &[BFieldElement],
             _sponge: &mut Option<Tip5>,
-        ) -> Vec<BFieldElement> {
+        ) -> Result<Vec<BFieldElement>, RustShadowError> {
             println!(
                 "nondeterminism.individual_tokens: {}",
                 nondeterminism.individual_tokens.iter().join(",")
@@ -157,13 +157,19 @@ pub mod tests {
 
             let mut output = vec![];
             for _ in 0..self.output_size {
-                output.push(individual_tokens.pop_front().unwrap());
+                let front_token = individual_tokens
+                    .pop_front()
+                    .ok_or(RustShadowError::StackUnderflow)?;
+                output.push(front_token);
             }
             output.reverse();
 
             let mut input = vec![];
             for _ in 0..self.input_size {
-                input.push(individual_tokens.pop_front().unwrap());
+                let front_token = individual_tokens
+                    .pop_front()
+                    .ok_or(RustShadowError::StackUnderflow)?;
+                input.push(front_token);
             }
             input.reverse();
 
@@ -176,7 +182,7 @@ pub mod tests {
 
             stack.push(claim_pointer);
 
-            vec![]
+            Ok(Vec::new())
         }
 
         fn pseudorandom_initial_state(

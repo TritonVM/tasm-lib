@@ -71,10 +71,12 @@ mod tests {
             &self,
             stack: &mut Vec<BFieldElement>,
             memory: &HashMap<BFieldElement, BFieldElement>,
-        ) {
-            let list_ptr = stack.pop().unwrap();
-            let list_length = memory[&list_ptr];
+        ) -> Result<(), RustShadowError> {
+            let list_ptr = stack.pop().ok_or(RustShadowError::StackUnderflow)?;
+            let list_length = *memory.get(&list_ptr).ok_or(RustShadowError::Other)?;
             stack.push(list_length);
+
+            Ok(())
         }
 
         fn pseudorandom_initial_state(

@@ -7,6 +7,7 @@ use crate::empty_stack;
 use crate::prelude::*;
 use crate::traits::procedure::Procedure;
 use crate::traits::procedure::ProcedureInitialState;
+use crate::traits::rust_shadow::RustShadowError;
 
 /// Move an element of type `DataType` from standard-in or secret-in's token stream to the stack
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
@@ -50,8 +51,8 @@ impl Procedure for ReadInput {
         _memory: &mut HashMap<BFieldElement, BFieldElement>,
         nondeterminism: &NonDeterminism,
         public_input: &[BFieldElement],
-        _sponge: &mut Option<crate::prelude::Tip5>,
-    ) -> Vec<BFieldElement> {
+        _sponge: &mut Option<Tip5>,
+    ) -> Result<Vec<BFieldElement>, RustShadowError> {
         let input_source = match self.input_source {
             InputSource::StdIn => public_input,
             InputSource::SecretIn => &nondeterminism.individual_tokens,
@@ -61,7 +62,7 @@ impl Procedure for ReadInput {
         }
 
         // Output nothing
-        vec![]
+        Ok(Vec::new())
     }
 
     fn pseudorandom_initial_state(

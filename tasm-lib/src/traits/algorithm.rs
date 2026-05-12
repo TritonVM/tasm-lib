@@ -5,6 +5,7 @@ use triton_vm::prelude::*;
 
 use super::basic_snippet::BasicSnippet;
 use super::rust_shadow::RustShadow;
+use super::rust_shadow::RustShadowError;
 use crate::InitVmState;
 use crate::linker::execute_bench;
 use crate::prelude::Tip5;
@@ -34,7 +35,7 @@ pub trait Algorithm: BasicSnippet {
         stack: &mut Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
         nondeterminism: &NonDeterminism,
-    );
+    ) -> Result<(), RustShadowError>;
 
     /// Take a object about which something is being proven in order to extract out the
     /// right nondeterminism. Update the mutably referenced non-determism argument.
@@ -109,9 +110,10 @@ where
         stack: &mut Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
         _sponge: &mut Option<Tip5>,
-    ) -> Vec<BFieldElement> {
-        self.algorithm.rust_shadow(stack, memory, nondeterminism);
-        vec![]
+    ) -> Result<Vec<BFieldElement>, RustShadowError> {
+        self.algorithm.rust_shadow(stack, memory, nondeterminism)?;
+
+        Ok(Vec::new())
     }
 
     fn test(&self) {

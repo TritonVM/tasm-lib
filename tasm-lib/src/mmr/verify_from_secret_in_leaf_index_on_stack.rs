@@ -165,13 +165,14 @@ mod tests {
             nondeterminism: &NonDeterminism,
             _: &[BFieldElement],
             _: &mut Option<Tip5>,
-        ) -> Vec<BFieldElement> {
-            let leaf_index = pop_encodable(stack);
-            let leaf_count = pop_encodable(stack);
-            let leaf_digest = pop_encodable(stack);
-            let peaks_pointer = pop_encodable(stack);
+        ) -> Result<Vec<BFieldElement>, RustShadowError> {
+            let leaf_index = pop_encodable(stack)?;
+            let leaf_count = pop_encodable(stack)?;
+            let leaf_digest = pop_encodable(stack)?;
+            let peaks_pointer = pop_encodable(stack)?;
 
-            let peaks = Vec::<Digest>::decode_from_memory(memory, peaks_pointer).unwrap();
+            let peaks = Vec::<Digest>::decode_from_memory(memory, peaks_pointer)
+                .map_err(|_| RustShadowError::DecodingError)?;
 
             let (mut mt_index, _peak_index) =
                 leaf_index_to_mt_index_and_peak_index(leaf_index, leaf_count);
@@ -191,9 +192,7 @@ mod tests {
                 leaf_count,
             );
 
-            assert!(valid_mp, "MMR leaf must authenticate against peak");
-
-            vec![]
+            valid_mp.then(Vec::new).ok_or(RustShadowError::InvalidProof)
         }
 
         fn pseudorandom_initial_state(

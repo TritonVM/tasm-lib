@@ -82,17 +82,16 @@ mod tests {
             &self,
             stack: &mut Vec<BFieldElement>,
             memory: &mut HashMap<BFieldElement, BFieldElement>,
-            nondeterminism: &NonDeterminism,
+            nondet: &NonDeterminism,
             public_input: &[BFieldElement],
             sponge: &mut Option<Tip5>,
-        ) -> Vec<BFieldElement> {
+        ) -> Result<Vec<BFieldElement>, RustShadowError> {
             stack.push(BFieldElement::new(self.num_squeezes as u64));
-            let ret =
-                SqueezeRepeatedly.rust_shadow(stack, memory, nondeterminism, public_input, sponge);
+            let ret = SqueezeRepeatedly.rust_shadow(stack, memory, nondet, public_input, sponge)?;
             stack.pop();
             stack.pop();
 
-            ret
+            Ok(ret)
         }
 
         fn pseudorandom_initial_state(
@@ -128,7 +127,7 @@ mod tests {
             let num_squeeze_count = stack.last().unwrap().value();
 
             (
-                tasm_final_state(&dyn_snippet, &stack, &stdin, nondeterminism, &sponge),
+                tasm_final_state(&dyn_snippet, &stack, &stdin, nondeterminism, &sponge).unwrap(),
                 num_squeeze_count as usize,
             )
         }
@@ -149,6 +148,7 @@ mod tests {
                 nondeterminism,
                 &sponge,
             )
+            .unwrap()
         }
 
         let mut seed = [0u8; 32];

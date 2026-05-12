@@ -99,10 +99,11 @@ mod tests {
     impl Closure for ToThePowerOfPowerOf2 {
         type Args = (u32, XFieldElement);
 
-        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
-            let (exponent_log_2, base) = pop_encodable::<Self::Args>(stack);
+        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) -> Result<(), RustShadowError> {
+            let (exponent_log_2, base) = pop_encodable::<Self::Args>(stack)?;
             let result = base.mod_pow_u32(2_u32.pow(exponent_log_2));
             push_encodable(stack, &result);
+            Ok(())
         }
 
         fn pseudorandom_args(
@@ -130,7 +131,7 @@ mod tests {
 
     #[macro_rules_attr::apply(test)]
     fn rust_shadow() {
-        ShadowedClosure::new(ToThePowerOfPowerOf2).test()
+        ShadowedClosure::new(ToThePowerOfPowerOf2).test();
     }
 
     #[macro_rules_attr::apply(test)]

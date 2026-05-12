@@ -84,14 +84,17 @@ mod tests {
             _nondeterminism: &NonDeterminism,
             _public_input: &[BFieldElement],
             sponge: &mut Option<Tip5>,
-        ) -> Vec<BFieldElement> {
-            let claim_pointer = stack.pop().unwrap();
+        ) -> Result<Vec<BFieldElement>, RustShadowError> {
+            let claim_pointer = stack.pop().ok_or(RustShadowError::StackUnderflow)?;
 
             let claim = load_claim_from_memory(claim_pointer, memory);
 
-            sponge.as_mut().unwrap().pad_and_absorb_all(&claim.encode());
+            let Some(sponge) = sponge.as_mut() else {
+                return Err(RustShadowError::SpongeUninitialized);
+            };
+            sponge.pad_and_absorb_all(&claim.encode());
 
-            vec![]
+            Ok(Vec::new())
         }
 
         fn pseudorandom_initial_state(

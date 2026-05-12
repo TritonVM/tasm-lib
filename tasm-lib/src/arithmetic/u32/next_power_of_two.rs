@@ -121,9 +121,14 @@ mod tests {
     impl Closure for NextPowerOfTwo {
         type Args = u32;
 
-        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
-            let arg = pop_encodable::<Self::Args>(stack);
-            push_encodable(stack, &arg.next_power_of_two());
+        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) -> Result<(), RustShadowError> {
+            let arg = pop_encodable::<Self::Args>(stack)?;
+            let pow = arg
+                .checked_next_power_of_two()
+                .ok_or(RustShadowError::ArithmeticOverflow)?;
+            push_encodable(stack, &pow);
+
+            Ok(())
         }
 
         fn pseudorandom_args(

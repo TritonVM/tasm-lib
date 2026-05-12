@@ -181,27 +181,31 @@ mod tests {
             &self,
             stack: &mut Vec<BFieldElement>,
             memory: &mut HashMap<BFieldElement, BFieldElement>,
-        ) {
-            let address = pop_encodable(stack);
-            let mmra = *MmrAccumulator::decode_from_memory(memory, address).unwrap();
+        ) -> Result<(), RustShadowError> {
+            let address = pop_encodable(stack)?;
+            let mmra = *MmrAccumulator::decode_from_memory(memory, address)
+                .map_err(|_| RustShadowError::DecodingError)?;
 
-            fn bag_peaks(peaks: &[Digest], leaf_count: u64) -> Digest {
+            fn bag_peaks(peaks: &[Digest], leaf_count: u64) -> Result<Digest, RustShadowError> {
                 // use `hash_10` over `hash` or `hash_varlen` to simplify hashing in Triton VM
                 let [lo_limb, hi_limb] = leaf_count.encode()[..] else {
-                    panic!("internal error: unknown encoding of type `u64`")
+                    return Err(RustShadowError::Other);
                 };
                 let padded_leaf_count = bfe_array![lo_limb, hi_limb, 0, 0, 0, 0, 0, 0, 0, 0];
                 let hashed_leaf_count = Digest::new(Tip5::hash_10(&padded_leaf_count));
 
-                peaks
+                let digest = peaks
                     .iter()
                     .rev()
-                    .fold(hashed_leaf_count, |acc, &peak| Tip5::hash_pair(peak, acc))
+                    .fold(hashed_leaf_count, |acc, &peak| Tip5::hash_pair(peak, acc));
+
+                Ok(digest)
             }
 
-            let bag = bag_peaks(&mmra.peaks(), mmra.num_leafs());
+            let bag = bag_peaks(&mmra.peaks(), mmra.num_leafs())?;
             println!("bag: {bag}");
             push_encodable(stack, &bag);
+            Ok(())
         }
 
         fn pseudorandom_initial_state(

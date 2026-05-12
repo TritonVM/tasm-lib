@@ -76,7 +76,7 @@ mod tests {
 
     #[macro_rules_attr::apply(test)]
     fn rust_shadow() {
-        ShadowedClosure::new(SafeAdd).test()
+        ShadowedClosure::new(SafeAdd).test();
     }
 
     #[macro_rules_attr::apply(test)]
@@ -132,19 +132,22 @@ mod tests {
     impl Closure for SafeAdd {
         type Args = <OverflowingAdd as Closure>::Args;
 
-        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
-            let left: U192 = pop_encodable(stack);
+        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) -> Result<(), RustShadowError> {
+            let left: U192 = pop_encodable(stack)?;
             let left: BigUint = BigUint::new(left.to_vec());
-            let right: U192 = pop_encodable(stack);
+            let right: U192 = pop_encodable(stack)?;
             let right: BigUint = BigUint::new(right.to_vec());
             let sum = left + right;
             let mut sum = sum.to_u32_digits();
-            assert!(sum.len() <= 6, "Overflow");
+            if sum.len() > 6 {
+                return Err(RustShadowError::ArithmeticOverflow);
+            }
 
             sum.resize(6, 0);
             let sum: U192 = sum.try_into().unwrap();
 
             push_encodable(stack, &sum);
+            Ok(())
         }
 
         fn pseudorandom_args(&self, seed: [u8; 32], _: Option<BenchmarkCase>) -> Self::Args {

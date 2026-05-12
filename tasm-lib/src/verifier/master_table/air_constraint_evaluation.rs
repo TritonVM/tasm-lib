@@ -430,7 +430,7 @@ mod tests {
             &self,
             _: &mut Vec<BFieldElement>,
             _: &mut HashMap<BFieldElement, BFieldElement>,
-        ) {
+        ) -> Result<(), RustShadowError> {
             // Never called as we do a more manual test.
             // The more manual test is done bc we don't want to
             // have to simulate all the intermediate calculations
@@ -621,7 +621,8 @@ mod tests {
                 vec![],
                 NonDeterminism::default().with_ram(init_memory),
                 None,
-            );
+            )
+            .unwrap();
 
             Self::read_result_from_memory(final_state)
         }

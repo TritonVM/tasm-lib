@@ -100,11 +100,12 @@ mod tests {
     impl Closure for ComputeTerminalFromDigestInitialIsOne {
         type Args = (XFieldElement, Digest);
 
-        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
-            let (challenge, digest) = pop_encodable::<Self::Args>(stack);
+        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) -> Result<(), RustShadowError> {
+            let (challenge, digest) = pop_encodable::<Self::Args>(stack)?;
             let terminal =
                 EvalArg::compute_terminal(&digest.0, EvalArg::default_initial(), challenge);
             push_encodable(stack, &terminal);
+            Ok(())
         }
 
         fn pseudorandom_args(&self, seed: [u8; 32], _: Option<BenchmarkCase>) -> Self::Args {

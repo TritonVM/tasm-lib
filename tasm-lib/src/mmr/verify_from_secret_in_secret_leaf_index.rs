@@ -275,17 +275,25 @@ mod tests {
             nondeterminism: &NonDeterminism,
             _public_input: &[BFieldElement],
             _sponge: &mut Option<Tip5>,
-        ) -> Vec<BFieldElement> {
+        ) -> Result<Vec<BFieldElement>, RustShadowError> {
             let mut leaf_digest = [BFieldElement::new(0); Digest::LEN];
             for elem in leaf_digest.iter_mut() {
-                *elem = stack.pop().unwrap();
+                *elem = stack.pop().ok_or(RustShadowError::StackUnderflow)?;
             }
 
             let leaf_digest = Digest::new(leaf_digest);
-            let leaf_count_lo: u32 = stack.pop().unwrap().try_into().unwrap();
-            let leaf_count_hi: u32 = stack.pop().unwrap().try_into().unwrap();
+            let leaf_count_lo: u32 = stack
+                .pop()
+                .ok_or(RustShadowError::StackUnderflow)?
+                .try_into()
+                .map_err(|_| RustShadowError::U64ToU32Error)?;
+            let leaf_count_hi: u32 = stack
+                .pop()
+                .ok_or(RustShadowError::StackUnderflow)?
+                .try_into()
+                .map_err(|_| RustShadowError::U64ToU32Error)?;
             let leaf_count: u64 = ((leaf_count_hi as u64) << 32) + leaf_count_lo as u64;
-            let peaks_pointer = stack.pop().unwrap();
+            let peaks_pointer = stack.pop().ok_or(RustShadowError::StackUnderflow)?;
             let peaks_count: u64 = memory[&peaks_pointer].value();
             let mut peaks: Vec<Digest> = vec![];
             for i in 0..peaks_count {
@@ -294,17 +302,17 @@ mod tests {
                     i as usize,
                     memory,
                     Digest::LEN,
-                );
+                )?;
                 peaks.push(Digest::new(digest_innards.try_into().unwrap()));
             }
             let leaf_index_hi: u32 = nondeterminism.individual_tokens[0]
                 .value()
                 .try_into()
-                .unwrap();
+                .map_err(|_| RustShadowError::U64ToU32Error)?;
             let leaf_index_lo: u32 = nondeterminism.individual_tokens[1]
                 .value()
                 .try_into()
-                .unwrap();
+                .map_err(|_| RustShadowError::U64ToU32Error)?;
             let leaf_index: u64 = ((leaf_index_hi as u64) << 32) + leaf_index_lo as u64;
             let (mut mt_index, _peak_index) =
                 leaf_index_to_mt_index_and_peak_index(leaf_index, leaf_count);
@@ -324,9 +332,7 @@ mod tests {
                 leaf_count,
             );
 
-            assert!(valid_mp, "MMR leaf not authenticated");
-
-            vec![]
+            valid_mp.then(Vec::new).ok_or(RustShadowError::InvalidProof)
         }
 
         fn pseudorandom_initial_state(
@@ -516,7 +522,8 @@ mod tests {
                     peaks_pointer,
                     peak.values().to_vec(),
                     &mut memory,
-                );
+                )
+                .unwrap();
             }
 
             let nondeterminism = NonDeterminism::default().with_ram(memory);

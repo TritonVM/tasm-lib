@@ -263,23 +263,29 @@ mod tests {
             &self,
             stack: &mut Vec<BFieldElement>,
             memory: &mut HashMap<BFieldElement, BFieldElement>,
-        ) {
+        ) -> Result<(), RustShadowError> {
             let indeterminate = XFieldElement::new([
-                stack.pop().unwrap(),
-                stack.pop().unwrap(),
-                stack.pop().unwrap(),
+                stack.pop().ok_or(RustShadowError::StackUnderflow)?,
+                stack.pop().ok_or(RustShadowError::StackUnderflow)?,
+                stack.pop().ok_or(RustShadowError::StackUnderflow)?,
             ]);
-            let codeword_pointer = stack.pop().unwrap();
+            let codeword_pointer = stack.pop().ok_or(RustShadowError::StackUnderflow)?;
             let codeword =
-                load_list_with_copy_elements::<EXTENSION_DEGREE>(codeword_pointer, memory);
-            let codeword_length: u32 = codeword.len().try_into().unwrap();
-            assert!(codeword_length <= MAX_CODEWORD_LENGTH);
+                load_list_with_copy_elements::<EXTENSION_DEGREE>(codeword_pointer, memory)?;
+            let codeword_length: u32 = codeword
+                .len()
+                .try_into()
+                .map_err(|_| RustShadowError::UsizeToU32Error)?;
+            if codeword_length > MAX_CODEWORD_LENGTH {
+                return Err(RustShadowError::Other);
+            }
 
             let codeword: Vec<XFieldElement> = codeword.into_iter().map(|x| x.into()).collect_vec();
             let result = barycentric_evaluate(&codeword, indeterminate);
 
             // Emulate effect on memory
-            let generator = BFieldElement::primitive_root_of_unity(codeword.len() as u64).unwrap();
+            let generator = BFieldElement::primitive_root_of_unity(codeword.len() as u64)
+                .ok_or(RustShadowError::Other)?;
             let mut partial_terms_pointer = STATIC_MEMORY_FIRST_ADDRESS
                 - bfe!(MAX_CODEWORD_LENGTH * EXTENSION_DEGREE as u32 - 1);
             let mut gen_acc = bfe!(1);
@@ -300,6 +306,7 @@ mod tests {
             for word in result.coefficients.into_iter().rev() {
                 stack.push(word);
             }
+            Ok(())
         }
 
         fn pseudorandom_initial_state(

@@ -155,21 +155,27 @@ mod tests {
             _: &HashMap<BFieldElement, BFieldElement>,
             _: VecDeque<BFieldElement>,
             mut nd_digests: VecDeque<Digest>,
-        ) {
+        ) -> Result<(), RustShadowError> {
             // BEFORE: _ [root; 5] tree_height leaf_index [leaf; 5]
             // AFTER:  _
-            let leaf = pop_encodable(stack);
-            let leaf_index = pop_encodable::<u32>(stack);
-            let tree_height = pop_encodable::<u32>(stack);
-            let root = pop_encodable(stack);
+            let leaf = pop_encodable(stack)?;
+            let leaf_index = pop_encodable::<u32>(stack)?;
+            let tree_height = pop_encodable::<u32>(stack)?;
+            let root = pop_encodable(stack)?;
 
-            let num_leaves = 1 << tree_height;
-            assert!(leaf_index < num_leaves);
+            let num_leaves = 1_u32
+                .checked_shl(tree_height)
+                .ok_or(RustShadowError::ArithmeticOverflow)?;
+            if leaf_index >= num_leaves {
+                return Err(RustShadowError::InvalidProof);
+            }
 
             let mut node_digest = leaf;
             let mut node_index = leaf_index + num_leaves;
             while node_index != 1 {
-                let sibling = nd_digests.pop_front().unwrap();
+                let sibling = nd_digests
+                    .pop_front()
+                    .ok_or(RustShadowError::InvalidProof)?;
                 let node_is_left_sibling = node_index.is_multiple_of(2);
                 node_digest = if node_is_left_sibling {
                     Tip5::hash_pair(node_digest, sibling)
@@ -178,7 +184,11 @@ mod tests {
                 };
                 node_index /= 2;
             }
-            assert_eq!(node_digest, root);
+            if node_digest != root {
+                return Err(RustShadowError::InvalidProof);
+            }
+
+            Ok(())
         }
 
         fn pseudorandom_initial_state(

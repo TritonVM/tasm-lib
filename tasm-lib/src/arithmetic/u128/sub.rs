@@ -121,10 +121,13 @@ mod tests {
     impl Closure for Sub {
         type Args = (u128, u128);
 
-        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
-            let (subtrahend, minuend) = pop_encodable::<Self::Args>(stack);
-            let difference = minuend.checked_sub(subtrahend).unwrap();
+        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) -> Result<(), RustShadowError> {
+            let (subtrahend, minuend) = pop_encodable::<Self::Args>(stack)?;
+            let difference = minuend
+                .checked_sub(subtrahend)
+                .ok_or(RustShadowError::ArithmeticOverflow)?;
             push_encodable(stack, &difference);
+            Ok(())
         }
 
         fn pseudorandom_args(

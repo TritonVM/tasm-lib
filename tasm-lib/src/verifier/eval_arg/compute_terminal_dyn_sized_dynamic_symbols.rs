@@ -138,17 +138,17 @@ mod tests {
             &self,
             stack: &mut Vec<BFieldElement>,
             memory: &mut HashMap<BFieldElement, BFieldElement>,
-        ) {
-            let symbols_pointer = stack.pop().unwrap();
+        ) -> Result<(), RustShadowError> {
+            let symbols_pointer = stack.pop().ok_or(RustShadowError::StackUnderflow)?;
             let initial = XFieldElement::new([
-                stack.pop().unwrap(),
-                stack.pop().unwrap(),
-                stack.pop().unwrap(),
+                stack.pop().ok_or(RustShadowError::StackUnderflow)?,
+                stack.pop().ok_or(RustShadowError::StackUnderflow)?,
+                stack.pop().ok_or(RustShadowError::StackUnderflow)?,
             ]);
             let challenge = XFieldElement::new([
-                stack.pop().unwrap(),
-                stack.pop().unwrap(),
-                stack.pop().unwrap(),
+                stack.pop().ok_or(RustShadowError::StackUnderflow)?,
+                stack.pop().ok_or(RustShadowError::StackUnderflow)?,
+                stack.pop().ok_or(RustShadowError::StackUnderflow)?,
             ]);
             let mut symbols_elem_pointer =
                 symbols_pointer + BFieldElement::new(LIST_METADATA_SIZE as u64);
@@ -165,6 +165,7 @@ mod tests {
             for elem in result.coefficients.into_iter().rev() {
                 stack.push(elem);
             }
+            Ok(())
         }
 
         fn pseudorandom_initial_state(

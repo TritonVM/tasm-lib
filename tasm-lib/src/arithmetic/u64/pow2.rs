@@ -74,7 +74,7 @@ mod tests {
             let initial_stack = self.set_up_test_stack(arg);
 
             let mut expected_stack = initial_stack.clone();
-            self.rust_shadow(&mut expected_stack);
+            self.rust_shadow(&mut expected_stack).unwrap();
 
             test_rust_equivalence_given_complete_state(
                 &ShadowedClosure::new(Self),
@@ -90,9 +90,13 @@ mod tests {
     impl Closure for Pow2 {
         type Args = u32;
 
-        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
-            let arg = pop_encodable::<Self::Args>(stack);
-            push_encodable(stack, &2_u64.pow(arg));
+        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) -> Result<(), RustShadowError> {
+            let arg = pop_encodable::<Self::Args>(stack)?;
+            let pow = 2_u64
+                .checked_pow(arg)
+                .ok_or(RustShadowError::ArithmeticOverflow)?;
+            push_encodable(stack, &pow);
+            Ok(())
         }
 
         fn pseudorandom_args(

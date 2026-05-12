@@ -399,13 +399,14 @@ mod tests {
     }
 
     impl RustShadowForDequeueNextAs<'_> {
-        fn execute(&mut self) -> Vec<BFieldElement> {
-            self.assert_correct_discriminant();
+        fn execute(&mut self) -> Result<Vec<BFieldElement>, RustShadowError> {
+            self.assert_correct_discriminant()?;
             self.maybe_alter_fiat_shamir_heuristic_with_proof_item();
             self.update_stack_using_current_proof_item();
             self.update_proof_item_iter();
             self.update_current_item_count();
-            self.public_output()
+
+            Ok(self.public_output())
         }
 
         fn current_proof_item_list_element_size_pointer(&self) -> BFieldElement {
@@ -460,9 +461,13 @@ mod tests {
             }
         }
 
-        fn assert_correct_discriminant(&self) {
+        fn assert_correct_discriminant(&self) -> Result<(), RustShadowError> {
             let expected_discriminant = self.dequeue_next_as.proof_item.bfield_codec_discriminant();
-            assert_eq!(expected_discriminant, self.discriminant().value() as usize);
+            if expected_discriminant != self.discriminant().value() as usize {
+                return Err(RustShadowError::Other);
+            };
+
+            Ok(())
         }
 
         fn proof_item(&self) -> ProofItem {
@@ -512,13 +517,17 @@ mod tests {
             _: &NonDeterminism,
             _: &[BFieldElement],
             sponge: &mut Option<Tip5>,
-        ) -> Vec<BFieldElement> {
+        ) -> Result<Vec<BFieldElement>, RustShadowError> {
+            let Some(sponge) = sponge.as_mut() else {
+                return Err(RustShadowError::SpongeUninitialized);
+            };
+
             RustShadowForDequeueNextAs {
                 dequeue_next_as: *self,
-                proof_iter_pointer: stack.pop().unwrap(),
+                proof_iter_pointer: stack.pop().ok_or(RustShadowError::StackUnderflow)?,
                 stack,
                 memory,
-                sponge: sponge.as_mut().unwrap(),
+                sponge,
             }
             .execute()
         }
@@ -660,17 +669,15 @@ mod tests {
             None,
         );
 
-        let rust_result = std::panic::catch_unwind(|| {
-            let mut stack = initial_state.stack.clone();
-            let mut memory = initial_state.nondeterminism.ram.clone();
-            dequeue_next_as.rust_shadow(
-                &mut stack,
-                &mut memory,
-                &NonDeterminism::default(),
-                &[],
-                &mut None,
-            );
-        });
+        let mut stack = initial_state.stack.clone();
+        let mut memory = initial_state.nondeterminism.ram.clone();
+        let rust_result = dequeue_next_as.rust_shadow(
+            &mut stack,
+            &mut memory,
+            &NonDeterminism::default(),
+            &[],
+            &mut None,
+        );
 
         assert!(
             rust_result.is_err() && tvm_result.is_err(),
@@ -703,17 +710,15 @@ mod tests {
             None,
         );
 
-        let rust_result = std::panic::catch_unwind(|| {
-            let mut stack = initial_state.stack.clone();
-            let mut memory = initial_state.nondeterminism.ram.clone();
-            dequeue_next_as.rust_shadow(
-                &mut stack,
-                &mut memory,
-                &NonDeterminism::default(),
-                &[],
-                &mut None,
-            );
-        });
+        let mut stack = initial_state.stack.clone();
+        let mut memory = initial_state.nondeterminism.ram.clone();
+        let rust_result = dequeue_next_as.rust_shadow(
+            &mut stack,
+            &mut memory,
+            &NonDeterminism::default(),
+            &[],
+            &mut None,
+        );
 
         assert!(
             rust_result.is_err() && tvm_result.is_err(),
@@ -839,15 +844,19 @@ mod tests {
             non_determinism: &NonDeterminism,
             std_in: &[BFieldElement],
             sponge: &mut Option<Tip5>,
-        ) -> Vec<BFieldElement> {
-            let &proof_iter_pointer = stack.last().unwrap();
+        ) -> Result<Vec<BFieldElement>, RustShadowError> {
+            let proof_iter_pointer = stack
+                .last()
+                .copied()
+                .ok_or(RustShadowError::StackUnderflow)?;
             for &proof_item in &self.proof_items {
                 let dequeue_next_as = DequeueNextAs { proof_item };
                 stack.push(proof_iter_pointer);
-                dequeue_next_as.rust_shadow(stack, memory, non_determinism, std_in, sponge);
-                stack.pop().unwrap();
+                dequeue_next_as.rust_shadow(stack, memory, non_determinism, std_in, sponge)?;
+                stack.pop().ok_or(RustShadowError::StackUnderflow)?;
             }
-            vec![]
+
+            Ok(Vec::new())
         }
 
         fn pseudorandom_initial_state(

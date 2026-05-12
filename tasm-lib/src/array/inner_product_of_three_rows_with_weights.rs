@@ -207,10 +207,10 @@ mod tests {
             &self,
             stack: &mut Vec<BFieldElement>,
             memory: &HashMap<BFieldElement, BFieldElement>,
-        ) {
-            let weights_address = stack.pop().unwrap();
-            let main_row_address = stack.pop().unwrap();
-            let aux_row_address = stack.pop().unwrap();
+        ) -> Result<(), RustShadowError> {
+            let weights_address = stack.pop().ok_or(RustShadowError::StackUnderflow)?;
+            let main_row_address = stack.pop().ok_or(RustShadowError::StackUnderflow)?;
+            let aux_row_address = stack.pop().ok_or(RustShadowError::StackUnderflow)?;
 
             let weights_len = self.main_length + self.aux_length;
             let weights = array_from_memory::<XFieldElement>(weights_address, weights_len, memory);
@@ -235,8 +235,9 @@ mod tests {
                 .zip_eq(weights)
                 .map(|(element, weight)| element * weight)
                 .sum::<XFieldElement>();
+            push_encodable(stack, &inner_product);
 
-            push_encodable(stack, &inner_product)
+            Ok(())
         }
 
         fn pseudorandom_initial_state(

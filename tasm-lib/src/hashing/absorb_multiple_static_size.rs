@@ -102,10 +102,10 @@ impl BasicSnippet for AbsorbMultipleStaticSize {
 
 #[cfg(test)]
 mod tests {
-    use twenty_first::prelude::Sponge;
-
     use super::*;
     use crate::test_prelude::*;
+    use tasm_lib::USIZE_TO_U64_ERR;
+    use twenty_first::prelude::Sponge;
 
     impl Procedure for AbsorbMultipleStaticSize {
         fn rust_shadow(
@@ -115,28 +115,29 @@ mod tests {
             _: &NonDeterminism,
             _: &[BFieldElement],
             sponge: &mut Option<Tip5>,
-        ) -> Vec<BFieldElement> {
+        ) -> Result<Vec<BFieldElement>, RustShadowError> {
             // read arguments
-            let address = stack.pop().unwrap();
+            let address = stack.pop().ok_or(RustShadowError::StackUnderflow)?;
 
             // read sequence from memory
-            let mut sequence = vec![];
+            let mut sequence = Vec::new();
             for i in 0..self.size {
-                sequence.push(
-                    memory
-                        .get(&(address + BFieldElement::new(i as u64)))
-                        .copied()
-                        .unwrap(),
-                )
+                let mem_value = memory
+                    .get(&(address + BFieldElement::new(i as u64)))
+                    .copied()
+                    .ok_or(RustShadowError::Other)?;
+                sequence.push(mem_value)
             }
 
-            let sponge = sponge.as_mut().expect("sponge must be initialized");
+            let Some(sponge) = sponge.as_mut() else {
+                return Err(RustShadowError::SpongeUninitialized);
+            };
             sponge.pad_and_absorb_all(&sequence);
 
-            stack.push(address + BFieldElement::new(self.size.try_into().unwrap()));
+            stack.push(address + BFieldElement::new(self.size.try_into().expect(USIZE_TO_U64_ERR)));
 
             // output empty
-            vec![]
+            Ok(Vec::new())
         }
 
         fn pseudorandom_initial_state(

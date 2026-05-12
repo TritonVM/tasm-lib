@@ -6,6 +6,7 @@ use triton_vm::prelude::*;
 
 use super::basic_snippet::BasicSnippet;
 use super::rust_shadow::RustShadow;
+use super::rust_shadow::RustShadowError;
 use crate::InitVmState;
 use crate::linker::execute_bench;
 use crate::prelude::Tip5;
@@ -35,7 +36,7 @@ pub trait ReadOnlyAlgorithm: BasicSnippet {
         memory: &HashMap<BFieldElement, BFieldElement>,
         nd_tokens: VecDeque<BFieldElement>,
         nd_digests: VecDeque<Digest>,
-    );
+    ) -> Result<(), RustShadowError>;
 
     fn pseudorandom_initial_state(
         &self,
@@ -44,7 +45,7 @@ pub trait ReadOnlyAlgorithm: BasicSnippet {
     ) -> ReadOnlyAlgorithmInitialState;
 
     fn corner_case_initial_states(&self) -> Vec<ReadOnlyAlgorithmInitialState> {
-        vec![]
+        Vec::new()
     }
 }
 
@@ -89,14 +90,15 @@ where
         stack: &mut Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
         _sponge: &mut Option<Tip5>,
-    ) -> Vec<BFieldElement> {
+    ) -> Result<Vec<BFieldElement>, RustShadowError> {
         self.algorithm.rust_shadow(
             stack,
             memory,
             nondeterminism.individual_tokens.to_owned().into(),
             nondeterminism.digests.to_owned().into(),
-        );
-        vec![]
+        )?;
+
+        Ok(Vec::new())
     }
 
     fn test(&self) {

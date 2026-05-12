@@ -122,16 +122,19 @@ mod tests {
             &self,
             stack: &mut Vec<BFieldElement>,
             memory: &mut HashMap<BFieldElement, BFieldElement>,
-        ) {
-            let supremum = pop_encodable::<u32>(stack);
-            let minimum = pop_encodable::<u32>(stack);
-            assert!(minimum <= supremum);
+        ) -> Result<(), RustShadowError> {
+            let supremum = pop_encodable::<u32>(stack)?;
+            let minimum = pop_encodable::<u32>(stack)?;
+            if minimum > supremum {
+                return Err(RustShadowError::Other);
+            }
 
             let list_pointer = dynamic_allocator(memory);
             let list = (minimum..supremum).collect_vec();
             encode_to_memory(memory, list_pointer, &list);
 
             stack.push(list_pointer);
+            Ok(())
         }
 
         fn pseudorandom_initial_state(

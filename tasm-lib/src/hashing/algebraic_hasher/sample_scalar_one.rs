@@ -65,14 +65,17 @@ mod tests {
             _nondeterminism: &NonDeterminism,
             _public_input: &[BFieldElement],
             sponge: &mut Option<Tip5>,
-        ) -> Vec<BFieldElement> {
-            let vals = sponge.as_mut().unwrap().squeeze();
+        ) -> Result<Vec<BFieldElement>, RustShadowError> {
+            let Some(sponge) = sponge.as_mut() else {
+                return Err(RustShadowError::SpongeUninitialized);
+            };
+            let vals = sponge.squeeze();
 
             for word in vals.iter().take(EXTENSION_DEGREE).rev() {
                 stack.push(*word)
             }
 
-            vec![]
+            Ok(Vec::new())
         }
 
         fn pseudorandom_initial_state(

@@ -74,8 +74,8 @@ mod tests {
             &self,
             stack: &mut Vec<BFieldElement>,
             memory: &mut HashMap<BFieldElement, BFieldElement>,
-        ) {
-            let mut array_pointer = stack.pop().unwrap();
+        ) -> Result<(), RustShadowError> {
+            let mut array_pointer = stack.pop().ok_or(RustShadowError::StackUnderflow)?;
             let mut array_quote_unquote = bfe_vec![0; self.length];
             for array_elem in array_quote_unquote.iter_mut() {
                 memory
@@ -88,6 +88,7 @@ mod tests {
             let sum = array_quote_unquote.into_iter().sum();
 
             stack.push(sum);
+            Ok(())
         }
 
         fn pseudorandom_initial_state(

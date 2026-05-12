@@ -113,10 +113,11 @@ mod tests {
     impl<const N: usize> Closure for ComputeTerminalConstSizedStaticSymbols<N> {
         type Args = XFieldElement;
 
-        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
-            let challenge = pop_encodable::<Self::Args>(stack);
+        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) -> Result<(), RustShadowError> {
+            let challenge = pop_encodable::<Self::Args>(stack)?;
             let terminal = EvalArg::compute_terminal(&self.symbols, self.initial, challenge);
             push_encodable(stack, &terminal);
+            Ok(())
         }
 
         fn pseudorandom_args(
@@ -292,7 +293,8 @@ mod tests {
                 &[],
                 NonDeterminism::default(),
                 &None,
-            );
+            )
+            .unwrap();
             let terminal = Literal::pop_from_stack(DataType::Xfe, &mut final_state.op_stack.stack);
 
             terminal.as_xfe()
@@ -324,7 +326,8 @@ mod tests {
             &[],
             NonDeterminism::default(),
             &None,
-        );
+        )
+        .unwrap();
         let terminal = Literal::pop_from_stack(DataType::Xfe, &mut final_state.op_stack.stack);
 
         terminal.as_xfe()
@@ -358,7 +361,8 @@ mod tests {
             &[],
             NonDeterminism::default().with_ram(memory),
             &None,
-        );
+        )
+        .unwrap();
 
         let terminal = Literal::pop_from_stack(DataType::Xfe, &mut final_state.op_stack.stack);
 
@@ -389,7 +393,8 @@ mod tests {
             &[],
             NonDeterminism::default().with_ram(memory),
             &None,
-        );
+        )
+        .unwrap();
 
         let terminal = Literal::pop_from_stack(DataType::Xfe, &mut final_state.op_stack.stack);
 
