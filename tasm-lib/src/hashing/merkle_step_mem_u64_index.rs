@@ -65,7 +65,7 @@ impl BasicSnippet for MerkleStepMemU64Index {
 
     fn sign_offs(&self) -> HashMap<Reviewer, SignOffFingerprint> {
         let mut sign_offs = HashMap::new();
-        sign_offs.insert(Reviewer("ferdinand"), 0x473701f330d0bdb4.into());
+        sign_offs.insert(Reviewer("ferdinand"), 0xd62cd505fcb51249.into());
         sign_offs
     }
 }

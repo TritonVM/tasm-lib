@@ -1,21 +1,23 @@
 use triton_vm::prelude::*;
+use triton_vm::table::NUM_QUOTIENT_SEGMENTS;
 use twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
 use crate::data_type::ArrayType;
 use crate::prelude::*;
 
-/// Calculate the three needed values related to out-of-domain points and store them in a statically
+/// Calculate the four needed values related to out-of-domain points and store them in a statically
 /// allocated array. Return the pointer to this array.
 #[derive(Debug, Clone, Copy)]
 pub struct OutOfDomainPoints;
 
-pub const NUM_OF_OUT_OF_DOMAIN_POINTS: usize = 3;
+pub const NUM_OF_OUT_OF_DOMAIN_POINTS: usize = 4;
 
 #[derive(Debug, Clone, Copy)]
 pub enum OodPoint {
     CurrentRow,
     NextRow,
     CurrentRowPowNumSegments,
+    CurrentRowTimesZetaPowNumSegments,
 }
 
 impl OutOfDomainPoints {
@@ -66,6 +68,7 @@ impl BasicSnippet for OutOfDomainPoints {
         // - `out_of_domain_point_curr_row`
         // - `out_of_domain_point_next_row`
         // - `out_of_domain_point_curr_row_pow_num_segments`
+        // - `out_of_domain_point_curr_row_times_zeta_pow_num_segments`
         let num_words_for_out_of_domain_points = (NUM_OF_OUT_OF_DOMAIN_POINTS * EXTENSION_DEGREE)
             .try_into()
             .unwrap();
@@ -105,16 +108,25 @@ impl BasicSnippet for OutOfDomainPoints {
                 xx_mul
                 // _ *ood_points[2] [ood_curr_row**4]
 
-                swap 1
-                swap 2
-                swap 3
-                // _ [ood_curr_row**4] *ood_points[2]
+                dup 2 dup 2 dup 2
+                // _ *ood_points[2] [ood_curr_row**4] [ood_curr_row**4]
 
+                pick 6
                 write_mem {EXTENSION_DEGREE}
-                // _ *ood_points[3]
+                // _ [ood_curr_row**4] *ood_points[3]
 
-                push {-(3 * EXTENSION_DEGREE as i32)}
-                add
+                place 3
+                // _ *ood_points[3] [ood_curr_row**4]
+
+                push {Stark::ZETA.mod_pow(NUM_QUOTIENT_SEGMENTS as u64)}
+                xb_mul
+                // _ *ood_points[3] [(ood_curr_row·ζ)**4]
+
+                pick 3
+                write_mem {EXTENSION_DEGREE}
+                // _ *ood_points[4]
+
+                addi {-((4 * EXTENSION_DEGREE) as i32)}
                 // _ *ood_points
 
                 return
@@ -124,7 +136,6 @@ impl BasicSnippet for OutOfDomainPoints {
 
 #[cfg(test)]
 mod tests {
-    use triton_vm::table::NUM_QUOTIENT_SEGMENTS;
     use twenty_first::math::traits::ModPowU32;
     use twenty_first::math::traits::PrimitiveRootOfUnity;
 
@@ -154,6 +165,8 @@ mod tests {
                 .try_into()
                 .map_err(|_| RustShadowError::UsizeToU32Error)?;
             let ood_curr_row_pow_num_segments = ood_curr_row.mod_pow_u32(num_quotient_segments);
+            let ood_curr_row_times_zeta_pow_num_segments =
+                (ood_curr_row * Stark::ZETA).mod_pow_u32(num_quotient_segments);
             let static_malloc_size: i32 = (EXTENSION_DEGREE * NUM_OF_OUT_OF_DOMAIN_POINTS)
                 .try_into()
                 .map_err(|_| RustShadowError::Other)?;
@@ -161,7 +174,12 @@ mod tests {
             insert_as_array(
                 ood_points_pointer,
                 memory,
-                vec![ood_curr_row, ood_next_row, ood_curr_row_pow_num_segments],
+                vec![
+                    ood_curr_row,
+                    ood_next_row,
+                    ood_curr_row_pow_num_segments,
+                    ood_curr_row_times_zeta_pow_num_segments,
+                ],
             );
 
             stack.push(ood_points_pointer);

@@ -84,7 +84,7 @@ impl BasicSnippet for InnerProductOfXfes {
         let mut sign_offs = HashMap::new();
 
         if self.length == 4 {
-            sign_offs.insert(Reviewer("ferdinand"), 0x9e413d8154bba5d.into());
+            sign_offs.insert(Reviewer("ferdinand"), 0xed61b35271403423.into());
         }
 
         sign_offs

@@ -54,7 +54,7 @@ impl BasicSnippet for IsOdd {
 
     fn sign_offs(&self) -> HashMap<Reviewer, SignOffFingerprint> {
         let mut sign_offs = HashMap::new();
-        sign_offs.insert(Reviewer("ferdinand"), 0xcff775fa49d9e7a5.into());
+        sign_offs.insert(Reviewer("ferdinand"), 0x9a3cdacd787c494c.into());
         sign_offs
     }
 }

@@ -81,7 +81,7 @@ impl BasicSnippet for WrappingMul {
 
     fn sign_offs(&self) -> HashMap<Reviewer, SignOffFingerprint> {
         let mut sign_offs = HashMap::new();
-        sign_offs.insert(Reviewer("ferdinand"), 0x427e0e20ec87cb1.into());
+        sign_offs.insert(Reviewer("ferdinand"), 0x7869919b1b001e1c.into());
         sign_offs
     }
 }

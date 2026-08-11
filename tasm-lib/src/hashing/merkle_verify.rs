@@ -133,7 +133,7 @@ impl BasicSnippet for MerkleVerify {
 
     fn sign_offs(&self) -> HashMap<Reviewer, SignOffFingerprint> {
         let mut sign_offs = HashMap::new();
-        sign_offs.insert(Reviewer("ferdinand"), 0xac769de2ac3b1a11.into());
+        sign_offs.insert(Reviewer("ferdinand"), 0xc40b72eb9a0edbc9.into());
         sign_offs
     }
 }

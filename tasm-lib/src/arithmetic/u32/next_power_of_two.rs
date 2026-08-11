@@ -108,7 +108,7 @@ impl BasicSnippet for NextPowerOfTwo {
 
     fn sign_offs(&self) -> HashMap<Reviewer, SignOffFingerprint> {
         let mut sign_offs = HashMap::new();
-        sign_offs.insert(Reviewer("ferdinand"), 0xa491e452efec6e7e.into());
+        sign_offs.insert(Reviewer("ferdinand"), 0x70cd222796c987d.into());
         sign_offs
     }
 }

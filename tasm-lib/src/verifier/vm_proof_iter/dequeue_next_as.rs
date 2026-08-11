@@ -4,7 +4,7 @@ use triton_vm::proof_item::FriResponse;
 use triton_vm::proof_item::ProofItemVariant;
 use triton_vm::table::AuxiliaryRow;
 use triton_vm::table::MainRow;
-use triton_vm::table::QuotientSegments;
+use triton_vm::table::RandQuotientSegments;
 use twenty_first::math::x_field_element::EXTENSION_DEGREE;
 use twenty_first::prelude::Polynomial;
 
@@ -44,7 +44,7 @@ impl DequeueNextAs {
                 Vec::<AuxiliaryRow>::compute_size_and_assert_valid_size_indicator(library)
             }
             ProofItemVariant::QuotientSegmentsElements => {
-                Vec::<QuotientSegments>::compute_size_and_assert_valid_size_indicator(library)
+                Vec::<RandQuotientSegments>::compute_size_and_assert_valid_size_indicator(library)
             }
             ProofItemVariant::FriCodeword => {
                 Vec::<XFieldElement>::compute_size_and_assert_valid_size_indicator(library)

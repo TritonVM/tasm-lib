@@ -384,8 +384,8 @@ impl BasicSnippet for VerifyMmrSuccessor {
 
     fn sign_offs(&self) -> HashMap<Reviewer, SignOffFingerprint> {
         let mut sign_offs = HashMap::new();
-        sign_offs.insert(Reviewer("ferdinand"), 0x340cb4106ebdecd.into());
-        sign_offs.insert(Reviewer("alan"), 0x340cb4106ebdecd.into());
+        sign_offs.insert(Reviewer("ferdinand"), 0xf3d96e6ea31556b5.into());
+        sign_offs.insert(Reviewer("alan"), 0xf3d96e6ea31556b5.into());
         sign_offs
     }
 }

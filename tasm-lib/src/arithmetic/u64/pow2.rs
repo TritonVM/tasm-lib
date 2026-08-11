@@ -59,7 +59,7 @@ impl BasicSnippet for Pow2 {
 
     fn sign_offs(&self) -> HashMap<Reviewer, SignOffFingerprint> {
         let mut sign_offs = HashMap::new();
-        sign_offs.insert(Reviewer("ferdinand"), 0x2fc60f2b2ee9d162.into());
+        sign_offs.insert(Reviewer("ferdinand"), 0xf3d56a4fe0a566ad.into());
         sign_offs
     }
 }

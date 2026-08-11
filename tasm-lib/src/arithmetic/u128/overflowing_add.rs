@@ -84,7 +84,7 @@ impl BasicSnippet for OverflowingAdd {
 
     fn sign_offs(&self) -> HashMap<Reviewer, SignOffFingerprint> {
         let mut sign_offs = HashMap::new();
-        sign_offs.insert(Reviewer("ferdinand"), 0x7fd85321ec51a08f.into());
+        sign_offs.insert(Reviewer("ferdinand"), 0x30352c90df0175cb.into());
         sign_offs
     }
 }

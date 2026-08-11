@@ -1,7 +1,7 @@
 use strum::Display;
 use strum::EnumIter;
 use triton_vm::prelude::*;
-use triton_vm::table::NUM_QUOTIENT_SEGMENTS;
+use triton_vm::table::NUM_RANDOMIZED_QUOTIENT_SEGMENTS;
 use triton_vm::table::master_table::MasterAuxTable;
 use triton_vm::table::master_table::MasterMainTable;
 use twenty_first::math::x_field_element::EXTENSION_DEGREE;
@@ -34,7 +34,7 @@ impl VerifyTableRows {
         match self.column_type {
             ColumnType::Main => MasterMainTable::NUM_COLUMNS,
             ColumnType::Aux => MasterAuxTable::NUM_COLUMNS * EXTENSION_DEGREE,
-            ColumnType::Quotient => NUM_QUOTIENT_SEGMENTS * EXTENSION_DEGREE,
+            ColumnType::Quotient => NUM_RANDOMIZED_QUOTIENT_SEGMENTS * EXTENSION_DEGREE,
         }
     }
 }

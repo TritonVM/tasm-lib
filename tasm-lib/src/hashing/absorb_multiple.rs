@@ -137,7 +137,7 @@ impl BasicSnippet for AbsorbMultiple {
 
     fn sign_offs(&self) -> HashMap<Reviewer, SignOffFingerprint> {
         let mut sign_offs = HashMap::new();
-        sign_offs.insert(Reviewer("ferdinand"), 0xa998eff26dbec64b.into());
+        sign_offs.insert(Reviewer("ferdinand"), 0x39ddc33f7bf7d155.into());
         sign_offs
     }
 }

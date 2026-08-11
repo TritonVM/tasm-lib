@@ -1,4 +1,5 @@
 use triton_vm::prelude::*;
+use triton_vm::table::NUM_RANDOMIZED_QUOTIENT_SEGMENTS;
 
 use crate::arithmetic::bfe::primitive_root_of_unity::PrimitiveRootOfUnity;
 use crate::arithmetic::u32::next_power_of_two::NextPowerOfTwo;
@@ -19,15 +20,44 @@ impl DeriveFriFromStark {
 
         let num_trace_randomizers = self.stark.num_trace_randomizers;
         let fri_expansion_factor = self.stark.fri_expansion_factor;
+
+        // padded-height independent lower bounds on the randomized trace
+        // length. From `Stark::randomized_trace_len`. The `+ 1` comes from
+        // (private) `NUM_OUT_OF_DOMAIN_QUOTIENTS`, defined upstream.
+        let min_randomized_trace_len = (2 * num_trace_randomizers + 1)
+            .max((num_trace_randomizers + 1) * NUM_RANDOMIZED_QUOTIENT_SEGMENTS);
         let interpolant_codeword_length_code = triton_asm!(
             // _ padded_height
 
-            push {num_trace_randomizers}
-            add
+            addi {num_trace_randomizers}
             // _ (padded_height + num_trace_randomizers)
 
+            /* Clamp to at least `min_randomized_trace_len`:
+               a + (a < min)·min − (a < min)·a = max(a, min) */
+            push {min_randomized_trace_len}
+            dup 1
+            lt
+            // _ a (a < min)
+
+            dup 0
+            push {min_randomized_trace_len}
+            mul
+            // _ a (a < min) ((a < min)·min)
+
+            place 2
+            // _ ((a < min)·min) a (a < min)
+
+            push -1
+            mul
+            addi 1
+            // _ ((a < min)·min) a (1 - (a < min))
+
+            mul
+            add
+            // _ max(a, min_randomized_trace_len)
+
             call {next_power_of_two}
-            // _ next_pow2(padded_height + num_trace_randomizers)
+            // _ next_pow2(max(padded_height + num_trace_randomizers, min_randomized_trace_len))
             // _ interpolant_codeword_length
         );
         let fri_domain_length = triton_asm!(
