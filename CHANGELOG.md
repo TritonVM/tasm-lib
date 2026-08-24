@@ -3,6 +3,12 @@
 All notable changes are documented in this file.
 Lines marked “(!)” indicate a breaking change.
 
+## [8.0.0](https://github.com/TritonVM/tasm-lib/compare/v7.0.0..v8.0.0) - 2026-08-24
+
+### ⚙️ Miscellaneous
+
+- *(!)* Upgrade upstream triton-vm to v8.0.0 ([97edcf05](https://github.com/TritonVM/tasm-lib/commit/97edcf05))
+
 ## [7.0.0](https://github.com/TritonVM/tasm-lib/compare/v6.0.0..v7.0.0) - 2026-06-17
 
 ### ⚙️ Miscellaneous
