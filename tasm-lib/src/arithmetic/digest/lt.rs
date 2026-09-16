@@ -5,9 +5,9 @@ use crate::prelude::*;
 
 /// Compare two digests
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
-pub struct LtDigest;
+pub struct Lt;
 
-impl BasicSnippet for LtDigest {
+impl BasicSnippet for Lt {
     fn parameters(&self) -> Vec<(DataType, String)> {
         vec![
             (DataType::VoidPointer, "*digest_lhs".to_owned()),
@@ -20,7 +20,7 @@ impl BasicSnippet for LtDigest {
     }
 
     fn entrypoint(&self) -> String {
-        "tasmlib_hashing_lt_digest".to_owned()
+        "tasmlib_arithmetic_digest_lt".to_owned()
     }
 
     fn code(&self, _library: &mut Library) -> Vec<LabelledInstruction> {
@@ -149,7 +149,7 @@ mod tests {
     use crate::memory::encode_to_memory;
     use crate::test_prelude::*;
 
-    impl LtDigest {
+    impl Lt {
         fn prepare_state(
             &self,
             lhs_ptr: BFieldElement,
@@ -167,7 +167,7 @@ mod tests {
         }
     }
 
-    impl Function for LtDigest {
+    impl Function for Lt {
         fn rust_shadow(
             &self,
             stack: &mut Vec<BFieldElement>,
@@ -252,7 +252,7 @@ mod tests {
 
     #[macro_rules_attr::apply(test)]
     fn rust_shadow() {
-        ShadowedFunction::new(LtDigest).test()
+        ShadowedFunction::new(Lt).test()
     }
 }
 
@@ -263,6 +263,6 @@ mod benches {
 
     #[macro_rules_attr::apply(test)]
     fn lt_digest_bench() {
-        ShadowedFunction::new(LtDigest).bench()
+        ShadowedFunction::new(Lt).bench()
     }
 }
