@@ -370,10 +370,9 @@ mod tests {
     use rand::random;
     use test_strategy::proptest;
 
+    use super::*;
     use crate::twenty_first::math::other::random_elements;
     use crate::twenty_first::util_types::mmr::mmr_accumulator::util::mmra_with_mps;
-
-    use super::*;
 
     #[proptest(cases = 20)]
     fn root_from_authentication_struct_mmr_prop_test(

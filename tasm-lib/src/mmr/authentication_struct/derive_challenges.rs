@@ -11,7 +11,7 @@ use crate::prelude::Library;
 pub struct DeriveChallenges;
 
 impl BasicSnippet for DeriveChallenges {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         vec![
             (
                 DataType::List(Box::new(DataType::Digest)),
@@ -24,7 +24,7 @@ impl BasicSnippet for DeriveChallenges {
         ]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![
             (DataType::Xfe, "alpha".to_owned()),
             (DataType::Xfe, "-beta".to_owned()),
@@ -103,6 +103,7 @@ mod tests {
     use twenty_first::prelude::Sponge;
     use twenty_first::util_types::mmr::mmr_accumulator::util::mmra_with_mps;
 
+    use super::*;
     use crate::mmr::authentication_struct::shared::AuthStructIntegrityProof;
     use crate::rust_shadowing_helper_functions::list::list_insert;
     use crate::rust_shadowing_helper_functions::list::load_list_with_copy_elements;
@@ -111,8 +112,7 @@ mod tests {
     use crate::test_prelude::MemPreserverInitialState;
     use crate::test_prelude::ShadowedMemPreserver;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
+    use crate::traits::rust_shadow::RustShadowError;
 
     const SIZE_OF_INDEXED_LEAFS_ELEMENT: usize = Digest::LEN + 2;
 
@@ -130,7 +130,7 @@ mod tests {
             _nd_digests: VecDeque<Digest>,
             _stdin: VecDeque<BFieldElement>,
             sponge: &mut Option<Tip5>,
-        ) -> Vec<BFieldElement> {
+        ) -> Result<Vec<BFieldElement>, RustShadowError> {
             let indexed_leafs_pointer = stack.pop().unwrap();
             let auth_struct_pointer = stack.pop().unwrap();
             let bfes_to_indexed_leaf =
@@ -141,13 +141,13 @@ mod tests {
                 *Digest::decode(&bfes[0..Digest::LEN]).unwrap()
             };
             let indexed_leafs: Vec<[BFieldElement; SIZE_OF_INDEXED_LEAFS_ELEMENT]> =
-                load_list_with_copy_elements(indexed_leafs_pointer, memory);
+                load_list_with_copy_elements(indexed_leafs_pointer, memory)?;
             let indexed_leafs = indexed_leafs
                 .into_iter()
                 .map(bfes_to_indexed_leaf)
                 .collect_vec();
             let auth_struct: Vec<[BFieldElement; Digest::LEN]> =
-                load_list_with_copy_elements(auth_struct_pointer, memory);
+                load_list_with_copy_elements(auth_struct_pointer, memory)?;
             let auth_struct = auth_struct.into_iter().map(bfes_to_digest).collect_vec();
 
             let sponge = sponge.as_mut().expect("sponge must be initialized");
@@ -160,7 +160,7 @@ mod tests {
                 stack.push(elem);
             }
 
-            vec![]
+            Ok(vec![])
         }
 
         fn pseudorandom_initial_state(
@@ -233,10 +233,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
+    use super::*;
     use crate::test_prelude::ShadowedMemPreserver;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     #[test]
     fn bag_peaks_benchmark() {

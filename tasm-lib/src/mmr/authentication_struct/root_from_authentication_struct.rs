@@ -15,7 +15,7 @@ impl RootFromAuthenticationStruct {
 }
 
 impl BasicSnippet for RootFromAuthenticationStruct {
-    fn inputs(&self) -> Vec<(DataType, String)> {
+    fn parameters(&self) -> Vec<(DataType, String)> {
         vec![
             (DataType::U32, "tree_height".to_owned()),
             (
@@ -29,7 +29,7 @@ impl BasicSnippet for RootFromAuthenticationStruct {
         ]
     }
 
-    fn outputs(&self) -> Vec<(DataType, String)> {
+    fn return_values(&self) -> Vec<(DataType, String)> {
         vec![(DataType::Digest, "root".to_owned())]
     }
 
@@ -652,10 +652,10 @@ mod tests {
     use rand::Rng;
     use rand::SeedableRng;
     use rand::rngs::StdRng;
-
     use twenty_first::prelude::Sponge;
     use twenty_first::util_types::mmr::mmr_accumulator::util::mmra_with_mps;
 
+    use super::*;
     use crate::memory::encode_to_memory;
     use crate::mmr::authentication_struct::shared::AuthStructIntegrityProof;
     use crate::rust_shadowing_helper_functions::list::list_insert;
@@ -665,8 +665,7 @@ mod tests {
     use crate::traits::procedure::ProcedureInitialState;
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
+    use crate::traits::rust_shadow::RustShadowError;
 
     /// Read and consume a digest from an input source, either public input or
     /// secret input. Returns the digest.
@@ -696,7 +695,7 @@ mod tests {
             nondeterminism: &NonDeterminism,
             _public_input: &[BFieldElement],
             sponge: &mut Option<Tip5>,
-        ) -> Vec<BFieldElement> {
+        ) -> Result<Vec<BFieldElement>, RustShadowError> {
             fn digest_to_xfe(digest: Digest, challenge: XFieldElement) -> XFieldElement {
                 let [l0, l1, l2, l3, l4] = digest.0;
                 let leaf_xfe_lo = XFieldElement::new([BFieldElement::new(1), l0, l1]);
@@ -711,8 +710,7 @@ mod tests {
                 beta: XFieldElement,
                 gamma: XFieldElement,
                 t: Digest,
-                right: Digest,
-                left: Digest,
+                right_and_left: Option<(Digest, Digest)>,
             ) {
                 const ALPHA_POINTER_WRITE: BFieldElement = BFieldElement::new(BFieldElement::P - 4);
                 const BETA_POINTER_WRITE: BFieldElement = BFieldElement::new(BFieldElement::P - 7);
@@ -729,8 +727,12 @@ mod tests {
                 encode_to_memory(memory, BETA_POINTER_WRITE, &beta);
                 encode_to_memory(memory, GAMMA_POINTER_WRITE, &gamma);
                 encode_to_memory(memory, T_DIGEST_POINTER_WRITE, &t);
-                encode_to_memory(memory, RIGHT_DIGEST_POINTER_WRITE, &right);
-                encode_to_memory(memory, LEFT_DIGEST_POINTER_WRITE, &left);
+
+                // only written in the ND-loop, which is skipped for trees of height 0
+                if let Some((right, left)) = right_and_left {
+                    encode_to_memory(memory, RIGHT_DIGEST_POINTER_WRITE, &right);
+                    encode_to_memory(memory, LEFT_DIGEST_POINTER_WRITE, &left);
+                }
             }
 
             fn accumulate_indexed_leafs(
@@ -803,13 +805,13 @@ mod tests {
             };
 
             let indexed_leafs: Vec<[BFieldElement; SIZE_OF_INDEXED_LEAFS_ELEMENT]> =
-                load_list_with_copy_elements(indexed_leafs_pointer, memory);
+                load_list_with_copy_elements(indexed_leafs_pointer, memory)?;
             let indexed_leafs = indexed_leafs
                 .into_iter()
                 .map(bfes_to_indexed_leaf)
                 .collect_vec();
             let auth_struct: Vec<[BFieldElement; Digest::LEN]> =
-                load_list_with_copy_elements(auth_struct_pointer, memory);
+                load_list_with_copy_elements(auth_struct_pointer, memory)?;
             let auth_struct = auth_struct.into_iter().map(bfes_to_digest).collect_vec();
 
             // Calculate challenges
@@ -835,8 +837,7 @@ mod tests {
             // "Unaccumulate" into `p` from secret data, and calculate Merkle root
             let mut t = indexed_leafs[0].1;
             let mut t_xfe = digest_to_xfe(t, alpha);
-            let mut right = Digest::default();
-            let mut left = Digest::default();
+            let mut right_and_left = None;
             if tree_num_leafs != 1 {
                 loop {
                     let left_index = individual_tokens.pop_front().unwrap();
@@ -845,8 +846,9 @@ mod tests {
 
                     let parent_index = left_index / bfe!(2);
 
-                    right = read_digest_from_input(&mut individual_tokens);
-                    left = read_digest_from_input(&mut individual_tokens);
+                    let right = read_digest_from_input(&mut individual_tokens);
+                    let left = read_digest_from_input(&mut individual_tokens);
+                    right_and_left = Some((right, left));
 
                     t = Tip5::hash_pair(left, right);
                     t_xfe = digest_to_xfe(t, alpha);
@@ -871,9 +873,9 @@ mod tests {
                 stack.push(elem);
             }
 
-            mimic_use_of_static_memory(memory, alpha, -beta, gamma, t, right, left);
+            mimic_use_of_static_memory(memory, alpha, -beta, gamma, t, right_and_left);
 
-            vec![]
+            Ok(vec![])
         }
 
         fn pseudorandom_initial_state(
@@ -1032,10 +1034,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
+    use super::*;
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     #[test]
     fn bench_root_from_auth_struct() {
