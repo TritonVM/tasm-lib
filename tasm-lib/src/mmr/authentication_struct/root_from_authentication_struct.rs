@@ -9,6 +9,8 @@ use crate::prelude::BasicSnippet;
 pub struct RootFromAuthenticationStruct;
 
 impl RootFromAuthenticationStruct {
+    pub(crate) const LEAF_INDEX_GE_NUM_LEAFS_ERROR_ID: i128 = 630;
+
     fn indexed_leaf_element_type() -> DataType {
         DataType::Tuple(vec![DataType::U64, DataType::Digest])
     }
@@ -110,61 +112,83 @@ impl BasicSnippet for RootFromAuthenticationStruct {
         let entrypoint = self.entrypoint();
         let accumulate_indexed_leafs_loop_label = format!("{entrypoint}_acc_indexed_leafs");
         let accumulated_indexed_leafs_loop = triton_asm!(
-            // INVARIANT: _ num_leafs *auth_struct *idx_leafs *idx_leafs[n]_lw [0; 2] [p; 3]
+            // INVARIANT: _ num_leafs *auth_struct *idx_leafs *idx_leafs[n]_lw [num_leafs; 2] [p; 3]
             {accumulate_indexed_leafs_loop_label}:
-                // _ num_leafs *auth_struct *idx_leafs *idx_leafs[n]_lw [0; 2] [p; 3]
+                // _ num_leafs *auth_struct *idx_leafs *idx_leafs[n]_lw [num_leafs; 2] [p; 3]
 
                 /* Read leaf-index, convert it to BFE, and multiply it with `gamma` challenge */
                 push {gamma_challenge_read_address}
                 read_mem {EXTENSION_DEGREE}
                 pop 1
-                // _ num_leafs *auth_struct *idx_leafs *idx_leafs[n]_lw [0; 2] [p; 3] [gamma]
-                // _ num_leafs *auth_struct *idx_leafs *idx_leafs[n]_lw [0; 2] [p; 3] [γ] <-- rename
+                // _ num_leafs *auth_struct *idx_leafs *idx_leafs[n]_lw [num_leafs; 2] [p; 3] [gamma]
+                // _ num_leafs *auth_struct *idx_leafs *idx_leafs[n]_lw [num_leafs; 2] [p; 3] [γ] <-- rename
 
                 dup 8
                 read_mem {u64_size}
                 swap 11
                 pop 1
-                // _ num_leafs *auth_struct *idx_leafs (*idx_leafs[n]_lw - 2) [0; 2] [p; 3] [γ] [leaf_idx; 2]
+                // _ num_leafs *auth_struct *idx_leafs (*idx_leafs[n]_lw - 2) [num_leafs; 2] [p; 3] [γ] [leaf_idx; 2]
 
-                // TODO: Assert that `leaf_idx < num_leafs`?
+                /* Assert `leaf_idx < num_leafs`. Also guarantees that both words of
+                   `leaf_idx` are valid u32s, since `lt` crashes the VM otherwise. */
+                dup 9
+                dup 2
+                lt
+                // _ num_leafs *auth_struct *idx_leafs (*idx_leafs[n]_lw - 2) [num_leafs; 2] [p; 3] [γ] [leaf_idx; 2] (leaf_idx_hi < num_leafs_hi)
+
+                dup 10
+                dup 3
+                eq
+                // _ num_leafs *auth_struct *idx_leafs (*idx_leafs[n]_lw - 2) [num_leafs; 2] [p; 3] [γ] [leaf_idx; 2] (leaf_idx_hi < num_leafs_hi) (leaf_idx_hi == num_leafs_hi)
+
+                dup 10
+                dup 3
+                lt
+                // _ num_leafs *auth_struct *idx_leafs (*idx_leafs[n]_lw - 2) [num_leafs; 2] [p; 3] [γ] [leaf_idx; 2] (leaf_idx_hi < num_leafs_hi) (leaf_idx_hi == num_leafs_hi) (leaf_idx_lo < num_leafs_lo)
+
+                mul
+                add
+                // _ num_leafs *auth_struct *idx_leafs (*idx_leafs[n]_lw - 2) [num_leafs; 2] [p; 3] [γ] [leaf_idx; 2] (leaf_idx < num_leafs)
+
+                assert error_id {Self::LEAF_INDEX_GE_NUM_LEAFS_ERROR_ID}
+                // _ num_leafs *auth_struct *idx_leafs (*idx_leafs[n]_lw - 2) [num_leafs; 2] [p; 3] [γ] [leaf_idx; 2]
 
                 {&u64_to_bfe}
-                // _ num_leafs *auth_struct *idx_leafs (*idx_leafs[n]_lw - 2) [0; 2] [p; 3] [γ] leaf_idx_bfe
+                // _ num_leafs *auth_struct *idx_leafs (*idx_leafs[n]_lw - 2) [num_leafs; 2] [p; 3] [γ] leaf_idx_bfe
 
                 dup 12
                 add
-                // _ num_leafs *auth_struct *idx_leafs (*idx_leafs[n]_lw - 2) [0; 2] [p; 3] [γ] node_idx_bfe
+                // _ num_leafs *auth_struct *idx_leafs (*idx_leafs[n]_lw - 2) [num_leafs; 2] [p; 3] [γ] node_idx_bfe
 
                 xb_mul
-                // _ num_leafs *auth_struct *idx_leafs (*idx_leafs[n]_lw - 2) [0; 2] [p; 3] [γ * node_idx; 3]
+                // _ num_leafs *auth_struct *idx_leafs (*idx_leafs[n]_lw - 2) [num_leafs; 2] [p; 3] [γ * node_idx; 3]
 
                 dup 8
                 read_mem {Digest::LEN}
                 swap 14
                 pop 1
-                // _ num_leafs *auth_struct *idx_leafs *idx_leafs[n-1]_lw [0; 2] [p; 3] [γ * node_idx; 3] [leaf; 5]
-                // _ num_leafs *auth_struct *idx_leafs *idx_leafs[n-1]_lw [0; 2] [p; 3] [γ * node_idx; 3] l4 l3 l2 l1 l0
+                // _ num_leafs *auth_struct *idx_leafs *idx_leafs[n-1]_lw [num_leafs; 2] [p; 3] [γ * node_idx; 3] [leaf; 5]
+                // _ num_leafs *auth_struct *idx_leafs *idx_leafs[n-1]_lw [num_leafs; 2] [p; 3] [γ * node_idx; 3] l4 l3 l2 l1 l0
 
                 /* Convert `leaf` to XFE, using challenge */
                 {&digest_to_xfe}
                 hint leaf_as_xfe: XFieldElement = stack[0..2]
-                // _ num_leafs *auth_struct *idx_leafs *idx_leafs[n-1]_lw [0; 2] [p; 3] [γ * node_idx; 3] [(l1 l0 1) * α + (l4 l3 l2)]
-                // _ num_leafs *auth_struct *idx_leafs *idx_leafs[n-1]_lw [0; 2] [p; 3] [γ * node_idx; 3] [leaf_as_xfe] <-- rename
+                // _ num_leafs *auth_struct *idx_leafs *idx_leafs[n-1]_lw [num_leafs; 2] [p; 3] [γ * node_idx; 3] [(l1 l0 1) * α + (l4 l3 l2)]
+                // _ num_leafs *auth_struct *idx_leafs *idx_leafs[n-1]_lw [num_leafs; 2] [p; 3] [γ * node_idx; 3] [leaf_as_xfe] <-- rename
 
                 push {beta_challenge_read_address}
                 read_mem {EXTENSION_DEGREE}
                 pop 1
-                // _ num_leafs *auth_struct *idx_leafs *idx_leafs[n-1]_lw [0; 2] [p; 3] [γ * node_idx; 3] [leaf_as_xfe] [-beta]
+                // _ num_leafs *auth_struct *idx_leafs *idx_leafs[n-1]_lw [num_leafs; 2] [p; 3] [γ * node_idx; 3] [leaf_as_xfe] [-beta]
 
                 xx_add
-                // _ num_leafs *auth_struct *idx_leafs *idx_leafs[n-1]_lw [0; 2] [p; 3] [γ * node_idx; 3] [leaf_as_xfe - beta]
+                // _ num_leafs *auth_struct *idx_leafs *idx_leafs[n-1]_lw [num_leafs; 2] [p; 3] [γ * node_idx; 3] [leaf_as_xfe - beta]
 
                 xx_add
-                // _ num_leafs *auth_struct *idx_leafs *idx_leafs[n-1]_lw [0; 2] [p; 3] [γ * node_idx + leaf_as_xfe - beta]
+                // _ num_leafs *auth_struct *idx_leafs *idx_leafs[n-1]_lw [num_leafs; 2] [p; 3] [γ * node_idx + leaf_as_xfe - beta]
 
                 xx_mul
-                // _ num_leafs *auth_struct *idx_leafs *idx_leafs[n-1]_lw [0; 2] [p'; 3]
+                // _ num_leafs *auth_struct *idx_leafs *idx_leafs[n-1]_lw [num_leafs; 2] [p'; 3]
 
                 recurse_or_return
         );
@@ -194,14 +218,16 @@ impl BasicSnippet for RootFromAuthenticationStruct {
             add
             // _ num_leafs *auth_struct *indexed_leafs *indexed_leafs_last_word
 
-            push 0
-            push 0
+            /* `num_leafs` as u64, for bounds-checking the leaf indices */
+            dup 3
+            split
+            // _ num_leafs *auth_struct *indexed_leafs *indexed_leafs_last_word [num_leafs; 2]
+
             push 0
             push 0
             push 1
-            hint prev = stack[3..5]
             hint p: XFieldElement = stack[0..3]
-            // _ num_leafs *auth_struct *indexed_leafs *indexed_leafs_last_word [0u64; 2] [p; 3]
+            // _ num_leafs *auth_struct *indexed_leafs *indexed_leafs_last_word [num_leafs; 2] [p; 3]
 
             dup 6
             dup 6
@@ -210,6 +236,16 @@ impl BasicSnippet for RootFromAuthenticationStruct {
             eq
             skiz
                 call {accumulate_indexed_leafs_loop_label}
+            // _ num_leafs *auth_struct *indexed_leafs *indexed_leafs [num_leafs; 2] [p; 3]
+
+            /* Next loop expects `prev`, initialized to 0, in place of `num_leafs` */
+            push 0
+            swap 4
+            pop 1
+            push 0
+            swap 5
+            pop 1
+            hint prev = stack[3..5]
             // _ num_leafs *auth_struct *indexed_leafs *indexed_leafs [0u64; 2] [p; 3]
         );
 
@@ -520,8 +556,8 @@ impl BasicSnippet for RootFromAuthenticationStruct {
                 // _ tree_num_leafs *auth_struct *indexed_leafs
 
                 {&accumulate_indexed_leafs_from_public_data}
-                // _ tree_num_leafs *auth_struct *indexed_leafs *indexed_leafs [garbage; 2] [p; 3]
-                // _ tree_num_leafs *auth_struct *indexed_leafs *indexed_leafs [garbage; 2] p2 p1 p0 <-- rename
+                // _ tree_num_leafs *auth_struct *indexed_leafs *indexed_leafs [0; 2] [p; 3]
+                // _ tree_num_leafs *auth_struct *indexed_leafs *indexed_leafs [0; 2] p2 p1 p0 <-- rename
 
                 /* Prepare for next loop, absorption of auth-struct digests into accumulator */
                 swap 7
@@ -661,6 +697,7 @@ mod tests {
     use crate::rust_shadowing_helper_functions::list::list_insert;
     use crate::rust_shadowing_helper_functions::list::load_list_with_copy_elements;
     use crate::snippet_bencher::BenchmarkCase;
+    use crate::test_helpers::test_assertion_failure;
     use crate::traits::procedure::Procedure;
     use crate::traits::procedure::ProcedureInitialState;
     use crate::traits::procedure::ShadowedProcedure;
@@ -685,6 +722,35 @@ mod tests {
     #[test]
     fn test() {
         ShadowedProcedure::new(RootFromAuthenticationStruct).test();
+    }
+
+    #[test]
+    fn leaf_index_out_of_bounds_crashes_vm() {
+        let snippet = RootFromAuthenticationStruct;
+        let mut rng = StdRng::seed_from_u64(0);
+
+        // cover `num_leafs` fitting in a u32, and not
+        for tree_height in [0, 5, 31, 32, 40, 62] {
+            let num_leafs = 1_u64 << tree_height;
+            for bad_leaf_index in [num_leafs, num_leafs + 1, 2 * num_leafs, u64::MAX] {
+                let mut init_state = snippet.initial_state(&mut rng, tree_height, vec![0]);
+
+                // (u64, Digest) is encoded as digest first, followed by u64
+                let indexed_leafs_pointer = *init_state.stack.last().unwrap();
+                let leaf_index_pointer = indexed_leafs_pointer + bfe!(1 + Digest::LEN);
+                encode_to_memory(
+                    &mut init_state.nondeterminism.ram,
+                    leaf_index_pointer,
+                    &bad_leaf_index,
+                );
+
+                test_assertion_failure(
+                    &ShadowedProcedure::new(RootFromAuthenticationStruct),
+                    init_state.into(),
+                    &[RootFromAuthenticationStruct::LEAF_INDEX_GE_NUM_LEAFS_ERROR_ID],
+                );
+            }
+        }
     }
 
     impl Procedure for RootFromAuthenticationStruct {
@@ -741,9 +807,15 @@ mod tests {
                 beta: XFieldElement,
                 gamma: XFieldElement,
                 tree_num_leafs: u64,
-            ) -> XFieldElement {
+            ) -> Result<XFieldElement, RustShadowError> {
                 let mut p = XFieldElement::one();
                 for (leaf_idx, leaf) in indexed_leafs.iter().copied().rev() {
+                    if leaf_idx >= tree_num_leafs {
+                        let error_id =
+                            RootFromAuthenticationStruct::LEAF_INDEX_GE_NUM_LEAFS_ERROR_ID;
+                        return Err(RustShadowError::AssertionError(error_id));
+                    }
+
                     let leaf_idx_as_bfe = bfe!(leaf_idx);
                     let node_idx_as_bfe = leaf_idx_as_bfe + bfe!(tree_num_leafs);
                     let leaf_as_xfe = digest_to_xfe(leaf, alpha);
@@ -751,7 +823,7 @@ mod tests {
                     p *= fact;
                 }
 
-                p
+                Ok(p)
             }
 
             fn accumulate_auth_struct(
@@ -828,7 +900,7 @@ mod tests {
 
             // Accumulate into `p` from public data
             let mut p =
-                accumulate_indexed_leafs(&indexed_leafs, alpha, beta, gamma, tree_num_leafs);
+                accumulate_indexed_leafs(&indexed_leafs, alpha, beta, gamma, tree_num_leafs)?;
 
             let mut individual_tokens: VecDeque<BFieldElement> =
                 nondeterminism.individual_tokens.to_owned().into();
@@ -935,6 +1007,25 @@ mod tests {
                     (tree_height, revealed_leaf_indices)
                 }
             };
+
+            self.initial_state(&mut rng, tree_height, revealed_leaf_indices)
+        }
+
+        fn corner_case_initial_states(&self) -> Vec<ProcedureInitialState> {
+            let mut rng = StdRng::seed_from_u64(0);
+            let tree_of_height_0 = self.initial_state(&mut rng, 0, vec![0]);
+
+            vec![tree_of_height_0]
+        }
+    }
+
+    impl RootFromAuthenticationStruct {
+        fn initial_state(
+            &self,
+            rng: &mut StdRng,
+            tree_height: u32,
+            revealed_leaf_indices: Vec<u64>,
+        ) -> ProcedureInitialState {
             let num_leafs_in_merkle_tree = 1 << tree_height;
 
             // This picks leaf-indices with low values but I don't think that
@@ -1024,10 +1115,6 @@ mod tests {
                 public_input: vec![],
                 sponge: Some(Tip5::init()),
             }
-        }
-
-        fn corner_case_initial_states(&self) -> Vec<ProcedureInitialState> {
-            vec![]
         }
     }
 }
