@@ -70,3 +70,4 @@ often.
 |  590..600 | [`u160::DivMod`](arithmetic/u160/div_mod.rs)                                                |
 |  600..610 | [`u192::SafeAdd`](arithmetic/u192/safe_add.rs)                                              |
 |  620..630 | [`dequeue_next_as::DequeNextAs`](verifier/vm_proof_iter/dequeue_next_as.rs)                 |
+|  630..640 | [`RootFromAuthenticationStruct`](mmr/authentication_struct/root_from_authentication_struct.rs) |
