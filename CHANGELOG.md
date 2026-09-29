@@ -3,6 +3,21 @@
 All notable changes are documented in this file.
 Lines marked “(!)” indicate a breaking change.
 
+## [9.0.0](https://github.com/TritonVM/tasm-lib/compare/v8.0.0..v9.0.0) - 2026-09-29
+
+### ✨ Features
+
+- *(mmr)* Add snippets `RootFromAuthenticationStruct` and `DeriveChallenges` for computing a Merkle root from an authentication struct ([#155](https://github.com/TritonVM/tasm-lib/issues/155)) ([944351e4](https://github.com/TritonVM/tasm-lib/commit/944351e4))
+- *(arithmetic)* Add some u320, u480, and digest arithmetic ([#170](https://github.com/TritonVM/tasm-lib/issues/170)) ([568d5897](https://github.com/TritonVM/tasm-lib/commit/568d5897))
+
+### ♻️ Refactor
+
+- *(!)* *(arithmetic)* Move `hashing::lt_digest::LtDigest` to `arithmetic::digest::lt::Lt`, changing its entrypoint to `tasmlib_arithmetic_digest_lt` ([#170](https://github.com/TritonVM/tasm-lib/issues/170)) ([568d5897](https://github.com/TritonVM/tasm-lib/commit/568d5897))
+
+### ⚙️ Miscellaneous
+
+- *(!)* Upgrade upstream triton-vm to v9.0.0 and rand to v0.10 ([e9bcc5d5](https://github.com/TritonVM/tasm-lib/commit/e9bcc5d5))
+
 ## [8.0.0](https://github.com/TritonVM/tasm-lib/compare/v7.0.0..v8.0.0) - 2026-08-24
 
 ### ⚙️ Miscellaneous
