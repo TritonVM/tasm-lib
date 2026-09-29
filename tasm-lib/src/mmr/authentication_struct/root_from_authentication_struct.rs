@@ -685,7 +685,7 @@ mod tests {
     use itertools::Itertools;
     use num::One;
     use num::Zero;
-    use rand::Rng;
+    use rand::RngExt;
     use rand::SeedableRng;
     use rand::rngs::StdRng;
     use twenty_first::prelude::Sponge;

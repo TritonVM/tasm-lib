@@ -409,7 +409,7 @@ pub mod test_prelude {
     pub use proptest::test_runner::TestCaseResult;
     pub use proptest_arbitrary_adapter::arb;
     pub use rand::Rng;
-    pub use rand::RngCore;
+    pub use rand::RngExt;
     pub use rand::SeedableRng;
     pub use rand::prelude::IndexedMutRandom;
     pub use rand::prelude::IndexedRandom;

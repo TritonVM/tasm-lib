@@ -96,7 +96,7 @@ mod tests {
 
     use itertools::Itertools;
     use num::One;
-    use rand::Rng;
+    use rand::RngExt;
     use rand::SeedableRng;
     use rand::rngs::StdRng;
     use shared::AuthenticatedMerkleAuthStruct;

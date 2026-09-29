@@ -137,7 +137,7 @@ mod tests {
     use std::collections::HashMap;
 
     use num_bigint::BigUint;
-    use rand::Rng;
+    use rand::RngExt;
     use rand::SeedableRng;
     use rand::prelude::StdRng;
     use tasm_lib::library::STATIC_MEMORY_FIRST_ADDRESS;
