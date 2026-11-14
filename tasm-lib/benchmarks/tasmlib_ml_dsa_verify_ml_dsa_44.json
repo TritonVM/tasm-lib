@@ -1,0 +1,13 @@
+[
+  {
+    "name": "tasmlib_ml_dsa_verify_ml_dsa_44",
+    "benchmark_result": {
+      "clock_cycle_count": 1041543,
+      "hash_table_height": 88258,
+      "u32_table_height": 622953,
+      "op_stack_table_height": 905282,
+      "ram_table_height": 358855
+    },
+    "case": "CommonCase"
+  }
+]

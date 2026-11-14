@@ -1,0 +1,13 @@
+[
+  {
+    "name": "tasmlib_hashing_keccak_f1600",
+    "benchmark_result": {
+      "clock_cycle_count": 107736,
+      "hash_table_height": 0,
+      "u32_table_height": 147684,
+      "op_stack_table_height": 94630,
+      "ram_table_height": 32784
+    },
+    "case": "CommonCase"
+  }
+]

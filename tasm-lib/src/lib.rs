@@ -32,6 +32,7 @@ pub mod library;
 pub mod linker;
 pub mod list;
 pub mod memory;
+pub mod ml_dsa;
 pub mod mmr;
 pub mod neptune;
 pub mod prelude;
