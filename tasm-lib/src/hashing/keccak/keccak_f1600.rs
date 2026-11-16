@@ -1,124 +1,16 @@
 //! Keccak-f\[1600\] on a state of slices in static memory.
 
-use triton_vm::isa::parser::to_labelled_instructions;
-use triton_vm::isa::parser::tokenize;
+use itertools::Itertools;
 use triton_vm::prelude::*;
 
 use super::ROTATION_OFFSETS;
 use super::ROUND_CONSTANTS;
 use super::tables::rotation_table_address;
+use crate::memory::load_words_from_memory_pop_pointer;
+use crate::memory::load_words_from_scattered_addresses;
+use crate::memory::write_words_to_memory_pop_pointer;
+use crate::memory::write_words_to_scattered_addresses;
 use crate::prelude::*;
-
-/// Assembly built as text, for code whose shape the generator computes.
-#[derive(Debug, Default, Clone)]
-pub(crate) struct Asm {
-    lines: Vec<String>,
-}
-
-impl Asm {
-    pub(crate) fn e(&mut self, line: impl AsRef<str>) {
-        self.lines.push(line.as_ref().to_string());
-    }
-
-    /// The field element `x mod p`, for offsets between addresses.
-    pub(crate) fn fe(x: i128) -> u64 {
-        x.rem_euclid(i128::from(BFieldElement::P)) as u64
-    }
-
-    /// `_ → _ m[addr]`
-    pub(crate) fn load(&mut self, addr: u64) {
-        self.e(format!("push {addr} read_mem 1 pop 1"));
-    }
-
-    /// `_ v → _`, and `m[addr] = v`
-    pub(crate) fn store(&mut self, addr: u64) {
-        self.e(format!("push {addr} write_mem 1 pop 1"));
-    }
-
-    /// `_ → _ m[a_0] m[a_1] … m[a_{n-1}]`, with one moving pointer.
-    pub(crate) fn load_seq(&mut self, addrs: &[u64]) {
-        self.e(format!("push {}", addrs[0]));
-        for (i, addr) in addrs.iter().enumerate() {
-            self.e("read_mem 1");
-            if let Some(next) = addrs.get(i + 1) {
-                let offset = i128::from(*next) - (i128::from(*addr) - 1);
-                if offset != 0 {
-                    self.e(format!("addi {}", Self::fe(offset)));
-                }
-            }
-        }
-        self.e("pop 1");
-    }
-
-    /// `_ v_{n-1} … v_1 v_0 → _`, and `m[a_i] = v_i`, with one moving pointer.
-    pub(crate) fn store_seq(&mut self, addrs: &[u64]) {
-        self.e(format!("push {}", addrs[0]));
-        for (i, addr) in addrs.iter().enumerate() {
-            self.e("write_mem 1");
-            if let Some(next) = addrs.get(i + 1) {
-                let offset = i128::from(*next) - (i128::from(*addr) + 1);
-                if offset != 0 {
-                    self.e(format!("addi {}", Self::fe(offset)));
-                }
-            }
-        }
-        self.e("pop 1");
-    }
-
-    /// `_ → _ m[last] m[last-1] … m[last-n+1]`; the lowest address ends on top.
-    pub(crate) fn load_block(&mut self, last: u64, n: usize) {
-        self.e(format!("push {last}"));
-        self.read_mem(n);
-        self.e("pop 1");
-    }
-
-    /// `read_mem` of `n` words, in chunks of at most five.
-    pub(crate) fn read_mem(&mut self, n: usize) {
-        let mut left = n;
-        while left > 0 {
-            let k = left.min(5);
-            self.e(format!("read_mem {k}"));
-            left -= k;
-        }
-    }
-
-    /// `_ v_{n-1} … v_0 → _`, and `m[first + i] = v_i`.
-    pub(crate) fn store_block(&mut self, first: u64, n: usize) {
-        self.e(format!("push {first}"));
-        let mut left = n;
-        while left > 0 {
-            let k = left.min(5);
-            self.e(format!("write_mem {k}"));
-            left -= k;
-        }
-        self.e("pop 1");
-    }
-
-    /// Pop `n` words, in chunks of at most five.
-    pub(crate) fn pop(&mut self, n: usize) {
-        let mut left = n;
-        while left > 0 {
-            let k = left.min(5);
-            self.e(format!("pop {k}"));
-            left -= k;
-        }
-    }
-
-    /// `_ v → _ rot(v, t)` for a byte `v`, by table lookup.
-    pub(crate) fn rotate_byte(&mut self, t: u32) {
-        if !t.is_multiple_of(8) {
-            let table = rotation_table_address(t % 8);
-            self.e(format!("addi {table} read_mem 1 pop 1"));
-        }
-    }
-
-    pub(crate) fn into_instructions(self) -> Vec<LabelledInstruction> {
-        let code = self.lines.join("\n");
-        let (rest, tokens) = tokenize(&code).expect("generated assembly must parse");
-        assert!(rest.is_empty(), "generated assembly must parse completely");
-        to_labelled_instructions(&tokens)
-    }
-}
 
 /// The source slice and the rotation in bits that give slice `jo` of a lane
 /// rotated left by `r`.
@@ -129,12 +21,31 @@ pub(crate) fn slice_rotation(r: u32, jo: usize) -> (usize, u32) {
     (src, t)
 }
 
+/// `_ v → _ rot(v, t)` for a byte `v`, by table lookup.
+pub(crate) fn rotate_byte(t: u32) -> Vec<LabelledInstruction> {
+    if t.is_multiple_of(8) {
+        return vec![];
+    }
+    let table = rotation_table_address(t % 8);
+    triton_asm!(addi { table } read_mem 1 pop 1)
+}
+
 /// Keccak-f\[1600\] on the state at [`slice_address`](Self::slice_address),
 /// held as slices (see [the module](super)).
 ///
 /// The state and the permutation's scratch space are a static allocation, of
 /// which the address is part of the snippet. A program that hashes with
 /// several snippets lets them share one `KeccakF1600`.
+///
+/// The snippet has no parameters and no return values: its stack signature is
+/// `_ → _`. Its input and output are the state in memory. The caller writes
+/// the state's slices to [`slice_address`](Self::slice_address) before the
+/// call and reads the permuted state from the same addresses after it. Every
+/// access in the snippet's code uses an address that
+/// [`allocate`](Self::allocate) fixed, so the code differs between
+/// allocations, and so does the
+/// [entrypoint](crate::traits::basic_snippet::BasicSnippet::entrypoint), which
+/// contains the address.
 ///
 /// ### Pre-conditions
 ///
@@ -194,47 +105,74 @@ impl KeccakF1600 {
         self.scratch + 440 + (x * 8 + j) as u64
     }
 
-    fn theta_c(&self, asm: &mut Asm) {
-        for batch in (0..40).step_by(5) {
-            for g in (batch..batch + 5).rev() {
-                let (x, j) = (g / 8, g % 8);
-                let last = self.a(x, 4, j);
-                asm.e(format!("push {last} read_mem 5 pop 1 xor xor xor xor"));
-            }
-            asm.e(format!(
-                "push {} write_mem 5 pop 1",
-                self.c(0, 0) + batch as u64
-            ));
-        }
+    fn theta_c(&self) -> Vec<LabelledInstruction> {
+        (0..40)
+            .step_by(5)
+            .flat_map(|batch| {
+                let column_sums = (batch..batch + 5)
+                    .rev()
+                    .flat_map(|g| {
+                        let last = self.a(g / 8, 4, g % 8);
+                        triton_asm!(push { last } read_mem 5 pop 1 xor xor xor xor)
+                    })
+                    .collect_vec();
+                let first = self.c(0, 0) + batch as u64;
+                triton_asm!(
+                    {&column_sums}
+                    push {first}
+                    write_mem 5
+                    pop 1
+                )
+            })
+            .collect()
     }
 
-    fn theta_d(&self, asm: &mut Asm) {
-        for x in 0..5 {
-            // C[x-1] on the stack with slice 0 on top. Each slice of D takes
-            // the place of a slice of C at the bottom, so that D ends with
-            // slice 0 on top.
-            asm.load_block(self.c((x + 4) % 5, 7), 8);
-            for jo in 0..8 {
-                let (src, t) = slice_rotation(1, jo);
-                asm.load(self.c((x + 1) % 5, src));
-                asm.rotate_byte(t);
-                asm.e("xor place 7");
-            }
-            asm.store_block(self.d(x, 0), 8);
-        }
+    fn theta_d(&self) -> Vec<LabelledInstruction> {
+        (0..5)
+            .flat_map(|x| {
+                // C[x-1] on the stack with slice 0 on top. Each slice of D
+                // takes the place of a slice of C at the bottom, so that D
+                // ends with slice 0 on top.
+                let slices = (0..8)
+                    .flat_map(|jo| {
+                        let (src, t) = slice_rotation(1, jo);
+                        let address = self.c((x + 1) % 5, src);
+                        triton_asm!(
+                            push {address}
+                            read_mem 1
+                            pop 1
+                            {&rotate_byte(t)}
+                            xor
+                            place 7
+                        )
+                    })
+                    .collect_vec();
+                triton_asm!(
+                    push {self.c((x + 4) % 5, 7)}
+                    {&load_words_from_memory_pop_pointer(8)}
+                    {&slices}
+                    push {self.d(x, 0)}
+                    {&write_words_to_memory_pop_pointer(8)}
+                )
+            })
+            .collect()
     }
 
-    fn rho_pi(&self, asm: &mut Asm) {
+    fn rho_pi(&self) -> Vec<LabelledInstruction> {
+        let mut instructions = vec![];
         for (x, offsets) in ROTATION_OFFSETS.iter().enumerate() {
             // D[x] on the stack, slice 0 on top, for the five lanes of column x.
-            asm.load_block(self.d(x, 7), 8);
+            instructions.extend(triton_asm!(
+                push {self.d(x, 7)}
+                {&load_words_from_memory_pop_pointer(8)}
+            ));
             for (y, &r) in offsets.iter().enumerate() {
                 let (bx, by) = (y, (2 * x + 3 * y) % 5);
                 let s = (r % 8) as usize;
                 for batch in [[0usize, 1, 2, 3], [4, 5, 6, 7]] {
                     let n = batch.len();
-                    let srcs = batch.map(|j| self.a(x, y, j));
-                    asm.load_seq(&srcs);
+                    let sources = batch.map(|j| self.a(x, y, j));
+                    instructions.extend(load_words_from_scattered_addresses(&sources));
                     // Process from the top; each result goes below the
                     // unprocessed slices, so the results end in load order.
                     for idx in (0..n).rev() {
@@ -242,18 +180,22 @@ impl KeccakF1600 {
                         let jo = (j + s) % 8;
                         let (src, t) = slice_rotation(r, jo);
                         debug_assert_eq!(src, j);
-                        asm.e(format!("dup {} xor", n + j));
-                        asm.rotate_byte(t);
+                        instructions.extend(triton_asm!(
+                            dup {n + j}
+                            xor
+                            {&rotate_byte(t)}
+                        ));
                         if idx > 0 {
-                            asm.e(format!("place {idx}"));
+                            instructions.extend(triton_asm!(place { idx }));
                         }
                     }
-                    let dsts = batch.map(|j| self.b(bx, by, (j + s) % 8));
-                    asm.store_seq(&dsts);
+                    let destinations = batch.map(|j| self.b(bx, by, (j + s) % 8));
+                    instructions.extend(write_words_to_scattered_addresses(&destinations));
                 }
             }
-            asm.pop(8);
+            instructions.extend(triton_asm!(pop 5 pop 3));
         }
+        instructions
     }
 
     /// χ on row `y`, and ι if `round_constant` is given (for row 0).
@@ -261,7 +203,7 @@ impl KeccakF1600 {
     /// Every B value is used four times; the last use takes it off the stack
     /// with `pick` instead of copying it with `dup`, so that only the five
     /// outputs remain.
-    fn chi_row(&self, asm: &mut Asm, y: usize, round_constant: Option<u64>) {
+    fn chi_row(&self, y: usize, round_constant: Option<u64>) -> Vec<LabelledInstruction> {
         #[derive(Clone, Copy, PartialEq, Eq)]
         enum Item {
             B(usize),
@@ -275,46 +217,50 @@ impl KeccakF1600 {
         for x in (0..5).rev() {
             uses.extend([(x + 1) % 5, (x + 2) % 5, (x + 2) % 5, x]);
         }
+        let fetch = |stack: &mut Vec<Item>, use_index: usize| {
+            let i = uses[use_index];
+            let last = !uses[use_index + 1..].contains(&i);
+            let index = stack.iter().rposition(|&item| item == Item::B(i)).unwrap();
+            let depth = stack.len() - 1 - index;
+            let instructions = if last {
+                stack.remove(index);
+                triton_asm!(pick { depth })
+            } else {
+                triton_asm!(dup { depth })
+            };
+            stack.push(Item::Value);
+            instructions
+        };
+
+        let mut instructions = vec![];
         for j in 0..8 {
-            asm.e(format!("push {} read_mem 5 pop 1", self.b(4, y, j)));
+            instructions.extend(triton_asm!(push {self.b(4, y, j)} read_mem 5 pop 1));
             // _ B[4] B[3] B[2] B[1] B[0], top of the stack last
             let mut stack: Vec<Item> = (0..5).rev().map(Item::B).collect();
-            let fetch = |asm: &mut Asm, stack: &mut Vec<Item>, use_index: usize| {
-                let i = uses[use_index];
-                let last = !uses[use_index + 1..].contains(&i);
-                let index = stack.iter().rposition(|&item| item == Item::B(i)).unwrap();
-                let depth = stack.len() - 1 - index;
-                if last {
-                    stack.remove(index);
-                    asm.e(format!("pick {depth}"));
-                } else {
-                    asm.e(format!("dup {depth}"));
-                }
-                stack.push(Item::Value);
-            };
             for (n, x) in (0..5).rev().enumerate() {
                 let u = 4 * n;
-                fetch(asm, &mut stack, u);
-                fetch(asm, &mut stack, u + 1);
-                asm.e("and");
+                instructions.extend(fetch(&mut stack, u));
+                instructions.extend(fetch(&mut stack, u + 1));
+                instructions.extend(triton_asm!(and));
                 stack.pop();
-                fetch(asm, &mut stack, u + 2);
-                asm.e("xor");
+                instructions.extend(fetch(&mut stack, u + 2));
+                instructions.extend(triton_asm!(xor));
                 stack.pop();
-                fetch(asm, &mut stack, u + 3);
-                asm.e("xor");
+                instructions.extend(fetch(&mut stack, u + 3));
+                instructions.extend(triton_asm!(xor));
                 stack.pop();
                 if let Some(slices) = rc_slices
                     && x == 0
                     && slices[j] != 0
                 {
-                    asm.e(format!("push {} xor", slices[j]));
+                    instructions.extend(triton_asm!(push {slices[j]} xor));
                 }
             }
             debug_assert!(stack.iter().all(|&item| item == Item::Value) && stack.len() == 5);
-            let dsts: Vec<u64> = (0..5).map(|x| self.a(x, y, j)).collect();
-            asm.store_seq(&dsts);
+            let destinations = (0..5).map(|x| self.a(x, y, j)).collect_vec();
+            instructions.extend(write_words_to_scattered_addresses(&destinations));
         }
+        instructions
     }
 }
 
@@ -336,22 +282,29 @@ impl BasicSnippet for KeccakF1600 {
         // but χ on row 0, which ι touches, is shared by every round.
         let entrypoint = self.entrypoint();
         let shared = format!("{entrypoint}_round");
-        let mut asm = Asm::default();
-        asm.e(format!("{entrypoint}:"));
-        for round_constant in ROUND_CONSTANTS {
-            asm.e(format!("call {shared}"));
-            self.chi_row(&mut asm, 0, Some(round_constant));
-        }
-        asm.e("return");
-        asm.e(format!("{shared}:"));
-        self.theta_c(&mut asm);
-        self.theta_d(&mut asm);
-        self.rho_pi(&mut asm);
-        for y in 1..5 {
-            self.chi_row(&mut asm, y, None);
-        }
-        asm.e("return");
-        asm.into_instructions()
+        let rounds = ROUND_CONSTANTS
+            .into_iter()
+            .flat_map(|round_constant| {
+                triton_asm!(
+                    call {shared}
+                    {&self.chi_row(0, Some(round_constant))}
+                )
+            })
+            .collect_vec();
+        let other_rows = (1..5).flat_map(|y| self.chi_row(y, None)).collect_vec();
+
+        triton_asm!(
+            {entrypoint}:
+                {&rounds}
+                return
+
+            {shared}:
+                {&self.theta_c()}
+                {&self.theta_d()}
+                {&self.rho_pi()}
+                {&other_rows}
+                return
+        )
     }
 }
 

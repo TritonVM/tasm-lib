@@ -1,19 +1,26 @@
 //! The ML-DSA-44 verifier in Triton assembly.
 
+use itertools::Itertools;
 use triton_vm::prelude::*;
 
 use super::reference::ExpandedPublicKey;
 use super::reference::SignatureWitness;
 use super::*;
+use crate::hashing::keccak::KeccakFunction;
 use crate::hashing::keccak::SHAKE256_RATE;
-use crate::hashing::keccak::keccak_f1600::Asm;
 use crate::hashing::keccak::keccak_f1600::KeccakF1600;
+use crate::hashing::keccak::sponge::bytes_of_word;
 use crate::hashing::keccak::tables::CheckKeccakTables;
 use crate::hashing::keccak::tables::KECCAK_TABLES_ADDRESS;
-use crate::hashing::keccak::tables::transposition_table_address;
+use crate::memory::load_words_from_memory_pop_pointer;
+use crate::memory::write_words_to_memory_pop_pointer;
+use crate::memory::write_words_to_scattered_addresses;
+use crate::memory::write_zeros_to_memory;
 use crate::prelude::*;
 
 const P: u64 = BFieldElement::P;
+
+const SHAKE256_PADDING_BYTE: u8 = KeccakFunction::Shake256.padding_byte();
 
 /// The address of the high-bits table, which lies in non-deterministically
 /// initialized memory just below the
@@ -179,50 +186,32 @@ struct Generator {
     permute: String,
     check_tables: String,
     failures: Vec<i128>,
-    asm: Asm,
 }
 
 impl Generator {
-    fn e(&mut self, line: impl AsRef<str>) {
-        self.asm.e(line);
-    }
-
     fn label(&self, name: &str) -> String {
         format!("{}_{name}", self.entrypoint)
     }
 
     /// `_ → _ (*witness + offset)`
-    fn witness_address(&mut self, offset: usize) {
-        let ptr = self.layout.witness_ptr;
-        self.e(format!("push {ptr} read_mem 1 pop 1 addi {offset}"));
+    fn witness_address(&self, offset: usize) -> Vec<LabelledInstruction> {
+        triton_asm!(push {self.layout.witness_ptr} read_mem 1 pop 1 addi {offset})
     }
 
     /// `_ → _ (*key + offset)`
-    fn key_address(&mut self, offset: usize) {
-        let ptr = self.layout.key_ptr;
-        self.e(format!("push {ptr} read_mem 1 pop 1 addi {offset}"));
+    fn key_address(&self, offset: usize) -> Vec<LabelledInstruction> {
+        triton_asm!(push {self.layout.key_ptr} read_mem 1 pop 1 addi {offset})
     }
 
     /// Absorbs `n` words from the address on top of the stack, which it pops.
-    fn absorb_words(&mut self, n: usize) {
+    fn absorb_words(n: usize) -> Vec<LabelledInstruction> {
         assert_eq!(0, n % tip5::RATE);
-        self.e("push 0 push 0 push 0 push 0 pick 4");
-        for _ in 0..n / tip5::RATE {
-            self.e("sponge_absorb_mem");
-        }
-        self.e("pop 5");
-    }
-
-    fn zero(&mut self, first: u64, n: usize) {
-        self.e(format!("push {first}"));
-        let mut left = n;
-        while left > 0 {
-            let k = left.min(5);
-            let zeros = vec!["push 0"; k].join(" ");
-            self.e(format!("{zeros} pick {k} write_mem {k}"));
-            left -= k;
-        }
-        self.e("pop 1");
+        let absorbs = triton_asm![sponge_absorb_mem; n / tip5::RATE];
+        triton_asm!(
+            push 0 push 0 push 0 push 0 pick 4
+            {&absorbs}
+            pop 5
+        )
     }
 
     /// The label of a routine that fails the assertion with the given id.
@@ -235,119 +224,65 @@ impl Generator {
 
     /// `_ v → _`, crashing unless `v ≤ max`. A value that is not a u32 crashes
     /// `lt`.
-    fn check_at_most(&mut self, max: u64, error_id: i128) {
+    fn check_at_most(&mut self, max: u64, error_id: i128) -> Vec<LabelledInstruction> {
         let fail = self.fail(error_id);
-        self.e(format!("push {max} lt skiz call {fail}"));
+        triton_asm!(push {max} lt skiz call {fail})
     }
 
     /// `_ ptr_to_last → _`: checks `n` words, read downward from the pointer,
     /// for `0 ≤ v ≤ max`.
-    fn range_check(&mut self, n: usize, max: u64, error_id: i128) {
+    fn range_check(&mut self, n: usize, max: u64, error_id: i128) -> Vec<LabelledInstruction> {
+        let mut instructions = vec![];
         let mut left = n;
         while left > 0 {
             let k = left.min(5);
-            self.e(format!("read_mem {k} place {k}"));
+            instructions.extend(triton_asm!(read_mem {k} place {k}));
             for _ in 0..k {
-                self.check_at_most(max, error_id);
+                instructions.extend(self.check_at_most(max, error_id));
             }
             left -= k;
         }
-        self.e("pop 1");
+        instructions.extend(triton_asm!(pop 1));
+        instructions
     }
 
     /// `_ → _ [Σ_k coef_k·r^k]`, the coefficients `n` words from the address
     /// that `push_pointer` pushes.
-    fn evaluate(&mut self, push_pointer: impl FnOnce(&mut Self), n: usize) {
-        let powers = self.layout.powers;
-        self.e(format!("push 0 push 0 push 0 push {powers}"));
-        push_pointer(self);
-        for _ in 0..n {
-            self.e("xb_dot_step");
-        }
-        self.e("pop 2");
+    fn evaluate(
+        &self,
+        push_pointer: Vec<LabelledInstruction>,
+        n: usize,
+    ) -> Vec<LabelledInstruction> {
+        let dot_steps = triton_asm![xb_dot_step; n];
+        triton_asm!(
+            push 0 push 0 push 0 push {self.layout.powers}
+            {&push_pointer}
+            {&dot_steps}
+            pop 2
+        )
     }
 
-    fn load_xfe(&mut self, address: u64) {
-        self.e(format!("push {} read_mem 3 pop 1", address + 2));
+    fn load_xfe(address: u64) -> Vec<LabelledInstruction> {
+        triton_asm!(push {address + 2} read_mem 3 pop 1)
     }
 
-    fn store_xfe(&mut self, address: u64) {
-        self.e(format!("push {address} write_mem 3 pop 1"));
+    fn store_xfe(address: u64) -> Vec<LabelledInstruction> {
+        triton_asm!(push {address} write_mem 3 pop 1)
     }
 
-    /// `_ v_7 … v_1 v_0 → _ o_3 o_2 o_1 o_0 o_7 o_6 o_5 o_4`, with `o_3` on
-    /// top: the 8×8 transposition of bits (see
-    /// [`TRANSPOSITION_OFFSET`](crate::hashing::keccak::tables::TRANSPOSITION_OFFSET)),
-    /// which turns the bytes of a lane into its slices and back.
-    fn transpose(&mut self) {
-        // One accumulator for positions 0 to 3 and one for 4 to 7, neither of
-        // which wraps modulo p. Each splits into its low word, the bits of
-        // outputs 0 to 3, and its high word, the bits of outputs 4 to 7.
-        self.e("push 0");
-        for m in 0..4 {
-            let table = transposition_table_address(m);
-            self.e(format!("pick 1 addi {table} read_mem 1 pop 1 add"));
-        }
-        self.e("push 0");
-        for m in 4..8 {
-            let table = transposition_table_address(m);
-            self.e(format!("pick 2 addi {table} read_mem 1 pop 1 add"));
-        }
-        // _ first second
-        self.e("split pick 2 split pick 2 add swap 2 add");
-        // _ lo hi
-        self.bytes_of_word();
-        self.e("pick 4");
-        self.bytes_of_word();
-    }
-
-    /// `_ x → _ b_3 b_2 b_1 b_0` for `x < 2^32`.
-    fn bytes_of_word(&mut self) {
-        for _ in 0..3 {
-            self.e("push 256 pick 1 div_mod pick 1");
-        }
-    }
-
-    fn slice_order_after_transpose() -> [usize; 8] {
-        [3, 2, 1, 0, 7, 6, 5, 4]
-    }
-
-    /// Writes lane `lane` of the state from eight bytes at `bytes`, by
-    /// storing if `xor` is false and by xoring into the state otherwise.
-    fn absorb_lane(&mut self, bytes: u64, lane: usize, xor: bool) {
-        self.asm.load_block(bytes + 7, 8);
-        self.transpose();
-        for j in Self::slice_order_after_transpose() {
-            let address = self.keccak.slice_address(lane, j);
-            if xor {
-                self.asm.load(address);
-                self.e("xor");
-            }
-            self.asm.store(address);
-        }
-    }
-
-    /// Writes the eight bytes of lane `lane` of the state to `bytes`.
-    fn squeeze_lane(&mut self, bytes: u64, lane: usize) {
-        let slices: Vec<u64> = (0..8)
-            .rev()
+    /// Writes the 32 bytes of c̃ into lanes 0 to 3 of the state.
+    fn store_c_tilde_lane(&self, lane: usize) -> Vec<LabelledInstruction> {
+        let slices = (0..8)
             .map(|j| self.keccak.slice_address(lane, j))
-            .collect();
-        self.asm.load_seq(&slices);
-        self.transpose();
-        let destinations = Self::slice_order_after_transpose().map(|m| bytes + m as u64);
-        self.asm.store_seq(&destinations);
+            .collect_vec();
+        triton_asm!(
+            {&self.witness_address(SignatureWitness::C_TILDE_OFFSET + 8 * lane + 7)}
+            {&load_words_from_memory_pop_pointer(8)}
+            {&write_words_to_scattered_addresses(&slices)}
+        )
     }
 
-    /// `slice ^= value` for a slice of the state.
-    fn xor_constant(&mut self, lane: usize, j: usize, value: u64) {
-        let address = self.keccak.slice_address(lane, j);
-        self.asm.load(address);
-        self.e(format!("push {value} xor"));
-        self.asm.store(address);
-    }
-
-    fn entry(&mut self) {
+    fn entry(&self) -> Vec<LabelledInstruction> {
         let l = self.layout;
         let names = [
             "check_key",
@@ -360,419 +295,465 @@ impl Generator {
             "mu",
             "commitment",
         ];
-        self.e(format!("{}:", self.entrypoint));
-        // _ *key *witness [key_digest] [message]
-        self.e(format!("push {} write_mem 5 pop 1", l.message));
-        self.e(format!("push {} write_mem 5 pop 1", l.key_block));
-        self.zero(l.key_block + 5, 5);
-        self.e(format!("push {} write_mem 1 pop 1", l.witness_ptr));
-        self.e(format!("push {} write_mem 1 pop 1", l.key_ptr));
-        self.e(format!("call {}", self.check_tables));
-        self.e(format!("sponge_init push {HIGH_BITS_TABLE_ADDRESS}"));
-        self.absorb_words(NUM_HIGH_BITS_TABLE_WORDS);
-        self.e("sponge_squeeze");
-        for d in high_bits_table_digest().iter().rev() {
-            self.e(format!("push {}", d.value()));
-        }
-        self.e(format!(
-            "assert_vector error_id {} pop 5 pop 5",
-            MlDsa44Verify::HIGH_BITS_TABLE_DIFFERS_ERROR_ID
-        ));
-        for name in names {
-            self.e(format!("call {}", self.label(name)));
-        }
-        self.e("return");
+        let push_digest = high_bits_table_digest()
+            .iter()
+            .rev()
+            .flat_map(|d| triton_asm!(push { d.value() }))
+            .collect_vec();
+        let calls = names
+            .iter()
+            .flat_map(|name| triton_asm!(call { self.label(name) }))
+            .collect_vec();
+        triton_asm!(
+            {self.entrypoint}:
+                // _ *key *witness [key_digest] [message]
+                push {l.message} write_mem 5 pop 1
+                push {l.key_block} write_mem 5 pop 1
+                {&write_zeros_to_memory(l.key_block + 5, 5)}
+                push {l.witness_ptr} write_mem 1 pop 1
+                push {l.key_ptr} write_mem 1 pop 1
+                call {self.check_tables}
+                sponge_init
+                push {HIGH_BITS_TABLE_ADDRESS}
+                {&Self::absorb_words(NUM_HIGH_BITS_TABLE_WORDS)}
+                sponge_squeeze
+                {&push_digest}
+                assert_vector error_id {MlDsa44Verify::HIGH_BITS_TABLE_DIFFERS_ERROR_ID}
+                pop 5 pop 5
+                {&calls}
+                return
+        )
     }
 
-    fn check_key(&mut self) {
-        self.e(format!("{}:", self.label("check_key")));
-        self.e("sponge_init");
-        self.key_address(0);
-        self.absorb_words(ExpandedPublicKey::NUM_WORDS);
-        self.e("sponge_squeeze");
-        self.e(format!(
-            "push {} read_mem 5 pop 1",
-            self.layout.key_block + 4
-        ));
-        self.e(format!(
-            "assert_vector error_id {} pop 5 pop 5 return",
-            MlDsa44Verify::KEY_DIGEST_MISMATCH_ERROR_ID
-        ));
+    fn check_key(&self) -> Vec<LabelledInstruction> {
+        triton_asm!(
+            {self.label("check_key")}:
+                sponge_init
+                {&self.key_address(0)}
+                {&Self::absorb_words(ExpandedPublicKey::NUM_WORDS)}
+                sponge_squeeze
+                push {self.layout.key_block + 4} read_mem 5 pop 1
+                assert_vector error_id {MlDsa44Verify::KEY_DIGEST_MISMATCH_ERROR_ID}
+                pop 5 pop 5
+                return
+        )
     }
 
-    fn challenge(&mut self) {
+    fn challenge(&self) -> Vec<LabelledInstruction> {
         let l = self.layout;
-        self.e(format!("{}:", self.label("challenge")));
-        self.e("sponge_init");
-        self.e(format!("push {}", l.key_block));
-        self.absorb_words(tip5::RATE);
-        self.witness_address(0);
-        self.absorb_words(SignatureWitness::NUM_CHALLENGE_WORDS);
-        self.e("sponge_squeeze");
-        self.store_xfe(l.r);
-        self.e("pop 5 pop 2 return");
+        triton_asm!(
+            {self.label("challenge")}:
+                sponge_init
+                push {l.key_block}
+                {&Self::absorb_words(tip5::RATE)}
+                {&self.witness_address(0)}
+                {&Self::absorb_words(SignatureWitness::NUM_CHALLENGE_WORDS)}
+                sponge_squeeze
+                {&Self::store_xfe(l.r)}
+                pop 5 pop 2
+                return
+        )
     }
 
-    fn range_checks(&mut self) {
-        self.e(format!("{}:", self.label("range_checks")));
-        self.witness_address(SignatureWitness::C_TILDE_OFFSET + 31);
-        self.range_check(32, 255, MlDsa44Verify::C_TILDE_OUT_OF_RANGE_ERROR_ID);
-        self.witness_address(SignatureWitness::Z_OFFSET + L * N - 1);
-        self.range_check(
+    fn range_checks(&mut self) -> Vec<LabelledInstruction> {
+        let c_tilde = self.range_check(32, 255, MlDsa44Verify::C_TILDE_OUT_OF_RANGE_ERROR_ID);
+        let z = self.range_check(
             L * N,
             2 * SignatureWitness::Z_SHIFT,
             MlDsa44Verify::Z_OUT_OF_RANGE_ERROR_ID,
         );
-        self.witness_address(SignatureWitness::Q_OFFSET + K * N - 1);
-        self.range_check(
+        let q = self.range_check(
             K * N,
             2 * SignatureWitness::Q_SHIFT - 1,
             MlDsa44Verify::Q_OUT_OF_RANGE_ERROR_ID,
         );
-        self.e("return");
+        triton_asm!(
+            {self.label("range_checks")}:
+                {&self.witness_address(SignatureWitness::C_TILDE_OFFSET + 31)}
+                {&c_tilde}
+                {&self.witness_address(SignatureWitness::Z_OFFSET + L * N - 1)}
+                {&z}
+                {&self.witness_address(SignatureWitness::Q_OFFSET + K * N - 1)}
+                {&q}
+                return
+        )
     }
 
-    fn powers(&mut self) {
+    fn powers(&self) -> Vec<LabelledInstruction> {
         let l = self.layout;
-        self.e(format!("{}:", self.label("powers")));
-        self.load_xfe(l.r);
-        self.e("push 0 push 0 push 1");
-        // _ [r] [r^k]
-        for k in 0..N {
-            self.e(format!(
-                "dup 2 dup 2 dup 2 push {} write_mem 3 pop 1",
-                l.powers + 3 * k as u64
-            ));
-            self.e("dup 5 dup 5 dup 5 xx_mul");
-        }
-        // _ [r] [r^256]
-        self.e(format!(
-            "dup 2 dup 2 dup 2 addi 1 push {} write_mem 3 pop 1",
-            l.r256_plus_1
-        ));
-        // The sum of the powers, (r^256 - 1)/(r - 1), by which the shifts of
-        // z and Q are taken out of their evaluations.
-        self.e(format!(
-            "addi {} pick 5 pick 5 pick 5 addi {} x_invert xx_mul",
-            neg(1),
-            neg(1)
-        ));
-        self.store_xfe(l.power_sum);
-        self.e("return");
+        let store_powers = (0..N)
+            .flat_map(|k| {
+                triton_asm!(
+                    dup 2 dup 2 dup 2
+                    push {l.powers + 3 * k as u64} write_mem 3 pop 1
+                    dup 5 dup 5 dup 5 xx_mul
+                )
+            })
+            .collect_vec();
+        triton_asm!(
+            {self.label("powers")}:
+                {&Self::load_xfe(l.r)}
+                push 0 push 0 push 1
+                // _ [r] [r^k]
+                {&store_powers}
+                // _ [r] [r^256]
+                dup 2 dup 2 dup 2 addi 1
+                push {l.r256_plus_1} write_mem 3 pop 1
+                // The sum of the powers, (r^256 - 1)/(r - 1), by which the
+                // shifts of z and Q are taken out of their evaluations.
+                addi {neg(1)} pick 5 pick 5 pick 5 addi {neg(1)} x_invert xx_mul
+                {&Self::store_xfe(l.power_sum)}
+                return
+        )
     }
 
-    fn sample_in_ball(&mut self) {
+    fn sample_in_ball(&self) -> Vec<LabelledInstruction> {
         let l = self.layout;
-        let state = self.keccak.state_address();
-        self.e(format!("{}:", self.label("sample_in_ball")));
-        self.zero(state, 200);
-        self.zero(l.c, N);
-        for lane in 0..4 {
-            self.witness_address(SignatureWitness::C_TILDE_OFFSET + 8 * lane + 7);
-            self.asm.read_mem(8);
-            self.e("pop 1");
-            let slices: Vec<u64> = (0..8).map(|j| self.keccak.slice_address(lane, j)).collect();
-            self.asm.store_seq(&slices);
-        }
-        // Padding: 0x1f after the 32 bytes of c̃, 0x80 in the rate's last byte.
-        for j in 0..5 {
-            self.xor_constant(4, j, 1);
-        }
-        self.xor_constant(SHAKE256_RATE / 8 - 1, 7, 0x80);
-        self.e(format!("call {}", self.permute));
-        self.e(format!("call {}", self.label("lower_lanes")));
-        self.asm.load_block(l.squeezed + 4, 5);
-        self.asm.store_block(l.signs, 5);
-        self.e(format!("push 8 push {} write_mem 1 pop 1", l.position));
-        for i in N - TAU..N {
-            let k = i + TAU - N;
-            let (byte, b) = (k / 8, k % 8);
-            let factor = (-bfe!(2) * bfe!(1u64 << b).inverse()).value();
-            self.e(format!("push {i} call {}", self.label("draw")));
-            // _ i j
-            self.e(format!("dup 0 addi {} read_mem 1 pop 1", l.c));
-            self.e(format!("push {} write_mem 1 pop 1", l.c + i as u64));
-            self.e(format!(
-                "push {} read_mem 1 pop 1 push {} and push {factor} mul addi 1",
-                l.signs + byte as u64,
-                1u64 << b
-            ));
-            // _ i j sign
-            self.e(format!("pick 1 addi {} write_mem 1 pop 2", l.c));
-        }
-        self.e("return");
+        let c_tilde = (0..4)
+            .flat_map(|lane| self.store_c_tilde_lane(lane))
+            .collect_vec();
+        // Padding after the 32 bytes of c̃.
+        let padding = self.keccak.pad(SHAKE256_RATE, 32, SHAKE256_PADDING_BYTE);
+        let draws = (N - TAU..N)
+            .flat_map(|i| {
+                let k = i + TAU - N;
+                let (byte, b) = (k / 8, k % 8);
+                let factor = (-bfe!(2) * bfe!(1u64 << b).inverse()).value();
+                triton_asm!(
+                    push {i}
+                    call {self.label("draw")}
+                    // _ i j
+                    dup 0 addi {l.c} read_mem 1 pop 1
+                    push {l.c + i as u64} write_mem 1 pop 1
+                    push {l.signs + byte as u64} read_mem 1 pop 1
+                    push {1u64 << b} and
+                    push {factor} mul
+                    addi 1
+                    // _ i j sign
+                    pick 1 addi {l.c} write_mem 1 pop 2
+                )
+            })
+            .collect_vec();
+        let lower_lanes = (0..8)
+            .flat_map(|lane| {
+                self.keccak
+                    .squeeze_lane_to_bytes(l.squeezed + 8 * lane as u64, lane)
+            })
+            .collect_vec();
+        let upper_lanes = (8..SHAKE256_RATE / 8)
+            .flat_map(|lane| {
+                self.keccak
+                    .squeeze_lane_to_bytes(l.squeezed + 8 * lane as u64, lane)
+            })
+            .collect_vec();
+        triton_asm!(
+            {self.label("sample_in_ball")}:
+                {&write_zeros_to_memory(self.keccak.state_address(), 200)}
+                {&write_zeros_to_memory(l.c, N)}
+                {&c_tilde}
+                {&padding}
+                call {self.permute}
+                call {self.label("lower_lanes")}
+                push {l.squeezed + 4}
+                {&load_words_from_memory_pop_pointer(5)}
+                push {l.signs}
+                {&write_words_to_memory_pop_pointer(5)}
+                push 8 push {l.position} write_mem 1 pop 1
+                {&draws}
+                return
 
-        // _ i → _ i j, the next squeezed byte j ≤ i
-        self.e(format!("{}:", self.label("draw")));
-        self.e(format!("call {}", self.label("next_byte")));
-        self.e("dup 1 addi 1 dup 1 lt skiz return pop 1 recurse");
+            // _ i → _ i j, the next squeezed byte j ≤ i
+            {self.label("draw")}:
+                call {self.label("next_byte")}
+                dup 1 addi 1 dup 1 lt
+                skiz return
+                pop 1
+                recurse
 
-        // _ → _ byte
-        self.e(format!("{}:", self.label("next_byte")));
-        self.e(format!("push {} read_mem 1 pop 1", l.position));
-        self.e(format!(
-            "dup 0 push {SHAKE256_RATE} eq skiz call {}",
-            self.label("refill")
-        ));
-        self.e(format!(
-            "dup 0 push 64 eq skiz call {}",
-            self.label("upper_lanes")
-        ));
-        self.e(format!(
-            "dup 0 addi 1 push {} write_mem 1 pop 1",
-            l.position
-        ));
-        self.e(format!("addi {} read_mem 1 pop 1 return", l.squeezed));
+            // _ → _ byte
+            {self.label("next_byte")}:
+                push {l.position} read_mem 1 pop 1
+                dup 0 push {SHAKE256_RATE} eq
+                skiz call {self.label("refill")}
+                dup 0 push 64 eq
+                skiz call {self.label("upper_lanes")}
+                dup 0 addi 1 push {l.position} write_mem 1 pop 1
+                addi {l.squeezed} read_mem 1 pop 1
+                return
 
-        self.e(format!("{}:", self.label("refill")));
-        self.e(format!(
-            "pop 1 call {} call {} push 0 return",
-            self.permute,
-            self.label("lower_lanes")
-        ));
+            {self.label("refill")}:
+                pop 1
+                call {self.permute}
+                call {self.label("lower_lanes")}
+                push 0
+                return
 
-        self.e(format!("{}:", self.label("lower_lanes")));
-        for lane in 0..8 {
-            self.squeeze_lane(l.squeezed + 8 * lane as u64, lane);
-        }
-        self.e("return");
+            {self.label("lower_lanes")}:
+                {&lower_lanes}
+                return
 
-        self.e(format!("{}:", self.label("upper_lanes")));
-        for lane in 8..SHAKE256_RATE / 8 {
-            self.squeeze_lane(l.squeezed + 8 * lane as u64, lane);
-        }
-        self.e("return");
+            {self.label("upper_lanes")}:
+                {&upper_lanes}
+                return
+        )
     }
 
-    fn identity(&mut self) {
+    fn identity(&self) -> Vec<LabelledInstruction> {
         let l = self.layout;
-        self.e(format!("{}:", self.label("identity")));
-        for j in 0..L {
-            let offset = SignatureWitness::Z_OFFSET + N * j;
-            self.evaluate(|g| g.witness_address(offset), N);
-            self.load_xfe(l.power_sum);
-            self.e(format!(
-                "push {} xb_mul xx_add",
-                neg(SignatureWitness::Z_SHIFT)
-            ));
-            self.store_xfe(l.z_evals + 3 * j as u64);
-        }
-        let c = l.c;
-        self.evaluate(|g| g.e(format!("push {c}")), N);
-        self.store_xfe(l.c_eval);
-        for i in 0..K {
-            for j in 0..L {
-                let offset = ExpandedPublicKey::A_OFFSET + N * (L * i + j);
-                self.evaluate(|g| g.key_address(offset), N);
-                self.load_xfe(l.z_evals + 3 * j as u64);
-                self.e("xx_mul");
-                if j > 0 {
-                    self.e("xx_add");
-                }
-            }
-            let offset = ExpandedPublicKey::T1_OFFSET + N * i;
-            self.evaluate(|g| g.key_address(offset), N);
-            self.load_xfe(l.c_eval);
-            self.e(format!("xx_mul push {} xb_mul xx_add", neg(1)));
-            let offset = SignatureWitness::W_OFFSET + N * i;
-            self.evaluate(|g| g.witness_address(offset), N);
-            self.e(format!("push {} xb_mul xx_add", neg(1)));
-            let offset = SignatureWitness::S_OFFSET + (N - 1) * i;
-            self.evaluate(|g| g.witness_address(offset), N - 1);
-            self.load_xfe(l.r256_plus_1);
-            self.e(format!("xx_mul push {} xb_mul xx_add", neg(1)));
-            let offset = SignatureWitness::Q_OFFSET + N * i;
-            self.evaluate(|g| g.witness_address(offset), N);
-            self.load_xfe(l.power_sum);
-            self.e(format!(
-                "push {} xb_mul xx_add",
-                neg(SignatureWitness::Q_SHIFT)
-            ));
-            self.e(format!("push {} xb_mul xx_add", neg(u64::from(Q))));
-            let id = MlDsa44Verify::IDENTITY_FAILS_ERROR_ID;
-            for _ in 0..3 {
-                self.e(format!("push 0 eq assert error_id {id}"));
-            }
-        }
-        self.e("return");
+        let z_evals = (0..L)
+            .flat_map(|j| {
+                let offset = SignatureWitness::Z_OFFSET + N * j;
+                triton_asm!(
+                    {&self.evaluate(self.witness_address(offset), N)}
+                    {&Self::load_xfe(l.power_sum)}
+                    push {neg(SignatureWitness::Z_SHIFT)} xb_mul xx_add
+                    {&Self::store_xfe(l.z_evals + 3 * j as u64)}
+                )
+            })
+            .collect_vec();
+        let id = MlDsa44Verify::IDENTITY_FAILS_ERROR_ID;
+        let rows = (0..K)
+            .flat_map(|i| {
+                let a_times_z = (0..L)
+                    .flat_map(|j| {
+                        let offset = ExpandedPublicKey::A_OFFSET + N * (L * i + j);
+                        let mut instructions = triton_asm!(
+                            {&self.evaluate(self.key_address(offset), N)}
+                            {&Self::load_xfe(l.z_evals + 3 * j as u64)}
+                            xx_mul
+                        );
+                        if j > 0 {
+                            instructions.extend(triton_asm!(xx_add));
+                        }
+                        instructions
+                    })
+                    .collect_vec();
+                let t1 = ExpandedPublicKey::T1_OFFSET + N * i;
+                let w = SignatureWitness::W_OFFSET + N * i;
+                let s = SignatureWitness::S_OFFSET + (N - 1) * i;
+                let q = SignatureWitness::Q_OFFSET + N * i;
+                let assert_zero = vec![triton_asm!(push 0 eq assert error_id {id}); 3].concat();
+                triton_asm!(
+                    {&a_times_z}
+                    {&self.evaluate(self.key_address(t1), N)}
+                    {&Self::load_xfe(l.c_eval)}
+                    xx_mul push {neg(1)} xb_mul xx_add
+                    {&self.evaluate(self.witness_address(w), N)}
+                    push {neg(1)} xb_mul xx_add
+                    {&self.evaluate(self.witness_address(s), N - 1)}
+                    {&Self::load_xfe(l.r256_plus_1)}
+                    xx_mul push {neg(1)} xb_mul xx_add
+                    {&self.evaluate(self.witness_address(q), N)}
+                    {&Self::load_xfe(l.power_sum)}
+                    push {neg(SignatureWitness::Q_SHIFT)} xb_mul xx_add
+                    push {neg(u64::from(Q))} xb_mul xx_add
+                    {&assert_zero}
+                )
+            })
+            .collect_vec();
+        triton_asm!(
+            {self.label("identity")}:
+                {&z_evals}
+                {&self.evaluate(triton_asm!(push {l.c}), N)}
+                {&Self::store_xfe(l.c_eval)}
+                {&rows}
+                return
+        )
     }
 
-    fn use_hint(&mut self) {
+    fn use_hint(&mut self) -> Vec<LabelledInstruction> {
         let l = self.layout;
         let two_gamma2 = 2 * u64::from(GAMMA2);
         let low_id = MlDsa44Verify::LOW_BITS_OUT_OF_RANGE_ERROR_ID;
         let high_id = MlDsa44Verify::HIGH_BITS_OUT_OF_RANGE_ERROR_ID;
+        let order_id = MlDsa44Verify::HINTS_NOT_INCREASING_ERROR_ID;
         let w_to_e = SignatureWitness::E_OFFSET - SignatureWitness::W_OFFSET;
-        self.e(format!("{}:", self.label("use_hint")));
+
         // For every coefficient r with high bits e: r - 2·γ2·e lies in
         // (-γ2, γ2], e ≤ 44, and w1 = e mod 44. Four coefficients make a
         // 24-bit group of w1Encode.
-        self.witness_address(SignatureWitness::W_OFFSET + 3);
+        let mut groups = vec![];
         for g in 0..K * N / 4 {
             // _ *r_{4g+3}
-            self.e(format!(
-                "dup 0 read_mem 4 pop 1 dup 4 addi {w_to_e} read_mem 4 pop 1"
+            groups.extend(triton_asm!(
+                dup 0 read_mem 4 pop 1
+                dup 4 addi {w_to_e} read_mem 4 pop 1
             ));
             for m in 0..4 {
                 // _ w1_0..w1_{m-1} r_3..r_m e_3..e_m, top last; each w1 went
                 // below the remaining r and e
-                self.e(format!(
-                    "dup 0 push {} mul pick {} add addi {}",
-                    neg(two_gamma2),
-                    5 - m,
-                    GAMMA2 - 1
+                let check_low = self.check_at_most(two_gamma2 - 1, low_id);
+                groups.extend(triton_asm!(
+                    dup 0 push {neg(two_gamma2)} mul
+                    pick {5 - m} add
+                    addi {GAMMA2 - 1}
+                    {&check_low}
+                    push {W1_RANGE + 1} dup 1 lt assert error_id {high_id}
+                    addi {HIGH_BITS_TABLE_ADDRESS} read_mem 1 pop 1
                 ));
-                self.check_at_most(two_gamma2 - 1, low_id);
-                self.e(format!(
-                    "push {} dup 1 lt assert error_id {high_id}",
-                    W1_RANGE + 1
-                ));
-                self.e(format!("addi {HIGH_BITS_TABLE_ADDRESS} read_mem 1 pop 1"));
                 if m < 3 {
-                    self.e(format!("place {}", 6 - 2 * m));
+                    groups.extend(triton_asm!(place { 6 - 2 * m }));
                 }
             }
             // _ *r w1_0 w1_1 w1_2 w1_3
-            self.e("push 64 mul add push 64 mul add push 64 mul add");
-            self.e(format!(
-                "push {} write_mem 1 pop 1 addi 4",
-                l.w1_groups + g as u64
+            groups.extend(triton_asm!(
+                push 64 mul add push 64 mul add push 64 mul add
+                push {l.w1_groups + g as u64} write_mem 1 pop 1
+                addi 4
             ));
         }
-        self.e("pop 1");
-        // The hints: a count of at most ω, then strictly increasing positions.
-        self.witness_address(SignatureWitness::HINT_COUNT_OFFSET);
-        self.e("read_mem 1 pop 1");
-        self.e(format!(
-            "push {} dup 1 lt assert error_id {}",
-            OMEGA + 1,
-            MlDsa44Verify::TOO_MANY_HINTS_ERROR_ID
-        ));
-        self.witness_address(SignatureWitness::HINTS_OFFSET);
-        self.e("push 0");
-        // _ count *hint lower
-        self.e(format!("call {}", self.label("hint_loop")));
-        self.e("pop 3");
+
         // The bytes of w1Encode, three per group.
-        for g in 0..K * N / 4 {
-            self.e(format!("push {} read_mem 1 pop 1", l.w1_groups + g as u64));
-            self.e("push 256 pick 1 div_mod pick 1 push 256 pick 1 div_mod pick 1");
-            self.e(format!(
-                "swap 2 push {} write_mem 3 pop 1",
-                l.w1_bytes + 3 * g as u64
-            ));
-        }
-        self.e("return");
+        let w1_bytes = (0..K * N / 4)
+            .flat_map(|g| {
+                triton_asm!(
+                    push {l.w1_groups + g as u64} read_mem 1 pop 1
+                    push 256 pick 1 div_mod pick 1
+                    push 256 pick 1 div_mod pick 1
+                    swap 2
+                    push {l.w1_bytes + 3 * g as u64} write_mem 3 pop 1
+                )
+            })
+            .collect_vec();
 
-        let order_id = MlDsa44Verify::HINTS_NOT_INCREASING_ERROR_ID;
-        self.e(format!("{}:", self.label("hint_loop")));
-        self.e("dup 2 push 0 eq skiz return");
-        self.e("dup 1 read_mem 1 pop 1");
-        // _ count *hint lower n
-        self.e(format!(
-            "push {} dup 1 lt assert error_id {order_id}",
-            K * N
-        ));
-        self.e(format!("dup 0 dup 2 push {} mul add", neg(1)));
-        self.e(format!(
-            "push {} swap 1 lt assert error_id {order_id}",
-            K * N
-        ));
-        self.e(format!("dup 0 call {}", self.label("apply_hint")));
-        self.e("addi 1 swap 1 pop 1 swap 1 addi 1 swap 1");
-        self.e(format!("pick 2 addi {} place 2 recurse", neg(1)));
+        triton_asm!(
+            {self.label("use_hint")}:
+                {&self.witness_address(SignatureWitness::W_OFFSET + 3)}
+                {&groups}
+                pop 1
+                // The hints: a count of at most ω, then strictly increasing
+                // positions.
+                {&self.witness_address(SignatureWitness::HINT_COUNT_OFFSET)}
+                read_mem 1 pop 1
+                push {OMEGA + 1} dup 1 lt
+                assert error_id {MlDsa44Verify::TOO_MANY_HINTS_ERROR_ID}
+                {&self.witness_address(SignatureWitness::HINTS_OFFSET)}
+                push 0
+                // _ count *hint lower
+                call {self.label("hint_loop")}
+                pop 3
+                {&w1_bytes}
+                return
 
-        // _ n → _, and w1[n] becomes (w1[n] ± 1) mod 44, by the sign of r0,
-        // in its group.
-        self.e(format!("{}:", self.label("apply_hint")));
-        self.e("dup 0");
-        self.witness_address(SignatureWitness::W_OFFSET);
-        self.e("add read_mem 1 pop 1 dup 1");
-        self.witness_address(SignatureWitness::E_OFFSET);
-        self.e("add read_mem 1 pop 1");
-        // _ n r e
-        self.e(format!("dup 0 push {W1_RANGE} eq"));
-        self.e(format!("dup 1 push {} mul pick 3 add", neg(two_gamma2)));
-        self.e(format!("pick 1 push {} mul add", neg(1)));
-        // _ n e r0, and r0 > 0 iff γ2 + 1 < r0 + γ2 + 1
-        self.e(format!("addi {} push {} lt", GAMMA2 + 1, GAMMA2 + 1));
-        self.e(format!("push 2 mul addi {}", neg(1)));
-        // _ n e delta
-        self.e(format!(
-            "pick 1 addi {HIGH_BITS_TABLE_ADDRESS} read_mem 1 pop 1"
-        ));
-        self.e(format!("dup 0 pick 2 add addi {W1_RANGE}"));
-        self.e(format!("push {W1_RANGE} swap 1 div_mod swap 1 pop 1"));
-        // _ n old new
-        self.e(format!("pick 1 push {} mul add", neg(1)));
-        self.e("pick 1 push 4 swap 1 div_mod");
-        // _ diff g (n mod 4)
-        self.e(format!(
-            "addi {} read_mem 1 pop 1 pick 2 mul",
-            HIGH_BITS_TABLE_ADDRESS + POWERS_OF_64_OFFSET
-        ));
-        self.e(format!("dup 1 addi {} read_mem 1 pop 1 add", l.w1_groups));
-        self.e(format!(
-            "pick 1 addi {} write_mem 1 pop 1 return",
-            l.w1_groups
-        ));
+            {self.label("hint_loop")}:
+                dup 2 push 0 eq
+                skiz return
+                dup 1 read_mem 1 pop 1
+                // _ count *hint lower n
+                push {K * N} dup 1 lt assert error_id {order_id}
+                dup 0 dup 2 push {neg(1)} mul add
+                push {K * N} swap 1 lt assert error_id {order_id}
+                dup 0
+                call {self.label("apply_hint")}
+                addi 1 swap 1 pop 1 swap 1 addi 1 swap 1
+                pick 2 addi {neg(1)} place 2
+                recurse
+
+            // _ n → _, and w1[n] becomes (w1[n] ± 1) mod 44, by the sign of
+            // r0, in its group.
+            {self.label("apply_hint")}:
+                dup 0
+                {&self.witness_address(SignatureWitness::W_OFFSET)}
+                add read_mem 1 pop 1
+                dup 1
+                {&self.witness_address(SignatureWitness::E_OFFSET)}
+                add read_mem 1 pop 1
+                // _ n r e
+                dup 0 push {W1_RANGE} eq
+                dup 1 push {neg(two_gamma2)} mul pick 3 add
+                pick 1 push {neg(1)} mul add
+                // _ n e r0, and r0 > 0 iff γ2 + 1 < r0 + γ2 + 1
+                addi {GAMMA2 + 1} push {GAMMA2 + 1} lt
+                push 2 mul addi {neg(1)}
+                // _ n e delta
+                pick 1 addi {HIGH_BITS_TABLE_ADDRESS} read_mem 1 pop 1
+                dup 0 pick 2 add addi {W1_RANGE}
+                push {W1_RANGE} swap 1 div_mod swap 1 pop 1
+                // _ n old new
+                pick 1 push {neg(1)} mul add
+                pick 1 push 4 swap 1 div_mod
+                // _ diff g (n mod 4)
+                addi {HIGH_BITS_TABLE_ADDRESS + POWERS_OF_64_OFFSET} read_mem 1 pop 1
+                pick 2 mul
+                dup 1 addi {l.w1_groups} read_mem 1 pop 1 add
+                pick 1 addi {l.w1_groups} write_mem 1 pop 1
+                return
+        )
     }
 
-    fn mu(&mut self) {
+    fn mu(&self) -> Vec<LabelledInstruction> {
         let l = self.layout;
-        let state = self.keccak.state_address();
-        self.e(format!("{}:", self.label("mu")));
-        self.zero(state, 200);
-        for lane in 0..8 {
-            self.key_address(ExpandedPublicKey::TR_OFFSET + 8 * lane + 7);
-            self.asm.read_mem(8);
-            self.e("pop 1");
-            let slices: Vec<u64> = (0..8).map(|j| self.keccak.slice_address(lane, j)).collect();
-            self.asm.store_seq(&slices);
-        }
-        // M' = 0 ‖ 0 ‖ message bytes, then 0x1f, then zeros, as bytes 64 to 111.
-        self.zero(l.message_bytes, 48);
-        self.e(format!(
-            "push 31 push {} write_mem 1 pop 1",
-            l.message_bytes + 42
-        ));
-        for i in 0..Digest::LEN {
-            let first = l.message_bytes + 2 + 8 * i as u64;
-            self.e(format!(
-                "push {} read_mem 1 pop 1 split",
-                l.message + i as u64
-            ));
-            // _ hi lo
-            self.bytes_of_word();
-            self.asm
-                .store_seq(&[first + 3, first + 2, first + 1, first]);
-            self.bytes_of_word();
-            self.asm
-                .store_seq(&[first + 7, first + 6, first + 5, first + 4]);
-        }
-        for lane in 8..14 {
-            self.absorb_lane(l.message_bytes + 8 * (lane as u64 - 8), lane, false);
-        }
-        self.xor_constant(SHAKE256_RATE / 8 - 1, 7, 0x80);
-        self.e(format!("call {} return", self.permute));
+        let tr = (0..8)
+            .flat_map(|lane| {
+                let slices = (0..8)
+                    .map(|j| self.keccak.slice_address(lane, j))
+                    .collect_vec();
+                triton_asm!(
+                    {&self.key_address(ExpandedPublicKey::TR_OFFSET + 8 * lane + 7)}
+                    {&load_words_from_memory_pop_pointer(8)}
+                    {&write_words_to_scattered_addresses(&slices)}
+                )
+            })
+            .collect_vec();
+        let message_bytes = (0..Digest::LEN)
+            .flat_map(|i| {
+                let first = l.message_bytes + 2 + 8 * i as u64;
+                triton_asm!(
+                    push {l.message + i as u64} read_mem 1 pop 1
+                    split
+                    // _ hi lo
+                    {&bytes_of_word()}
+                    {&write_words_to_scattered_addresses(&[first + 3, first + 2, first + 1, first])}
+                    {&bytes_of_word()}
+                    {&write_words_to_scattered_addresses(&[first + 7, first + 6, first + 5, first + 4])}
+                )
+            })
+            .collect_vec();
+        let absorb = (8..14)
+            .flat_map(|lane| {
+                self.keccak.absorb_lane_from_bytes(
+                    l.message_bytes + 8 * (lane as u64 - 8),
+                    lane,
+                    false,
+                )
+            })
+            .collect_vec();
+        triton_asm!(
+            {self.label("mu")}:
+                {&write_zeros_to_memory(self.keccak.state_address(), 200)}
+                {&tr}
+                // M' = 0 ‖ 0 ‖ message bytes, then 0x1f, then zeros, as bytes
+                // 64 to 111.
+                {&write_zeros_to_memory(l.message_bytes, 48)}
+                push 31 push {l.message_bytes + 42} write_mem 1 pop 1
+                {&message_bytes}
+                {&absorb}
+                {&self.keccak.xor_byte(SHAKE256_RATE - 1, 0x80)}
+                call {self.permute}
+                return
+        )
     }
 
-    fn commitment(&mut self) {
+    fn commitment(&self) -> Vec<LabelledInstruction> {
         let l = self.layout;
-        self.e(format!("{}:", self.label("commitment")));
+        let mut instructions = triton_asm!({self.label("commitment")}:);
         // The state holds μ in lanes 0 to 7. The first block is μ followed by
         // the first 72 bytes of w1Encode(w1).
         for lane in 17..25 {
             for j in 0..8 {
                 let address = self.keccak.slice_address(lane, j);
-                self.e(format!("push 0 push {address} write_mem 1 pop 1"));
+                instructions.extend(triton_asm!(push 0 push {address} write_mem 1 pop 1));
             }
         }
         let rate_lanes = SHAKE256_RATE / 8;
         for lane in 8..rate_lanes {
-            self.absorb_lane(l.w1_bytes + 8 * (lane as u64 - 8), lane, false);
+            instructions.extend(self.keccak.absorb_lane_from_bytes(
+                l.w1_bytes + 8 * (lane as u64 - 8),
+                lane,
+                false,
+            ));
         }
-        self.e(format!("call {}", self.permute));
+        instructions.extend(triton_asm!(call {self.permute}));
         let num_bytes = K * N * 6 / 8;
         let mut offset = 8 * (rate_lanes - 8);
         // The padding goes into a block that w1Encode leaves partly empty.
@@ -780,34 +761,38 @@ impl Generator {
         while offset < num_bytes {
             let lanes = ((num_bytes - offset) / 8).min(rate_lanes);
             for lane in 0..lanes {
-                self.absorb_lane(l.w1_bytes + (offset + 8 * lane) as u64, lane, true);
+                instructions.extend(self.keccak.absorb_lane_from_bytes(
+                    l.w1_bytes + (offset + 8 * lane) as u64,
+                    lane,
+                    true,
+                ));
             }
             offset += 8 * lanes;
-            if lanes == rate_lanes {
-                self.e(format!("call {}", self.permute));
-            } else {
-                // Padding: 0x1f after the last byte, 0x80 in the rate's last byte.
-                for j in 0..5 {
-                    self.xor_constant(lanes, j, 1);
-                }
-                self.xor_constant(rate_lanes - 1, 7, 0x80);
-                self.e(format!("call {}", self.permute));
+            if lanes < rate_lanes {
+                instructions.extend(self.keccak.pad(
+                    SHAKE256_RATE,
+                    8 * lanes,
+                    SHAKE256_PADDING_BYTE,
+                ));
             }
+            instructions.extend(triton_asm!(call {self.permute}));
         }
         // c̃' is the first 32 bytes, lanes 0 to 3, compared slice by slice.
         let id = MlDsa44Verify::C_TILDE_MISMATCH_ERROR_ID;
         for lane in 0..4 {
-            self.witness_address(SignatureWitness::C_TILDE_OFFSET + 8 * lane + 7);
-            self.asm.read_mem(8);
-            self.e("pop 1");
+            instructions.extend(triton_asm!(
+                {&self.witness_address(SignatureWitness::C_TILDE_OFFSET + 8 * lane + 7)}
+                {&load_words_from_memory_pop_pointer(8)}
+            ));
             for j in 0..8 {
                 let address = self.keccak.slice_address(lane, j);
-                self.e(format!(
-                    "push {address} read_mem 1 pop 1 eq assert error_id {id}"
+                instructions.extend(triton_asm!(
+                    push {address} read_mem 1 pop 1 eq assert error_id {id}
                 ));
             }
         }
-        self.e("return");
+        instructions.extend(triton_asm!(return));
+        instructions
     }
 }
 
@@ -841,23 +826,25 @@ impl BasicSnippet for MlDsa44Verify {
             permute,
             check_tables,
             failures: vec![],
-            asm: Asm::default(),
         };
-        generator.entry();
-        generator.check_key();
-        generator.challenge();
-        generator.range_checks();
-        generator.powers();
-        generator.sample_in_ball();
-        generator.identity();
-        generator.use_hint();
-        generator.mu();
-        generator.commitment();
+        let mut instructions = [
+            generator.entry(),
+            generator.check_key(),
+            generator.challenge(),
+            generator.range_checks(),
+            generator.powers(),
+            generator.sample_in_ball(),
+            generator.identity(),
+            generator.use_hint(),
+            generator.mu(),
+            generator.commitment(),
+        ]
+        .concat();
         for error_id in generator.failures.clone() {
             let label = generator.label(&format!("fail_{error_id}"));
-            generator.e(format!("{label}: push 0 assert error_id {error_id}"));
+            instructions.extend(triton_asm!({label}: push 0 assert error_id {error_id}));
         }
-        generator.asm.into_instructions()
+        instructions
     }
 }
 

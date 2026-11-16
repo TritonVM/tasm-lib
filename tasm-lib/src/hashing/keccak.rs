@@ -1,4 +1,6 @@
-//! Keccak-f\[1600\] and SHAKE, with each 64-bit lane held as eight *slices*.
+//! Keccak-f\[1600\] and the functions of FIPS 202 built on it, SHA3-256,
+//! SHA3-512, SHAKE128 and SHAKE256, with each 64-bit lane held as eight
+//! *slices*.
 //!
 //! Slice `j` of a lane is the byte whose bit `m` is bit `j + 8·m` of the lane.
 //! The steps θ, χ and ι act on every bit position alike, so they act on slices
@@ -12,7 +14,9 @@
 //! Triton assembly is tested, and the helpers with which a prover prepares
 //! its input.
 
+pub mod hash;
 pub mod keccak_f1600;
+pub(crate) mod sponge;
 pub mod tables;
 
 /// The round constants of ι.
@@ -60,6 +64,73 @@ pub const SHAKE128_RATE: usize = 168;
 
 /// The rate of SHAKE256, in bytes.
 pub const SHAKE256_RATE: usize = 136;
+
+/// A function of FIPS 202: a sponge on Keccak-f\[1600\] with a rate and a
+/// first padding byte.
+///
+/// The first padding byte holds the domain-separation bits, `01` for SHA3 and
+/// `1111` for SHAKE, followed by the first bit of `pad10*1`. Its last bit is
+/// `0x80` in the rate's last byte.
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
+pub enum KeccakFunction {
+    Sha3_256,
+    Sha3_512,
+    Shake128,
+    Shake256,
+}
+
+impl KeccakFunction {
+    pub const ALL: [Self; 4] = [
+        Self::Sha3_256,
+        Self::Sha3_512,
+        Self::Shake128,
+        Self::Shake256,
+    ];
+
+    /// The rate, in bytes.
+    pub const fn rate(self) -> usize {
+        match self {
+            Self::Sha3_256 => 136,
+            Self::Sha3_512 => 72,
+            Self::Shake128 => SHAKE128_RATE,
+            Self::Shake256 => SHAKE256_RATE,
+        }
+    }
+
+    /// The first padding byte.
+    pub const fn padding_byte(self) -> u8 {
+        match self {
+            Self::Sha3_256 | Self::Sha3_512 => 0x06,
+            Self::Shake128 | Self::Shake256 => 0x1f,
+        }
+    }
+
+    /// The length of the digest in bytes, for a hash function; `None` for an
+    /// extendable-output function, whose caller chooses the length.
+    pub const fn digest_len(self) -> Option<usize> {
+        match self {
+            Self::Sha3_256 => Some(32),
+            Self::Sha3_512 => Some(64),
+            Self::Shake128 | Self::Shake256 => None,
+        }
+    }
+
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::Sha3_256 => "sha3_256",
+            Self::Sha3_512 => "sha3_512",
+            Self::Shake128 => "shake128",
+            Self::Shake256 => "shake256",
+        }
+    }
+
+    /// The function's `output_len` bytes of output on `input`.
+    pub fn hash(self, input: &[u8], output_len: usize) -> Vec<u8> {
+        let mut sponge = Shake::with_padding(self.rate(), self.padding_byte());
+        sponge.absorb(input);
+        sponge.squeeze(output_len)
+    }
+}
 
 /// Keccak-f\[1600\] on lanes indexed `x + 5·y`.
 pub fn keccak_f1600(state: &mut [u64; 25]) {
@@ -113,20 +184,29 @@ pub fn deinterleave(slices: [u8; 8]) -> u64 {
     lane
 }
 
-/// The extendable-output function SHAKE with the given rate in bytes.
+/// The sponge on Keccak-f\[1600\] with the given rate in bytes and first
+/// padding byte (see [`KeccakFunction`]), SHAKE unless the padding byte says
+/// otherwise.
 #[derive(Debug, Clone)]
 pub struct Shake {
     state: [u64; 25],
     rate: usize,
+    padding_byte: u8,
     position: usize,
     squeezing: bool,
 }
 
 impl Shake {
+    /// SHAKE with the given rate in bytes.
     pub fn new(rate: usize) -> Self {
+        Self::with_padding(rate, 0x1f)
+    }
+
+    pub fn with_padding(rate: usize, padding_byte: u8) -> Self {
         Self {
             state: [0; 25],
             rate,
+            padding_byte,
             position: 0,
             squeezing: false,
         }
@@ -158,7 +238,7 @@ impl Shake {
 
     pub fn squeeze(&mut self, len: usize) -> Vec<u8> {
         if !self.squeezing {
-            self.xor_byte(self.position, 0x1f);
+            self.xor_byte(self.position, self.padding_byte);
             self.xor_byte(self.rate - 1, 0x80);
             keccak_f1600(&mut self.state);
             self.position = 0;
@@ -203,6 +283,25 @@ mod tests {
     fn shake256_of_empty_string_matches_known_answer() {
         let output = shake256(&[], 8);
         assert_eq!([0x46, 0xb9, 0xdd, 0x2b, 0x0b, 0xa8, 0x8d, 0x13], output[..]);
+    }
+
+    /// The functions on the empty string, from NIST's examples.
+    #[macro_rules_attr::apply(test)]
+    fn functions_of_empty_string_match_known_answers() {
+        let hex = |bytes: Vec<u8>| bytes.iter().map(|b| format!("{b:02x}")).collect::<String>();
+        assert_eq!(
+            "a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a",
+            hex(KeccakFunction::Sha3_256.hash(&[], 32))
+        );
+        assert_eq!(
+            "a69f73cca23a9ac5c8b567dc185a756e97c982164fe25859e0d1dcc1475c80a6\
+             15b2123af1f5f94c11e3e9402c3ac558f500199d95b6d3e301758586281dcd26",
+            hex(KeccakFunction::Sha3_512.hash(&[], 64))
+        );
+        assert_eq!(
+            "7f9c2ba4e88f827d616045507605853ed73b8093f6efbc88eb1a6eacfa66ef26",
+            hex(KeccakFunction::Shake128.hash(&[], 32))
+        );
     }
 
     #[macro_rules_attr::apply(proptest)]
