@@ -21,7 +21,7 @@ pub const KECCAK_TABLES_ADDRESS: u64 = (1 << 32) - 8192;
 
 /// The offset of the rotation tables: entry `256·(t-1) + v` is the byte `v`
 /// rotated left by `t` bits, for `t` from 1 to 7.
-pub const ROTATION_OFFSET: u64 = 0;
+pub(crate) const ROTATION_OFFSET: u64 = 0;
 
 /// The offset of the transposition tables. For a byte `v` in position `m` of
 /// eight bytes, word `256·m + v` is `lo_m(v) + 2^32·hi_m(v)`, where
@@ -38,24 +38,24 @@ pub const ROTATION_OFFSET: u64 = 0;
 /// The words of positions 0 to 3 have their bits in distinct places, and so do
 /// those of positions 4 to 7. So each of the two sums is their bitwise or, of
 /// which the high word is at most `0xf0f0f0f0`, and neither wraps modulo p.
-pub const TRANSPOSITION_OFFSET: u64 = 7 * 256;
+pub(crate) const TRANSPOSITION_OFFSET: u64 = 7 * 256;
 
 /// The number of table words, a multiple of the sponge's rate.
 pub const NUM_TABLE_WORDS: usize = TRANSPOSITION_OFFSET as usize + 8 * 256;
 
 /// The address of the rotation table for a rotation by `t` bits.
-pub fn rotation_table_address(t: u32) -> u64 {
+pub(crate) fn rotation_table_address(t: u32) -> u64 {
     assert!((1..8).contains(&t));
     KECCAK_TABLES_ADDRESS + ROTATION_OFFSET + 256 * u64::from(t - 1)
 }
 
 /// The address of the transposition table for byte position `m`.
-pub fn transposition_table_address(m: usize) -> u64 {
+pub(crate) fn transposition_table_address(m: usize) -> u64 {
     KECCAK_TABLES_ADDRESS + TRANSPOSITION_OFFSET + 256 * m as u64
 }
 
 /// The table words, in order.
-pub fn table_words() -> Vec<BFieldElement> {
+pub(crate) fn table_words() -> Vec<BFieldElement> {
     let mut words = vec![bfe!(0); NUM_TABLE_WORDS];
     for t in 1..8u32 {
         for v in 0..256u32 {
@@ -85,7 +85,7 @@ pub fn insert_tables(memory: &mut std::collections::HashMap<BFieldElement, BFiel
 
 /// The first five elements that Tip5's sponge squeezes after absorbing the
 /// table words.
-pub fn table_digest() -> [BFieldElement; Digest::LEN] {
+pub(crate) fn table_digest() -> [BFieldElement; Digest::LEN] {
     let mut sponge = Tip5::init();
     for chunk in table_words().chunks(tip5::RATE) {
         sponge.absorb(chunk.try_into().unwrap());
@@ -102,7 +102,7 @@ pub fn table_digest() -> [BFieldElement; Digest::LEN] {
 ///
 /// ### Post-conditions
 ///
-/// - every word of the tables equals [`table_words`]
+/// - every word of the tables equals the word that [`insert_tables`] writes
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct CheckKeccakTables;
 

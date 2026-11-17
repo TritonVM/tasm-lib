@@ -314,7 +314,6 @@ mod tests {
 
     use super::super::deinterleave;
     use super::super::interleave;
-    use super::super::keccak_f1600;
     use super::super::tables::CheckKeccakTables;
     use super::super::tables::insert_tables;
     use super::*;
@@ -356,7 +355,7 @@ mod tests {
     }
 
     #[macro_rules_attr::apply(proptest(cases = 4))]
-    fn permutes_like_the_reference(state: [u64; 25], #[strategy(1usize..3)] perms: usize) {
+    fn permutation_complies_with_fips_202(state: [u64; 25], #[strategy(1usize..3)] perms: usize) {
         let (code, keccak) = program(perms);
         let nondeterminism = NonDeterminism::default().with_ram(initial_memory(&keccak, &state));
         let mut vm_state =
@@ -365,7 +364,7 @@ mod tests {
 
         let mut expected = state;
         for _ in 0..perms {
-            keccak_f1600(&mut expected);
+            keccak::f1600(&mut expected);
         }
         for (lane, value) in expected.iter().enumerate() {
             let slices: [u64; 8] =

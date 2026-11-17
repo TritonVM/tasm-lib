@@ -266,8 +266,120 @@ pub fn shake256(input: &[u8], len: usize) -> Vec<u8> {
 
 #[cfg(test)]
 mod tests {
+    use proptest::collection::vec;
+    use sha3::digest::ExtendableOutput;
+
     use super::*;
     use crate::test_prelude::*;
+
+    /// The function's `output_len` bytes of output on `input`, computed by the
+    /// `sha3` crate, against which the code here is tested for compliance with
+    /// FIPS 202.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `function` is SHA3 and `output_len` is not its digest length.
+    pub(super) fn fips_202(function: KeccakFunction, input: &[u8], output_len: usize) -> Vec<u8> {
+        let mut output = vec![0; output_len];
+        match function {
+            KeccakFunction::Sha3_256 => {
+                output.copy_from_slice(&<sha3::Sha3_256 as sha3::Digest>::digest(input))
+            }
+            KeccakFunction::Sha3_512 => {
+                output.copy_from_slice(&<sha3::Sha3_512 as sha3::Digest>::digest(input))
+            }
+            KeccakFunction::Shake128 => sha3::Shake128::digest_xof(input, &mut output),
+            KeccakFunction::Shake256 => sha3::Shake256::digest_xof(input, &mut output),
+        }
+        output
+    }
+
+    fn output_len(function: KeccakFunction, shake_len: usize) -> usize {
+        function.digest_len().unwrap_or(shake_len)
+    }
+
+    #[macro_rules_attr::apply(proptest)]
+    fn permutation_complies_with_fips_202(state: [u64; 25]) {
+        let mut expected = state;
+        keccak::f1600(&mut expected);
+        let mut actual = state;
+        keccak_f1600(&mut actual);
+        prop_assert_eq!(expected, actual);
+    }
+
+    #[macro_rules_attr::apply(proptest)]
+    fn functions_comply_with_fips_202(
+        #[strategy(0usize..4)] function: usize,
+        #[strategy(vec(arb(), 0..1000))] input: Vec<u8>,
+        #[strategy(0usize..1000)] shake_len: usize,
+    ) {
+        let function = KeccakFunction::ALL[function];
+        let output_len = output_len(function, shake_len);
+        prop_assert_eq!(
+            fips_202(function, &input, output_len),
+            function.hash(&input, output_len)
+        );
+    }
+
+    /// Every input length up to three blocks and one byte, and so every
+    /// position of the padding in a block.
+    #[macro_rules_attr::apply(test)]
+    fn functions_comply_with_fips_202_on_every_length() {
+        for function in KeccakFunction::ALL {
+            let rate = function.rate();
+            for n in 0..=3 * rate + 1 {
+                let input = (0..n).map(|i| (i * 37 + 11) as u8).collect::<Vec<_>>();
+                let output_len = output_len(function, 2 * rate + 1);
+                assert_eq!(
+                    fips_202(function, &input, output_len),
+                    function.hash(&input, output_len),
+                    "{function:?} {n}"
+                );
+            }
+        }
+    }
+
+    #[macro_rules_attr::apply(proptest)]
+    fn shake256_complies_with_fips_202(
+        #[strategy(vec(arb(), 0..1000))] input: Vec<u8>,
+        #[strategy(0usize..1000)] len: usize,
+    ) {
+        prop_assert_eq!(
+            fips_202(KeccakFunction::Shake256, &input, len),
+            shake256(&input, len)
+        );
+    }
+
+    /// [`Shake`] absorbs and squeezes in pieces of lengths `absorb_lens` and
+    /// `squeeze_lens`, the former repeated until the input runs out.
+    #[macro_rules_attr::apply(proptest)]
+    fn shake_in_pieces_complies_with_fips_202(
+        #[strategy(0usize..3)] constructor: usize,
+        #[strategy(vec(arb(), 0..1000))] input: Vec<u8>,
+        #[strategy(vec(1usize..400, 1..5))] absorb_lens: Vec<usize>,
+        #[strategy(vec(0usize..400, 1..5))] squeeze_lens: Vec<usize>,
+    ) {
+        let (function, mut shake) = [
+            (KeccakFunction::Shake128, Shake::shake128()),
+            (KeccakFunction::Shake256, Shake::shake256()),
+            (KeccakFunction::Shake128, Shake::new(SHAKE128_RATE)),
+        ][constructor]
+            .clone();
+        let mut rest = &input[..];
+        for &len in absorb_lens.iter().cycle() {
+            if rest.is_empty() {
+                break;
+            }
+            let (piece, tail) = rest.split_at(len.min(rest.len()));
+            shake.absorb(piece);
+            rest = tail;
+        }
+        let output = squeeze_lens
+            .iter()
+            .flat_map(|&len| shake.squeeze(len))
+            .collect_vec();
+        prop_assert_eq!(fips_202(function, &input, output.len()), output);
+    }
 
     /// The permutation of the zero state, from the Keccak team's test vectors.
     #[macro_rules_attr::apply(test)]

@@ -1,8 +1,97 @@
-//! SHA3-256, SHA3-512, SHAKE128 and SHAKE256 on byte strings in memory.
+//! SHA3-256, SHA3-512, SHAKE128 and SHAKE256 on byte strings in memory, each
+//! with a dedicated snippet for an input of any length and one for an input of
+//! a length fixed by the snippet.
 //!
-//! A byte string of length `n` is held as `⌈n/4⌉` u32 words, little-endian:
-//! byte `i` is byte `i mod 4` of word `⌊i/4⌋`. The bytes of the last word from
-//! `n` on are zero.
+//! A byte string `b_0 … b_{n-1}` is held as `⌈n/4⌉` field elements, of which
+//! element `w` is the integer `Σ_{k<4} b_{4w+k}·256^k`, with `b_i = 0` for
+//! `i ≥ n`. Each element is thus below `2^32`, and the snippets crash on an
+//! element that is not, or on one with a nonzero `b_i` for `i ≥ n`, with the
+//! error ID `NONZERO_PADDING_ERROR_ID` of the snippet.
+//!
+//! Every snippet here hashes the `input_len` bytes at `*input` to the
+//! `output_len` bytes at `*output`. Lengths count bytes.
+//!
+//! ### Pre-conditions
+//!
+//! - [`CheckKeccakTables`](super::tables::CheckKeccakTables) ran before
+//! - `*input` points to `⌈input_len/4⌉` field elements
+//!
+//! ### Post-conditions
+//!
+//! - `*output` points to `⌈output_len/4⌉` field elements, which hold the
+//!   function's `output_len` bytes of output on the `input_len` bytes at
+//!   `*input`, and which lie in memory that the snippet allocates with
+//!   [`DynMalloc`]
+//!
+//! The snippets use the state of their [`KeccakF1600`]. Those for an input of
+//! any length also use a static buffer of `rate/4 + 1` words.
+//!
+//! ### Example
+//!
+//! A program that computes SHA3-256 of the 3-byte string `abc` consists of:
+//!
+//! 1. a [`KeccakF1600`], which allocates the permutation's state in the
+//!    program's static memory, and which every Keccak snippet of the program
+//!    can share;
+//! 2. a call to [`CheckKeccakTables`](super::tables::CheckKeccakTables), once,
+//!    before the first call to a hash snippet;
+//! 3. a call to [`Sha3_256`] on `*input` and `input_len`.
+//!
+//! The prover puts the tables into non-deterministic memory with
+//! [`insert_tables`](super::tables::insert_tables). The caller's own
+//! non-deterministic memory must avoid the `NUM_TABLE_WORDS` words from
+//! [`KECCAK_TABLES_ADDRESS`](super::tables::KECCAK_TABLES_ADDRESS) on.
+//!
+//! The input `abc` is the field element `0x61 + 0x62·256 + 0x63·256²`, here
+//! at address 0. The digest is 32 bytes, so 8 field elements from `*digest`
+//! on, of which element `w` holds bytes `4w` to `4w + 3`.
+//!
+//! ```
+//! use std::collections::HashMap;
+//!
+//! use tasm_lib::hashing::keccak::hash::Sha3_256;
+//! use tasm_lib::hashing::keccak::keccak_f1600::KeccakF1600;
+//! use tasm_lib::hashing::keccak::tables::CheckKeccakTables;
+//! use tasm_lib::hashing::keccak::tables::insert_tables;
+//! use tasm_lib::prelude::*;
+//! use tasm_lib::triton_vm::prelude::*;
+//!
+//! let mut library = Library::new();
+//! let keccak = KeccakF1600::allocate(&mut library);
+//! let check_tables = library.import(Box::new(CheckKeccakTables));
+//! let sha3_256 = library.import(Box::new(Sha3_256::new(keccak)));
+//! let code = triton_asm!(
+//!     call {check_tables}
+//!     push 0              // _ *input
+//!     push 3              // _ *input input_len
+//!     call {sha3_256}     // _ *digest 32
+//!     halt
+//!     {&library.all_imports()}
+//! );
+//!
+//! let mut ram = HashMap::new();
+//! insert_tables(&mut ram);
+//! ram.insert(bfe!(0), bfe!(u32::from_le_bytes(*b"abc\0")));
+//!
+//! let nondeterminism = NonDeterminism::default().with_ram(ram);
+//! let mut vm_state = VMState::new(Program::new(&code), PublicInput::default(), nondeterminism);
+//! vm_state.run().unwrap();
+//!
+//! let [.., digest_pointer, digest_len] = vm_state.op_stack.stack[..] else {
+//!     unreachable!()
+//! };
+//! assert_eq!(bfe!(32), digest_len);
+//! let digest: Vec<u8> = (0..8)
+//!     .flat_map(|w| {
+//!         let element = vm_state.ram[&(digest_pointer + bfe!(w))];
+//!         u32::try_from(element.value()).unwrap().to_le_bytes()
+//!     })
+//!     .collect();
+//! assert_eq!(
+//!     "3a985da74fe225b2045c172d6bd390bd855f086e3e9d525b46bfe24511431532",
+//!     hex::encode(digest),
+//! );
+//! ```
 
 use triton_vm::prelude::*;
 
@@ -36,7 +125,7 @@ fn words_of_bytes() -> Vec<LabelledInstruction> {
 /// AFTER:  _ *output [output_len: u32]
 /// ```
 ///
-/// The lengths count bytes, and the strings are u32 words (see
+/// The lengths count bytes, and the strings are field elements (see
 /// [the module](self)). The output lies in memory that the snippet allocates
 /// with [`DynMalloc`].
 ///
@@ -56,15 +145,15 @@ fn words_of_bytes() -> Vec<LabelledInstruction> {
 /// The snippet crashes if a word of the input is not a u32 or if a byte of
 /// the last word from `input_len` on is not zero.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
-pub struct KeccakHash {
+pub(crate) struct KeccakHash {
     function: KeccakFunction,
     keccak: KeccakF1600,
 }
 
 impl KeccakHash {
-    pub const NONZERO_PADDING_ERROR_ID: i128 = 641;
+    pub(crate) const NONZERO_PADDING_ERROR_ID: i128 = 641;
 
-    pub fn new(function: KeccakFunction, keccak: KeccakF1600) -> Self {
+    pub(crate) fn new(function: KeccakFunction, keccak: KeccakF1600) -> Self {
         Self { function, keccak }
     }
 }
@@ -214,7 +303,7 @@ impl BasicSnippet for KeccakHash {
 /// AFTER:  _ *output
 /// ```
 ///
-/// The strings are u32 words (see [the module](self)). The output lies in
+/// The strings are field elements (see [the module](self)). The output lies in
 /// memory that the snippet allocates with [`DynMalloc`].
 ///
 /// The snippet uses the state of its [`KeccakF1600`].
@@ -232,7 +321,7 @@ impl BasicSnippet for KeccakHash {
 /// The snippet crashes if a word of the input is not a u32 or if a byte of
 /// the last word from `input_len` on is not zero.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
-pub struct KeccakHashStaticSize {
+pub(crate) struct KeccakHashStaticSize {
     function: KeccakFunction,
     keccak: KeccakF1600,
     input_len: usize,
@@ -240,12 +329,12 @@ pub struct KeccakHashStaticSize {
 }
 
 impl KeccakHashStaticSize {
-    pub const NONZERO_PADDING_ERROR_ID: i128 = 642;
+    pub(crate) const NONZERO_PADDING_ERROR_ID: i128 = 642;
 
     /// # Panics
     ///
     /// Panics if `function` is SHA3 and `output_len` is not its digest length.
-    pub fn new(
+    pub(crate) fn new(
         function: KeccakFunction,
         keccak: KeccakF1600,
         input_len: usize,
@@ -413,6 +502,141 @@ impl BasicSnippet for KeccakHashStaticSize {
     }
 }
 
+/// A snippet that is `KeccakHash` or `KeccakHashStaticSize` for one
+/// [function](KeccakFunction), with the same entrypoint and code.
+macro_rules! dedicated_snippet {
+    (
+        $(#[$doc:meta])*
+        $name:ident($inner:ident) = |$($arg:ident: $ty:ty),*| $construct:expr
+    ) => {
+        $(#[$doc])*
+        #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
+        pub struct $name($inner);
+
+        impl $name {
+            pub const NONZERO_PADDING_ERROR_ID: i128 = $inner::NONZERO_PADDING_ERROR_ID;
+
+            pub fn new($($arg: $ty),*) -> Self {
+                Self($construct)
+            }
+        }
+
+        impl BasicSnippet for $name {
+            fn parameters(&self) -> Vec<(DataType, String)> {
+                self.0.parameters()
+            }
+
+            fn return_values(&self) -> Vec<(DataType, String)> {
+                self.0.return_values()
+            }
+
+            fn entrypoint(&self) -> String {
+                self.0.entrypoint()
+            }
+
+            fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
+                self.0.code(library)
+            }
+        }
+    };
+}
+
+dedicated_snippet! {
+    /// SHA3-256 of a byte string of any length.
+    ///
+    /// ```text
+    /// BEFORE: _ *input [input_len: u32]
+    /// AFTER:  _ *digest [32: u32]
+    /// ```
+    Sha3_256(KeccakHash) = |keccak: KeccakF1600|
+        KeccakHash::new(KeccakFunction::Sha3_256, keccak)
+}
+
+dedicated_snippet! {
+    /// SHA3-256 of a byte string of length `input_len`, fixed by the snippet.
+    ///
+    /// ```text
+    /// BEFORE: _ *input
+    /// AFTER:  _ *digest
+    /// ```
+    ///
+    /// The digest is 32 bytes long.
+    Sha3_256StaticSize(KeccakHashStaticSize) = |keccak: KeccakF1600, input_len: usize|
+        KeccakHashStaticSize::new(KeccakFunction::Sha3_256, keccak, input_len, 32)
+}
+
+dedicated_snippet! {
+    /// SHA3-512 of a byte string of any length.
+    ///
+    /// ```text
+    /// BEFORE: _ *input [input_len: u32]
+    /// AFTER:  _ *digest [64: u32]
+    /// ```
+    Sha3_512(KeccakHash) = |keccak: KeccakF1600|
+        KeccakHash::new(KeccakFunction::Sha3_512, keccak)
+}
+
+dedicated_snippet! {
+    /// SHA3-512 of a byte string of length `input_len`, fixed by the snippet.
+    ///
+    /// ```text
+    /// BEFORE: _ *input
+    /// AFTER:  _ *digest
+    /// ```
+    ///
+    /// The digest is 64 bytes long.
+    Sha3_512StaticSize(KeccakHashStaticSize) = |keccak: KeccakF1600, input_len: usize|
+        KeccakHashStaticSize::new(KeccakFunction::Sha3_512, keccak, input_len, 64)
+}
+
+dedicated_snippet! {
+    /// SHAKE128 of a byte string of any length, with an output of any length.
+    ///
+    /// ```text
+    /// BEFORE: _ *input [input_len: u32] [output_len: u32]
+    /// AFTER:  _ *output [output_len: u32]
+    /// ```
+    Shake128(KeccakHash) = |keccak: KeccakF1600|
+        KeccakHash::new(KeccakFunction::Shake128, keccak)
+}
+
+dedicated_snippet! {
+    /// SHAKE128 of a byte string of length `input_len`, with an output of
+    /// length `output_len`, both fixed by the snippet.
+    ///
+    /// ```text
+    /// BEFORE: _ *input
+    /// AFTER:  _ *output
+    /// ```
+    Shake128StaticSize(KeccakHashStaticSize) =
+        |keccak: KeccakF1600, input_len: usize, output_len: usize|
+        KeccakHashStaticSize::new(KeccakFunction::Shake128, keccak, input_len, output_len)
+}
+
+dedicated_snippet! {
+    /// SHAKE256 of a byte string of any length, with an output of any length.
+    ///
+    /// ```text
+    /// BEFORE: _ *input [input_len: u32] [output_len: u32]
+    /// AFTER:  _ *output [output_len: u32]
+    /// ```
+    Shake256(KeccakHash) = |keccak: KeccakF1600|
+        KeccakHash::new(KeccakFunction::Shake256, keccak)
+}
+
+dedicated_snippet! {
+    /// SHAKE256 of a byte string of length `input_len`, with an output of
+    /// length `output_len`, both fixed by the snippet.
+    ///
+    /// ```text
+    /// BEFORE: _ *input
+    /// AFTER:  _ *output
+    /// ```
+    Shake256StaticSize(KeccakHashStaticSize) =
+        |keccak: KeccakF1600, input_len: usize, output_len: usize|
+        KeccakHashStaticSize::new(KeccakFunction::Shake256, keccak, input_len, output_len)
+}
+
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
@@ -421,6 +645,7 @@ mod tests {
 
     use super::super::tables::CheckKeccakTables;
     use super::super::tables::insert_tables;
+    use super::super::tests::fips_202;
     use super::*;
     use crate::test_prelude::*;
 
@@ -475,6 +700,36 @@ mod tests {
             .collect()
     }
 
+    /// The dedicated snippet for `function` of an input of any length.
+    fn dedicated(function: KeccakFunction, keccak: KeccakF1600) -> Box<dyn BasicSnippet> {
+        match function {
+            KeccakFunction::Sha3_256 => Box::new(Sha3_256::new(keccak)),
+            KeccakFunction::Sha3_512 => Box::new(Sha3_512::new(keccak)),
+            KeccakFunction::Shake128 => Box::new(Shake128::new(keccak)),
+            KeccakFunction::Shake256 => Box::new(Shake256::new(keccak)),
+        }
+    }
+
+    /// The dedicated snippet for `function` of an input of length `input_len`,
+    /// with an output of length `output_len` if `function` is SHAKE.
+    fn dedicated_static_size(
+        function: KeccakFunction,
+        keccak: KeccakF1600,
+        input_len: usize,
+        output_len: usize,
+    ) -> Box<dyn BasicSnippet> {
+        match function {
+            KeccakFunction::Sha3_256 => Box::new(Sha3_256StaticSize::new(keccak, input_len)),
+            KeccakFunction::Sha3_512 => Box::new(Sha3_512StaticSize::new(keccak, input_len)),
+            KeccakFunction::Shake128 => {
+                Box::new(Shake128StaticSize::new(keccak, input_len, output_len))
+            }
+            KeccakFunction::Shake256 => {
+                Box::new(Shake256StaticSize::new(keccak, input_len, output_len))
+            }
+        }
+    }
+
     fn hash_dynamic(
         function: KeccakFunction,
         input: &[u8],
@@ -485,7 +740,7 @@ mod tests {
             arguments.push(output_len as u64);
         }
         let state = run(
-            |keccak| Box::new(KeccakHash::new(function, keccak)),
+            |keccak| dedicated(function, keccak),
             &arguments,
             &to_words(input),
         )
@@ -503,11 +758,7 @@ mod tests {
     ) -> Vec<BFieldElement> {
         let input_len = input.len();
         let state = run(
-            |keccak| {
-                Box::new(KeccakHashStaticSize::new(
-                    function, keccak, input_len, output_len,
-                ))
-            },
+            |keccak| dedicated_static_size(function, keccak, input_len, output_len),
             &[INPUT_ADDRESS],
             &to_words(input),
         )
@@ -516,12 +767,8 @@ mod tests {
         output_words(&state, output, output_len)
     }
 
-    fn assert_both_hash_like_the_reference(
-        function: KeccakFunction,
-        input: &[u8],
-        output_len: usize,
-    ) {
-        let expected = to_words(&function.hash(input, output_len));
+    fn assert_both_comply_with_fips_202(function: KeccakFunction, input: &[u8], output_len: usize) {
+        let expected = to_words(&fips_202(function, input, output_len));
         let n = input.len();
         assert_eq!(
             expected,
@@ -540,28 +787,28 @@ mod tests {
     }
 
     #[macro_rules_attr::apply(proptest(cases = 8))]
-    fn hash_like_the_reference(
+    fn hash_complies_with_fips_202(
         #[strategy(0usize..4)] function: usize,
-        #[strategy(vec(arb(), 0..400))] input: Vec<u8>,
+        #[strategy(vec(arb(), 0..600))] input: Vec<u8>,
         #[strategy(0usize..400)] shake_len: usize,
     ) {
         let function = KeccakFunction::ALL[function];
-        assert_both_hash_like_the_reference(function, &input, output_len(function, shake_len));
+        assert_both_comply_with_fips_202(function, &input, output_len(function, shake_len));
     }
 
     /// Every length next to a boundary of a word, a lane or a block.
     #[macro_rules_attr::apply(test)]
-    fn hash_like_the_reference_at_boundaries() {
+    fn hash_complies_with_fips_202_at_boundaries() {
         for function in KeccakFunction::ALL {
             let rate = function.rate();
             let lengths = [0, 1, 3, 4, 5, 7, 8, 9, rate - 1, rate, rate + 1, 2 * rate];
             for n in lengths {
                 let input = (0..n).map(|i| (i * 37 + 11) as u8).collect::<Vec<_>>();
-                assert_both_hash_like_the_reference(function, &input, output_len(function, 32));
+                assert_both_comply_with_fips_202(function, &input, output_len(function, 32));
             }
             if function.digest_len().is_none() {
                 for d in lengths {
-                    assert_both_hash_like_the_reference(function, b"abc", d);
+                    assert_both_comply_with_fips_202(function, b"abc", d);
                 }
             }
         }
