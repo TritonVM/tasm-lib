@@ -1219,9 +1219,11 @@ mod tests {
             .collect()
     }
 
+    /// The key and the witness are boxed, so that moving an instance copies
+    /// pointers. Copies of their 50 kB overflowed the 1 MiB stack of wasm32.
     struct Instance {
-        key: ExpandedPublicKey,
-        witness: SignatureWitness,
+        key: Box<ExpandedPublicKey>,
+        witness: Box<SignatureWitness>,
         key_digest: Digest,
         message: Vec<u8>,
     }
@@ -1250,8 +1252,8 @@ mod tests {
             let witness = SignatureWitness::new(&key, sig)?;
             let key_digest = key.digest();
             Some(Self {
-                key,
-                witness,
+                key: Box::new(key),
+                witness: Box::new(witness),
                 key_digest,
                 message,
             })
@@ -1404,8 +1406,8 @@ mod tests {
             };
             let key_digest = key.digest();
             Self {
-                key,
-                witness,
+                key: Box::new(key),
+                witness: Box::new(witness),
                 key_digest,
                 message,
             }
@@ -2174,7 +2176,6 @@ mod tests {
             .assert_fails_with_or_non_u32(MlDsa44VerifyExternalMu::LOW_BITS_OUT_OF_RANGE_ERROR_ID);
     }
 
-    #[macro_rules_attr::apply(test)]
     /// Each makes a gap `next − n − 1` negative, which is not a u32.
     #[macro_rules_attr::apply(test)]
     fn refuses_hints_out_of_order_or_repeated() {
