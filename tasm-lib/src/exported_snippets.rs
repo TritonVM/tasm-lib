@@ -232,6 +232,10 @@ pub fn name_to_snippet(fn_name: &str) -> Option<Box<dyn BasicSnippet>> {
             Some(Box::new(hashing::keccak::tables::CheckKeccakTables))
         }
         "tasmlib_ml_dsa_verify_ml_dsa_44" => Some(Box::new(ml_dsa::verify::MlDsa44Verify)),
+        "tasmlib_ml_dsa_mu_ml_dsa_44" => Some(Box::new(ml_dsa::verify::MlDsa44Mu)),
+        "tasmlib_ml_dsa_verify_external_mu_ml_dsa_44" => {
+            Some(Box::new(ml_dsa::verify::MlDsa44VerifyExternalMu))
+        }
 
         // Hashing -> algebraic hasher trait
         "tasmlib_hashing_algebraic_hasher_hash_varlen" => {

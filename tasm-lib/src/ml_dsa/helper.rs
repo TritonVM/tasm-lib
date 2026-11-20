@@ -1,6 +1,5 @@
-//! ML-DSA-44 in Rust: the verification algorithm of FIPS 204, and the
-//! preparation of what [`MlDsa44Verify`](super::verify::MlDsa44Verify) takes
-//! from a prover.
+//! The preparation of what [`MlDsa44Verify`](super::verify::MlDsa44Verify)
+//! takes from a prover.
 
 use triton_vm::prelude::*;
 use twenty_first::prelude::Sponge;
@@ -40,7 +39,8 @@ fn zetas() -> [u64; N] {
 }
 
 /// The number-theoretic transform, FIPS 204 Algorithm 41.
-pub fn ntt(w: &Poly) -> Poly {
+#[cfg(test)]
+fn ntt(w: &Poly) -> Poly {
     let zetas = zetas();
     let mut w = w.map(u64::from);
     let (mut m, mut len) = (0, 128);
@@ -62,7 +62,7 @@ pub fn ntt(w: &Poly) -> Poly {
 }
 
 /// The inverse transform, FIPS 204 Algorithm 42.
-pub fn intt(w: &Poly) -> Poly {
+fn intt(w: &Poly) -> Poly {
     let zetas = zetas();
     let mut w = w.map(u64::from);
     let (mut m, mut len) = (N, 1);
@@ -93,7 +93,7 @@ fn unpack(bytes: &[u8], bits: usize) -> [u32; N] {
 }
 
 /// `(ρ, t1)`, FIPS 204 Algorithm 23.
-pub fn decode_public_key(pk: &[u8; PUBLIC_KEY_LEN]) -> ([u8; 32], [Poly; K]) {
+fn decode_public_key(pk: &[u8; PUBLIC_KEY_LEN]) -> ([u8; 32], [Poly; K]) {
     let rho = pk[..32].try_into().unwrap();
     let t1 = std::array::from_fn(|i| unpack(&pk[32 + 320 * i..32 + 320 * (i + 1)], 10));
     (rho, t1)
@@ -101,7 +101,7 @@ pub fn decode_public_key(pk: &[u8; PUBLIC_KEY_LEN]) -> ([u8; 32], [Poly; K]) {
 
 /// The decoded parts of a signature.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct DecodedSignature {
+struct DecodedSignature {
     pub c_tilde: [u8; C_TILDE_LEN],
     /// Coefficients in `(-γ1, γ1]`.
     pub z: [[i32; N]; L],
@@ -110,7 +110,7 @@ pub struct DecodedSignature {
 }
 
 /// `(c̃, z, h)`, or `None` if the hint is malformed; FIPS 204 Algorithm 27.
-pub fn decode_signature(sig: &[u8; SIGNATURE_LEN]) -> Option<DecodedSignature> {
+fn decode_signature(sig: &[u8; SIGNATURE_LEN]) -> Option<DecodedSignature> {
     let c_tilde = sig[..C_TILDE_LEN].try_into().unwrap();
     let z = std::array::from_fn(|i| {
         let start = C_TILDE_LEN + 576 * i;
@@ -140,7 +140,7 @@ pub fn decode_signature(sig: &[u8; SIGNATURE_LEN]) -> Option<DecodedSignature> {
 }
 
 /// `Â`, in the NTT domain; FIPS 204 Algorithm 32.
-pub fn expand_a(rho: &[u8; 32]) -> [[Poly; L]; K] {
+fn expand_a(rho: &[u8; 32]) -> [[Poly; L]; K] {
     std::array::from_fn(|r| {
         std::array::from_fn(|s| {
             let mut shake = Shake::shake128();
@@ -163,7 +163,7 @@ pub fn expand_a(rho: &[u8; 32]) -> [[Poly; L]; K] {
 }
 
 /// The challenge `c`, with coefficients in `{-1, 0, 1}`; FIPS 204 Algorithm 29.
-pub fn sample_in_ball(c_tilde: &[u8; C_TILDE_LEN]) -> [i32; N] {
+fn sample_in_ball(c_tilde: &[u8; C_TILDE_LEN]) -> [i32; N] {
     let mut shake = Shake::shake256();
     shake.absorb(c_tilde);
     let signs = shake.squeeze(8);
@@ -180,7 +180,7 @@ pub fn sample_in_ball(c_tilde: &[u8; C_TILDE_LEN]) -> [i32; N] {
 }
 
 /// `(r1, r0)` with `r0` in `(-γ2, γ2]`; FIPS 204 Algorithm 36.
-pub fn decompose(r: u32) -> (u32, i32) {
+pub(super) fn decompose(r: u32) -> (u32, i32) {
     let mut r0 = (r % (2 * GAMMA2)) as i32;
     if r0 > GAMMA2 as i32 {
         r0 -= 2 * GAMMA2 as i32;
@@ -190,103 +190,6 @@ pub fn decompose(r: u32) -> (u32, i32) {
     } else {
         ((r as i32 - r0) as u32 / (2 * GAMMA2), r0)
     }
-}
-
-/// FIPS 204 Algorithm 40.
-pub fn use_hint(hint: bool, r: u32) -> u32 {
-    let (r1, r0) = decompose(r);
-    match (hint, r0 > 0) {
-        (false, _) => r1,
-        (true, true) => (r1 + 1) % W1_RANGE,
-        (true, false) => (r1 + W1_RANGE - 1) % W1_RANGE,
-    }
-}
-
-/// FIPS 204 Algorithm 28: six bits per coefficient.
-pub fn w1_encode(w1: &[Poly; K]) -> Vec<u8> {
-    let mut bytes = vec![0u8; K * N * 6 / 8];
-    for (i, c) in w1.iter().flatten().enumerate() {
-        for b in 0..6 {
-            let pos = 6 * i + b;
-            bytes[pos / 8] |= (((c >> b) & 1) as u8) << (pos % 8);
-        }
-    }
-    bytes
-}
-
-/// The 40 bytes of a digest, each element little-endian.
-pub fn digest_bytes(digest: Digest) -> [u8; 40] {
-    let mut bytes = [0u8; 40];
-    for (i, element) in digest.values().iter().enumerate() {
-        bytes[8 * i..8 * i + 8].copy_from_slice(&element.value().to_le_bytes());
-    }
-    bytes
-}
-
-/// ML-DSA.Verify, FIPS 204 Algorithm 3 with Algorithm 8.
-pub fn verify(
-    pk: &[u8; PUBLIC_KEY_LEN],
-    message: &[u8],
-    sig: &[u8; SIGNATURE_LEN],
-    ctx: &[u8],
-) -> bool {
-    if ctx.len() > 255 {
-        return false;
-    }
-    let Some(signature) = decode_signature(sig) else {
-        return false;
-    };
-    let (rho, t1) = decode_public_key(pk);
-    let a_hat = expand_a(&rho);
-    let tr = shake256(pk, 64);
-    let mut shake = Shake::shake256();
-    shake.absorb(&tr);
-    shake.absorb(&[0, ctx.len() as u8]);
-    shake.absorb(ctx);
-    shake.absorb(message);
-    let mu = shake.squeeze(64);
-
-    let c_hat = ntt(&sample_in_ball(&signature.c_tilde).map(|c| reduce(c.into())));
-    let z_hat = signature.z.map(|z| ntt(&z.map(|c| reduce(c.into()))));
-    let mut w1 = [[0; N]; K];
-    for i in 0..K {
-        let t1_hat = ntt(&t1[i].map(|c| c << D));
-        let mut w_hat = [0u32; N];
-        for (k, w) in w_hat.iter_mut().enumerate() {
-            let az: u64 = (0..L)
-                .map(|j| u64::from(a_hat[i][j][k]) * u64::from(z_hat[j][k]) % u64::from(Q))
-                .sum();
-            let ct = u64::from(c_hat[k]) * u64::from(t1_hat[k]) % u64::from(Q);
-            *w = reduce(az as i64 - ct as i64);
-        }
-        let w_approx = intt(&w_hat);
-        for k in 0..N {
-            let hint = signature.hints.contains(&((256 * i + k) as u16));
-            w1[i][k] = use_hint(hint, w_approx[k]);
-        }
-    }
-    let mut shake = Shake::shake256();
-    shake.absorb(&mu);
-    shake.absorb(&w1_encode(&w1));
-    let c_tilde = shake.squeeze(C_TILDE_LEN);
-
-    let z_in_range = signature
-        .z
-        .iter()
-        .flatten()
-        .all(|z| z.unsigned_abs() < GAMMA1 - BETA);
-    z_in_range && c_tilde == signature.c_tilde
-}
-
-/// Verifies a signature on a digest, encoded as by [`digest_bytes`], with an
-/// empty context string, as [`MlDsa44Verify`](super::verify::MlDsa44Verify)
-/// does.
-pub fn verify_digest(
-    pk: &[u8; PUBLIC_KEY_LEN],
-    message: Digest,
-    sig: &[u8; SIGNATURE_LEN],
-) -> bool {
-    verify(pk, &digest_bytes(message), sig, &[])
 }
 
 fn sponge_digest(words: &[BFieldElement]) -> Digest {
@@ -300,6 +203,12 @@ fn sponge_digest(words: &[BFieldElement]) -> Digest {
 
 /// What a program commits to instead of the public key: everything that
 /// verification derives from the public key alone.
+///
+/// A program commits to it by its [digest](Self::digest), which binds the
+/// expansion and not the public key: the snippet does not check that the
+/// words it reads are the expansion of any public key. The digest is computed
+/// from the public key outside the VM and enters the program from a source the
+/// program trusts.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ExpandedPublicKey {
     /// `tr = H(pk, 64)`, as eight lanes of eight slices each.
@@ -395,6 +304,10 @@ impl SignatureWitness {
     pub const HINTS_OFFSET: usize = Self::HINT_COUNT_OFFSET + 1;
 
     /// The witness of a signature, or `None` if the signature does not decode.
+    ///
+    /// A signature that does not decode is invalid, and there is no witness
+    /// with which to run the snippet; the caller rejects the signature. `Some`
+    /// does not imply validity, which the snippet decides.
     pub fn new(key: &ExpandedPublicKey, sig: &[u8; SIGNATURE_LEN]) -> Option<Self> {
         let signature = decode_signature(sig)?;
         let c = sample_in_ball(&signature.c_tilde);
@@ -496,19 +409,6 @@ mod tests {
     fn ntt_and_intt_are_inverse() {
         let poly: Poly = std::array::from_fn(|i| (i as u32 * 7919 + 13) % Q);
         assert_eq!(poly, intt(&ntt(&poly)));
-    }
-
-    #[macro_rules_attr::apply(test)]
-    fn reference_verifier_agrees_with_fips204() {
-        for seed in 0..4 {
-            let message = [seed; 40];
-            let (pk, sig) = sign(seed, &message);
-            assert!(verify(&pk, &message, &sig, &[]));
-            assert!(!verify(&pk, &[seed ^ 1; 40], &sig, &[]));
-            let mut bad = sig;
-            bad[0] ^= 1;
-            assert!(!verify(&pk, &message, &bad, &[]));
-        }
     }
 
     #[macro_rules_attr::apply(test)]
