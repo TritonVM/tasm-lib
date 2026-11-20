@@ -647,6 +647,10 @@ mod tests {
     use super::super::tables::insert_tables;
     use super::super::tests::fips_202;
     use super::*;
+    use crate::linker::execute_bench;
+    use crate::snippet_bencher::BenchmarkCase;
+    use crate::snippet_bencher::NamedBenchmarkResult;
+    use crate::snippet_bencher::write_benchmarks;
     use crate::test_prelude::*;
 
     const INPUT_ADDRESS: u64 = 0;
@@ -662,35 +666,56 @@ mod tests {
             .collect()
     }
 
-    /// Runs a program that checks the tables, pushes `arguments`, and calls
-    /// the snippet that `snippet` makes, with `input` at [`INPUT_ADDRESS`].
-    fn run(
-        snippet: impl FnOnce(KeccakF1600) -> Box<dyn BasicSnippet>,
+    /// A program that checks the tables, pushes `arguments`, and calls the
+    /// snippet that `snippet` makes, if any.
+    fn program(
+        snippet: Option<&dyn Fn(KeccakF1600) -> Box<dyn BasicSnippet>>,
         arguments: &[u64],
-        input: &[BFieldElement],
-    ) -> Result<VMState, InstructionError> {
+    ) -> Vec<LabelledInstruction> {
         let mut library = Library::new();
         let keccak = KeccakF1600::allocate(&mut library);
         let check = library.import(Box::new(CheckKeccakTables));
-        let hash = library.import(snippet(keccak));
+        let call_hash = snippet
+            .map(|snippet| {
+                let hash = library.import(snippet(keccak));
+                triton_asm!(call { hash })
+            })
+            .unwrap_or_default();
         let push_arguments = arguments
             .iter()
             .flat_map(|&a| triton_asm!(push { a }))
             .collect::<Vec<_>>();
-        let code = triton_asm!(
+        triton_asm!(
             call {check}
             {&push_arguments}
-            call {hash}
+            {&call_hash}
             halt
             {&library.all_imports()}
-        );
+        )
+    }
+
+    /// The tables, and `input` at [`INPUT_ADDRESS`].
+    fn nondeterminism(input: &[BFieldElement]) -> NonDeterminism {
         let mut memory = HashMap::new();
         insert_tables(&mut memory);
         for (i, &word) in input.iter().enumerate() {
             memory.insert(bfe!(INPUT_ADDRESS + i as u64), word);
         }
-        let nondeterminism = NonDeterminism::default().with_ram(memory);
-        let mut state = VMState::new(Program::new(&code), PublicInput::default(), nondeterminism);
+        NonDeterminism::default().with_ram(memory)
+    }
+
+    /// Runs [`program`] with `input` at [`INPUT_ADDRESS`].
+    fn run(
+        snippet: impl Fn(KeccakF1600) -> Box<dyn BasicSnippet>,
+        arguments: &[u64],
+        input: &[BFieldElement],
+    ) -> Result<VMState, InstructionError> {
+        let code = program(Some(&snippet), arguments);
+        let mut state = VMState::new(
+            Program::new(&code),
+            PublicInput::default(),
+            nondeterminism(input),
+        );
         state.run().map(|()| state)
     }
 
@@ -838,6 +863,75 @@ mod tests {
                 &input,
             );
             assert_fails_with(fixed, KeccakHashStaticSize::NONZERO_PADDING_ERROR_ID);
+        }
+    }
+
+    /// The cost of the call alone, without the check of the tables.
+    fn bench(
+        snippet: &dyn Fn(KeccakF1600) -> Box<dyn BasicSnippet>,
+        arguments: &[u64],
+        input: &[u8],
+    ) -> crate::snippet_bencher::BenchmarkResult {
+        let nondeterminism = nondeterminism(&to_words(input));
+        let stack = crate::empty_stack();
+        let base = execute_bench(
+            &program(None, arguments),
+            &stack,
+            vec![],
+            nondeterminism.clone(),
+            None,
+        );
+        let full = execute_bench(
+            &program(Some(snippet), arguments),
+            &stack,
+            vec![],
+            nondeterminism,
+            None,
+        );
+        full - base
+    }
+
+    /// Every dedicated snippet, on a 32-byte input as the common case and a
+    /// 1000-byte input as the "worst case". The cost grows with the input, and
+    /// for SHAKE with the output, without bound: the second case is a larger
+    /// sample, not a bound. SHAKE's output is as long as its input.
+    #[macro_rules_attr::apply(test)]
+    fn benchmark() {
+        let cases = [
+            (BenchmarkCase::CommonCase, 32),
+            (BenchmarkCase::WorstCase, 1000),
+        ];
+        for function in KeccakFunction::ALL {
+            let mut dynamic = vec![];
+            let mut fixed = vec![];
+            for (case, n) in cases {
+                let input = (0..n).map(|i| (i * 37 + 11) as u8).collect::<Vec<_>>();
+                let output_len = output_len(function, n);
+                let mut arguments = vec![INPUT_ADDRESS, n as u64];
+                if function.digest_len().is_none() {
+                    arguments.push(output_len as u64);
+                }
+                dynamic.push(NamedBenchmarkResult {
+                    name: format!("tasmlib_hashing_keccak_{}", function.name()),
+                    benchmark_result: bench(
+                        &|keccak| dedicated(function, keccak),
+                        &arguments,
+                        &input,
+                    ),
+                    case,
+                });
+                fixed.push(NamedBenchmarkResult {
+                    name: format!("tasmlib_hashing_keccak_{}_static_size", function.name()),
+                    benchmark_result: bench(
+                        &|keccak| dedicated_static_size(function, keccak, n, output_len),
+                        &[INPUT_ADDRESS],
+                        &input,
+                    ),
+                    case,
+                });
+            }
+            write_benchmarks(dynamic);
+            write_benchmarks(fixed);
         }
     }
 }

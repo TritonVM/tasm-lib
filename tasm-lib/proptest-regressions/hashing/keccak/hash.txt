@@ -1,0 +1,7 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 008908ed70f46cd7426eca83366eb9eba914bf465f51e25693cdc418098a14ac # shrinks to input = _HashCompliesWithFips202Args { function: 2, input: [198, 239, 103, 242, 177, 168, 245, 168, 223, 215, 99, 35, 233, 180, 164, 212, 158, 164, 196, 112, 241, 242, 169, 252, 115, 11, 223, 165, 254, 138, 22, 99, 49, 160, 253, 163, 177, 6, 37, 115, 29, 161, 33, 87, 31, 255, 207, 49, 57, 86, 88, 211, 101, 108, 191, 236, 100, 42, 18, 227, 31, 153, 113, 231, 52, 59, 107, 171, 157, 158, 31, 112, 178, 134, 19, 162, 215, 151, 88, 178, 74, 174], shake_len: 321 }

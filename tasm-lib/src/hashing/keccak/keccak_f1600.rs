@@ -7,7 +7,6 @@ use super::ROTATION_OFFSETS;
 use super::ROUND_CONSTANTS;
 use super::tables::rotation_table_address;
 use crate::memory::load_words_from_memory_pop_pointer;
-use crate::memory::load_words_from_scattered_addresses;
 use crate::memory::write_words_to_memory_pop_pointer;
 use crate::memory::write_words_to_scattered_addresses;
 use crate::prelude::*;
@@ -166,31 +165,23 @@ impl KeccakF1600 {
                 push {self.d(x, 7)}
                 {&load_words_from_memory_pop_pointer(8)}
             ));
-            for (y, &r) in offsets.iter().enumerate() {
-                let (bx, by) = (y, (2 * x + 3 * y) % 5);
-                let s = (r % 8) as usize;
-                for batch in [[0usize, 1, 2, 3], [4, 5, 6, 7]] {
-                    let n = batch.len();
-                    let sources = batch.map(|j| self.a(x, y, j));
-                    instructions.extend(load_words_from_scattered_addresses(&sources));
-                    // Process from the top; each result goes below the
-                    // unprocessed slices, so the results end in load order.
-                    for idx in (0..n).rev() {
-                        let j = batch[idx];
-                        let jo = (j + s) % 8;
-                        let (src, t) = slice_rotation(r, jo);
-                        debug_assert_eq!(src, j);
-                        instructions.extend(triton_asm!(
-                            dup {n + j}
-                            xor
-                            {&rotate_byte(t)}
-                        ));
-                        if idx > 0 {
-                            instructions.extend(triton_asm!(place { idx }));
-                        }
-                    }
-                    let destinations = batch.map(|j| self.b(bx, by, (j + s) % 8));
-                    instructions.extend(write_words_to_scattered_addresses(&destinations));
+            for j in 0..8 {
+                // Slice j of the five lanes of column x, which are consecutive,
+                // lane y = 0 on top. Each goes to its place in B.
+                instructions.extend(triton_asm!(push {self.a(x, 4, j)} read_mem 5 pop 1));
+                for (y, &r) in offsets.iter().enumerate() {
+                    let (bx, by) = (y, (2 * x + 3 * y) % 5);
+                    let jo = (j + (r % 8) as usize) % 8;
+                    let (src, t) = slice_rotation(r, jo);
+                    debug_assert_eq!(src, j);
+                    instructions.extend(triton_asm!(
+                        dup {5 - y + j}
+                        xor
+                        {&rotate_byte(t)}
+                        push {self.b(bx, by, jo)}
+                        write_mem 1
+                        pop 1
+                    ));
                 }
             }
             instructions.extend(triton_asm!(pop 5 pop 3));
@@ -388,13 +379,7 @@ mod tests {
             None,
         );
         let one = execute_bench(&code_1, &crate::empty_stack(), vec![], nondeterminism, None);
-        let result = crate::snippet_bencher::BenchmarkResult {
-            clock_cycle_count: one.clock_cycle_count - base.clock_cycle_count,
-            hash_table_height: one.hash_table_height - base.hash_table_height,
-            u32_table_height: one.u32_table_height - base.u32_table_height,
-            op_stack_table_height: one.op_stack_table_height - base.op_stack_table_height,
-            ram_table_height: one.ram_table_height - base.ram_table_height,
-        };
+        let result = one - base;
         write_benchmarks(vec![NamedBenchmarkResult {
             name: "tasmlib_hashing_keccak_f1600".to_string(),
             benchmark_result: result,

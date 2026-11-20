@@ -12,6 +12,21 @@ pub struct BenchmarkResult {
     pub ram_table_height: usize,
 }
 
+/// The cost of a program less that of a prefix of it: the cost of the rest.
+impl std::ops::Sub for BenchmarkResult {
+    type Output = Self;
+
+    fn sub(self, base: Self) -> Self {
+        Self {
+            clock_cycle_count: self.clock_cycle_count - base.clock_cycle_count,
+            hash_table_height: self.hash_table_height - base.hash_table_height,
+            u32_table_height: self.u32_table_height - base.u32_table_height,
+            op_stack_table_height: self.op_stack_table_height - base.op_stack_table_height,
+            ram_table_height: self.ram_table_height - base.ram_table_height,
+        }
+    }
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct NamedBenchmarkResult {
     pub name: String,

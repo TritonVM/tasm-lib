@@ -1,0 +1,7 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc e7a5caaa1862bc40f2ace94ddc605d7d3f6172e07d94c5d0a96626d284216d53 # shrinks to input = _FunctionsComplyWithFips202Args { function: 2, input: [], shake_len: 1 }
