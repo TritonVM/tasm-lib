@@ -158,6 +158,76 @@ pub fn write_words_to_memory_pop_pointer(n: usize) -> Vec<LabelledInstruction> {
     )
 }
 
+/// Return the code to write zeros to the `n` words from `first`.
+///
+/// ```text
+/// BEFORE: _
+/// AFTER:  _
+/// ```
+pub(crate) fn write_zeros_to_memory(first: u64, n: usize) -> Vec<LabelledInstruction> {
+    let mut instructions = triton_asm!(push { first });
+    let mut left = n;
+    while left > 0 {
+        let k = left.min(5);
+        let zeros = triton_asm![push 0; k];
+        instructions.extend(triton_asm!({&zeros} pick {k} write_mem {k}));
+        left -= k;
+    }
+    instructions.extend(triton_asm!(pop 1));
+    instructions
+}
+
+/// The field element `x mod p`, as an offset from one address to another.
+fn address_offset(x: i128) -> u64 {
+    x.rem_euclid(i128::from(BFieldElement::P)) as u64
+}
+
+/// Return the code to read the words at the given addresses, which need not be
+/// contiguous, with one pointer that `addi` moves between them.
+///
+/// ```text
+/// BEFORE: _
+/// AFTER:  _ m[addresses[0]] m[addresses[1]] … m[addresses[n-1]]
+/// ```
+pub(crate) fn load_words_from_scattered_addresses(addresses: &[u64]) -> Vec<LabelledInstruction> {
+    let mut instructions = triton_asm!(push { addresses[0] });
+    for (i, address) in addresses.iter().enumerate() {
+        instructions.extend(triton_asm!(read_mem 1));
+        if let Some(next) = addresses.get(i + 1) {
+            let offset = i128::from(*next) - (i128::from(*address) - 1);
+            if offset != 0 {
+                instructions.extend(triton_asm!(addi { address_offset(offset) }));
+            }
+        }
+    }
+    instructions.extend(triton_asm!(pop 1));
+    instructions
+}
+
+/// Return the code to write words to the given addresses, which need not be
+/// contiguous, with one pointer that `addi` moves between them.
+///
+/// ```text
+/// BEFORE: _ v_{n-1} … v_1 v_0
+/// AFTER:  _
+/// ```
+///
+/// and `m[addresses[i]] = v_i`.
+pub(crate) fn write_words_to_scattered_addresses(addresses: &[u64]) -> Vec<LabelledInstruction> {
+    let mut instructions = triton_asm!(push { addresses[0] });
+    for (i, address) in addresses.iter().enumerate() {
+        instructions.extend(triton_asm!(write_mem 1));
+        if let Some(next) = addresses.get(i + 1) {
+            let offset = i128::from(*next) - (i128::from(*address) + 1);
+            if offset != 0 {
+                instructions.extend(triton_asm!(addi { address_offset(offset) }));
+            }
+        }
+    }
+    instructions.extend(triton_asm!(pop 1));
+    instructions
+}
+
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;

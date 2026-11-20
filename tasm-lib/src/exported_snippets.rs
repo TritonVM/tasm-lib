@@ -25,6 +25,7 @@ use crate::io::write_to_stdout::WriteToStdout;
 use crate::list;
 use crate::memory::dyn_malloc::DynMalloc;
 use crate::memory::memcpy::MemCpy;
+use crate::ml_dsa;
 use crate::mmr::bag_peaks::BagPeaks;
 use crate::mmr::calculate_new_peaks_from_append::CalculateNewPeaksFromAppend;
 use crate::mmr::calculate_new_peaks_from_leaf_mutation::MmrCalculateNewPeaksFromLeafMutationMtIndices;
@@ -227,6 +228,14 @@ pub fn name_to_snippet(fn_name: &str) -> Option<Box<dyn BasicSnippet>> {
             Some(Box::new(hashing::merkle_step_u64_index::MerkleStepU64Index))
         }
         "tasmlib_hashing_merkle_verify" => Some(Box::new(hashing::merkle_verify::MerkleVerify)),
+        "tasmlib_hashing_keccak_check_tables" => {
+            Some(Box::new(hashing::keccak::tables::CheckKeccakTables))
+        }
+        "tasmlib_ml_dsa_verify_ml_dsa_44" => Some(Box::new(ml_dsa::verify::MlDsa44Verify)),
+        "tasmlib_ml_dsa_mu_ml_dsa_44" => Some(Box::new(ml_dsa::verify::MlDsa44Mu)),
+        "tasmlib_ml_dsa_verify_external_mu_ml_dsa_44" => {
+            Some(Box::new(ml_dsa::verify::MlDsa44VerifyExternalMu))
+        }
 
         // Hashing -> algebraic hasher trait
         "tasmlib_hashing_algebraic_hasher_hash_varlen" => {
