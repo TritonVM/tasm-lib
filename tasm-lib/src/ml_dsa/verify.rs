@@ -1838,6 +1838,11 @@ mod tests {
     /// Real ML-DSA-44 signatures, from random keys, signing randomness and
     /// messages of random lengths: the snippet accepts a signature, one with a
     /// bit flipped, and one on another message exactly when `fips204` does.
+    ///
+    /// A signature whose hints do not decode has no witness, and counts as
+    /// refused without a run of the snippet. About 2% of single bit flips do
+    /// that. [`agrees_with_fips204_on_a_bit_flip_in_each_part_of_a_signature`]
+    /// covers both cases on every run.
     #[macro_rules_attr::apply(proptest(cases = 8))]
     fn agrees_with_fips204_on_real_signatures(
         key_seed: [u8; 32],
@@ -1858,6 +1863,49 @@ mod tests {
             prop_assert_eq!(fips204_accepts, snippet_accepts(&pk_bytes, &message, &sig));
         }
         prop_assert!(snippet_accepts(&pk_bytes, &message, &sig));
+    }
+
+    /// One bit flipped in each part of a real signature: c̃, z, a hint
+    /// position, the number of hints of a polynomial, and the zeros after the
+    /// hints. `fips204` refuses each, and so does the snippet. A flip in c̃ or
+    /// z leaves the hints decodable, so the snippet runs and refuses. A flip in
+    /// the zeros after the hints leaves them undecodable, so there is no
+    /// witness to run the snippet on.
+    #[macro_rules_attr::apply(test)]
+    fn agrees_with_fips204_on_a_bit_flip_in_each_part_of_a_signature() {
+        let (pk, sk) = ml_dsa_44::KG::keygen_from_seed(&[5; 32]);
+        let message = b"one bit flipped".to_vec();
+        let sig = sk.try_sign_with_seed(&[6; 32], &message, &[]).unwrap();
+        let pk_bytes = pk.clone().into_bytes();
+
+        // The hints: OMEGA positions, then the number of hints up to and
+        // including each of the K polynomials.
+        let hints = C_TILDE_LEN + 576 * L;
+        let num_hints = usize::from(sig[hints + OMEGA + K - 1]);
+        assert!(0 < num_hints && num_hints < OMEGA);
+
+        // (byte, whether the hints still decode)
+        let flips = [
+            (0, Some(true)),
+            (C_TILDE_LEN - 1, Some(true)),
+            (C_TILDE_LEN, Some(true)),
+            (hints - 1, Some(true)),
+            (hints, None),
+            (hints + OMEGA, None),
+            (hints + num_hints, Some(false)),
+        ];
+        for (byte, decodes) in flips {
+            let mut tampered = sig;
+            tampered[byte] ^= 1;
+            assert!(!pk.verify(&message, &tampered, &[]), "byte {byte}");
+            let instance = Instance::from_signature(&pk_bytes, message.clone(), &tampered);
+            if let Some(decodes) = decodes {
+                assert_eq!(decodes, instance.is_some(), "byte {byte}");
+            }
+            if let Some(instance) = instance {
+                assert!(instance.run().is_err(), "byte {byte}");
+            }
+        }
     }
 
     /// Every message length modulo 4, and the lengths at which the input to
