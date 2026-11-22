@@ -821,12 +821,32 @@ mod tests {
         assert_both_comply_with_fips_202(function, &input, output_len(function, shake_len));
     }
 
-    /// Every length next to a boundary of a word, a lane or a block.
+    /// Every position in a lane, and so in a word, at which the input or the
+    /// output can end, and the lengths next to the end of one block or two.
+    /// The padding goes to byte `n mod 8` of its lane, and the snippets place
+    /// it according to `n mod 4` or `n mod 8`. The block loops run twice from
+    /// `2·rate + 1` bytes on.
     #[macro_rules_attr::apply(test)]
     fn hash_complies_with_fips_202_at_boundaries() {
         for function in KeccakFunction::ALL {
             let rate = function.rate();
-            let lengths = [0, 1, 3, 4, 5, 7, 8, 9, rate - 1, rate, rate + 1, 2 * rate];
+            let lengths = [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                rate - 1,
+                rate,
+                rate + 1,
+                2 * rate,
+                2 * rate + 1,
+            ];
             for n in lengths {
                 let input = (0..n).map(|i| (i * 37 + 11) as u8).collect::<Vec<_>>();
                 assert_both_comply_with_fips_202(function, &input, output_len(function, 32));
