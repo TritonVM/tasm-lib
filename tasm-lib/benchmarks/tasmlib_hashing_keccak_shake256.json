@@ -1,0 +1,24 @@
+[
+  {
+    "name": "tasmlib_hashing_keccak_shake256",
+    "benchmark_result": {
+      "clock_cycle_count": 104308,
+      "hash_table_height": 18480,
+      "u32_table_height": 153213,
+      "op_stack_table_height": 104443,
+      "ram_table_height": 33807
+    },
+    "case": "CommonCase"
+  },
+  {
+    "name": "tasmlib_hashing_keccak_shake256",
+    "benchmark_result": {
+      "clock_cycle_count": 1529123,
+      "hash_table_height": 18480,
+      "u32_table_height": 575762,
+      "op_stack_table_height": 1540551,
+      "ram_table_height": 498035
+    },
+    "case": "WorstCase"
+  }
+]

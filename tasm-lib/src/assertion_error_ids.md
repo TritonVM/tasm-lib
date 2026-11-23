@@ -71,3 +71,6 @@ often.
 |  600..610 | [`u192::SafeAdd`](arithmetic/u192/safe_add.rs)                                              |
 |  620..630 | [`dequeue_next_as::DequeNextAs`](verifier/vm_proof_iter/dequeue_next_as.rs)                 |
 |  630..640 | [`RootFromAuthenticationStruct`](mmr/authentication_struct/root_from_authentication_struct.rs) |
+|  640..650 | [`CheckKeccakTables`](hashing/keccak/tables.rs), [`KeccakHash`, `KeccakHashStaticSize`](hashing/keccak/hash.rs) |
+|  650..670 | [`MlDsa44VerifyExternalMu`](ml_dsa/verify.rs)                                               |
+|  670..680 | [`MlDsa44Mu`](ml_dsa/verify.rs)                                                             |
