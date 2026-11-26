@@ -1,3 +1,5 @@
+#![doc = include_str!("verifier/agreement.md")]
+
 pub mod challenges;
 pub mod claim;
 pub mod eval_arg;

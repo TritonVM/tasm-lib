@@ -121,6 +121,14 @@ impl StarkVerify {
     }
 
     fn extract_nondeterministic_digests(&self, proof: &Proof, claim: &Claim) -> Vec<Digest> {
+        self.replay_rust_verifier_transcript(proof, claim).0
+    }
+
+    /// Replay the proof-stream operations of the Rust verifier, `Verifier::verify`,
+    /// in the same order. Returns the digests that the tasm verifier reads from
+    /// `NonDeterminism`, and the sponge state at the end of the transcript, which
+    /// is the sponge state in which the Rust verifier ends on an accepted proof.
+    fn replay_rust_verifier_transcript(&self, proof: &Proof, claim: &Claim) -> (Vec<Digest>, Tip5) {
         const NUM_DEEP_CODEWORD_COMPONENTS: usize = 4;
 
         fn extract_paths<R: BFieldCodec>(
@@ -295,7 +303,7 @@ impl StarkVerify {
         .concat()
         .concat();
 
-        [fri_digests, stark_digests].concat()
+        ([fri_digests, stark_digests].concat(), proof_stream.sponge)
     }
 }
 
@@ -1350,6 +1358,7 @@ pub mod tests {
     use crate::maybe_write_debuggable_vm_state_to_disk;
     use crate::memory::FIRST_NON_DETERMINISTICALLY_INITIALIZED_MEMORY_ADDRESS;
     use crate::test_helpers::maybe_write_tvm_output_to_disk;
+    use crate::test_helpers::verify_sponge_equivalence;
     use crate::test_prelude::*;
     use crate::verifier::claim::shared::insert_claim_into_static_memory;
     use crate::verifier::master_table::air_constraint_evaluation::an_integral_but_profane_dynamic_memory_layout;
@@ -1507,10 +1516,23 @@ pub mod tests {
             &mut init_stack,
             snippet.stack_diff(),
             vec![],
-            non_determinism,
+            non_determinism.clone(),
             None,
         )
         .unwrap();
+
+        // The two verifiers absorb the same values in the same order and
+        // squeeze the same challenges, so their transcripts end in the same
+        // sponge state. The tasm verifier's transcript ends where it first
+        // re-initializes the sponge, to hash the revealed rows.
+        let proof = *Proof::decode_from_memory(
+            &non_determinism.ram,
+            FIRST_NON_DETERMINISTICALLY_INITIALIZED_MEMORY_ADDRESS,
+        )
+        .unwrap();
+        let (_, rust_sponge) = snippet.replay_rust_verifier_transcript(&proof, &claim_for_proof);
+        let tasm_sponge = sponge_at_end_of_transcript(vm_state);
+        verify_sponge_equivalence(&Some(rust_sponge), &Some(tasm_sponge));
 
         let (aet, _public_output) = VM::trace_execution(
             inner_program,
@@ -1521,6 +1543,24 @@ pub mod tests {
         let inner_padded_height = aet.padded_height();
 
         (final_tasm_state.cycle_count as usize, inner_padded_height)
+    }
+
+    /// Run the VM up to the second `sponge_init`, and return the sponge state
+    /// there. The first `sponge_init` starts the Fiat-Shamir transcript; the
+    /// second starts the hashing of the revealed rows.
+    fn sponge_at_end_of_transcript(mut vm_state: VMState) -> Tip5 {
+        let mut num_sponge_inits = 0;
+        loop {
+            if vm_state.current_instruction().unwrap()
+                == triton_vm::isa::instruction::Instruction::SpongeInit
+            {
+                num_sponge_inits += 1;
+                if num_sponge_inits == 2 {
+                    return vm_state.sponge.unwrap();
+                }
+            }
+            vm_state.step().unwrap();
+        }
     }
 
     #[macro_rules_attr::apply(test)]
